@@ -1,0 +1,196 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// company
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farms Farm[]
+
+  @@map("companies")
+}
+
+// Farm
+
+model Farm {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+
+  code   String
+  name   String
+  status FarmStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+  sheds   Shed[]
+
+  @@unique([companyId, code])
+  @@map("farms")
+}
+
+// Shed
+
+model Shed {
+  id     String @id @default(uuid()) @db.Uuid
+  farmId String @db.Uuid
+
+  number   String
+  capacity Int
+
+  status ShedStatus @default(AVAILABLE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farm Farm @relation(fields: [farmId], references: [id])
+
+  @@unique([farmId, number])
+  @@map("sheds")
+}
+
+// Designation
+model Designation {
+  id   String @id @default(uuid()) @db.Uuid()
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("desgination")
+}
+
+// Employee
+
+model Employee {
+  id         String @id @default(uuid()) @db.Uuid()
+  employeeId String @unique
+
+  name     String
+  phone    String?
+  photoUrl String?
+
+  desiginationId String @db.Uuid()
+
+  joiningDate DateTime?
+  status      EmployeeStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  designation Designation @relation(fields: [desiginationId], references: [id])
+  user        User?
+
+  @@map("employees")
+}
+
+// User
+
+model User {
+  id         String @id @default(uuid()) @db.Uuid
+  employeeId String @unique @db.Uuid
+
+  email        String @unique
+  passwordHash String
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee   @relation(fields: [employeeId], references: [id])
+  roles    UserRole[]
+
+  @@map("users")
+}
+
+// role
+
+model Role {
+  id String @id @default(uuid()) @db.Uuid()
+
+  name        String  @unique
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+// permission
+
+model Permission {
+  id String @id @default(uuid()) @db.Uuid()
+
+  name String @unique
+
+  description String?
+
+  createdAt DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+// user <-> role
+
+model UserRole {
+  userId String @db.Uuid()
+  roleId String @db.Uuid()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+//  Role <-> Permission 
+
+model RolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ENUMS
+
+enum FarmStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ShedStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}

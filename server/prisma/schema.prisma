@@ -194,3 +194,25 @@ enum EmployeeStatus {
   ACTIVE
   INACTIVE
 }
+
+
+// Otp
+
+model OtpChallenge {
+  id String @id @default(uuid()) @db.Uuid
+
+  phone String
+
+  otpHash String
+
+  expiresAt DateTime
+
+  attempts Int @default(0)
+
+  consumedAt DateTime?
+
+  createdAt DateTime  @default(now())
+
+  @@index([phone])
+  @@map("otp_challenges")
+}

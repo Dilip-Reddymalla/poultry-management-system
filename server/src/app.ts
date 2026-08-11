@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
+import authRouter from "./modules/auth/auth.routes.js";
+
 
 const app = express();
 
@@ -23,5 +25,7 @@ app.get('/api/health',(_req,res)=>{
         message:"Poultry Management API is running"
     });
 });
+
+app.use("/api/auth",authRouter);
 
 export default app;

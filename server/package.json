@@ -18,6 +18,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "firebase": "^12.18.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
     "prisma": "^7.9.1",
@@ -37,6 +38,8 @@
     "@prisma/engines@7.9.1": true,
     "prisma@7.9.1": true,
     "esbuild@0.28.2": true,
-    "argon2@0.45.1": true
+    "argon2@0.45.1": true,
+    "@firebase/util@1.15.3": true,
+    "protobufjs@7.6.5": true
   }
 }

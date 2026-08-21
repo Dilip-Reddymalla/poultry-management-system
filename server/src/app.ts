@@ -3,6 +3,9 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 import authRouter from "./modules/auth/auth.routes.js";
+import employeeRouter from "./modules/employee/employee.routes.js";
+import farmRouter from "./modules/farm/farm.routes.js";
+import shedRouter from "./modules/shed/shed.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 
@@ -28,6 +31,9 @@ app.get('/api/health',(_req,res)=>{
 });
 
 app.use("/api/auth",authRouter);
+app.use("/api/employees", employeeRouter);
+app.use("/api/farms", farmRouter);
+app.use("/api/sheds", shedRouter);
 
 
 

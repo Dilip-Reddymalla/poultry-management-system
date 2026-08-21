@@ -15,3 +15,8 @@ export interface PhoneLoginUser {
   name: string;
   designation: string;
 }
+
+export interface UserAuthorization {
+  roles: string[];
+  permissions: string[];
+}

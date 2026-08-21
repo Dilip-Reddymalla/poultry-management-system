@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const emailSchema = z.preprocess(
+export const emailSchema = z.preprocess(
   (value) => (typeof value === "string" ? value.trim() : value),
   z.email("Invalid email address"),
 );

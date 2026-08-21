@@ -94,6 +94,12 @@ model Employee {
   designation Designation @relation(fields: [desiginationId], references: [id])
   user        User?
 
+  // FK is not auto-indexed by Postgres; used as the designation join target and
+  // as the designation filter in listEmployees.
+  @@index([desiginationId])
+  // Phone login (findUsersByPhone) filters on phone; non-unique because several
+  // employees may share a number (drives phone account selection).
+  @@index([phone])
   @@map("employees")
 }
 
@@ -213,6 +219,8 @@ model OtpChallenge {
 
   createdAt DateTime  @default(now())
 
-  @@index([phone])
+  // Active-challenge lookup filters phone and orders by createdAt desc; the
+  // composite serves both equality and ordering, so a plain [phone] is redundant.
+  @@index([phone, createdAt])
   @@map("otp_challenges")
 }

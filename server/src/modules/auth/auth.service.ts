@@ -4,7 +4,7 @@ import { generateAccessToken } from "../../utils/jwt.js";
 import { AppError } from "../../utils/app-error.js";
 
 import type { LoginInput } from "./auth.schema.js";
-import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
+import type { SafeUser, PhoneLoginUser, UserAuthorization } from "./auth.types.js";
 import {
   generatePhoneSelectionToken,
   verifyPhoneSelectionToken,
@@ -48,6 +48,10 @@ export async function login(
     throw new AppError("Invalid email or password", 401);
   }
   if (!user.isActive) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  if (user.employee.status !== "ACTIVE") {
     throw new AppError("Invalid email or password", 401);
   }
 
@@ -95,8 +99,8 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
     },
   });
 
-  if (!user || !user.isActive) {
-    throw new AppError("Authentication required", 500);
+  if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
+    throw new AppError("Authentication required", 401);
   }
 
   const safeUser: SafeUser = {
@@ -111,6 +115,59 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
   };
 
   return safeUser;
+}
+
+export async function getUserAuthorization(
+  userId: string,
+): Promise<UserAuthorization> {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      isActive: true,
+      employee: {
+        select: {
+          status: true,
+        },
+      },
+      roles: {
+        select: {
+          role: {
+            select: {
+              name: true,
+              permissions: {
+                select: {
+                  permission: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
+    throw new AppError("Authentication required", 401);
+  }
+
+  const permissions = new Set<string>();
+
+  for (const userRole of user.roles) {
+    for (const rolePermission of userRole.role.permissions) {
+      permissions.add(rolePermission.permission.name);
+    }
+  }
+
+  return {
+    roles: user.roles.map((userRole) => userRole.role.name),
+    permissions: Array.from(permissions),
+  };
 }
 
 import {

@@ -20,7 +20,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
-    "prisma": "^6.12.0",
+    "prisma": "^7.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -38,7 +38,7 @@
     "argon2@0.45.1": true,
     "@firebase/util@1.15.3": true,
     "protobufjs@7.6.5": true,
-    "@prisma/engines@6.12.0": true,
-    "prisma@6.12.0": true
+    "prisma@7.9.1": true,
+    "@prisma/engines@7.9.1": true
   }
 }

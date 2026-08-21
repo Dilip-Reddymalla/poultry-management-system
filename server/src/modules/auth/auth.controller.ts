@@ -3,10 +3,8 @@ import { env } from "../../config/env.js";
 import type { AuthenticatedRequest } from "../../middlewares/auth.middleware.js";
 
 import { getCurrentUser, login, requestOtp,verifyPhoneOtp, selectPhoneUser } from "./auth.service.js";
-import { loginSchema } from "./auth.schema.js";
-import { requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema } from "./auth.schema.js";
+import { loginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema } from "./auth.schema.js";
 
-import { success } from "zod";
 
 const AUTH_COOKIE_NAME = "poultry_auth";
 

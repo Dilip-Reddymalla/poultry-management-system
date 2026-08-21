@@ -366,7 +366,7 @@ export async function selectPhoneUser(
   });
 
   if (!user) {
-    throw new Error("Invalid account selection");
+    throw new AppError("Invalid account selection", 400);
   }
 
   const token = generateAccessToken(user.id);

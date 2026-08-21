@@ -1,3 +1,3 @@
-import { DevOtpProvider } from "./dev-otp-provider.js";
+import { HttpsmsOtpProvider } from "./httpsms-otp-provider.js";
 
-export const otpProvider = new DevOtpProvider();
+export const otpProvider = new HttpsmsOtpProvider();

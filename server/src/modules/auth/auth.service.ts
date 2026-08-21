@@ -10,6 +10,7 @@ import {
   verifyPhoneSelectionToken,
 } from "../../utils/phone-selection-token.js";
 import { otpProvider } from "./otp/otp-provider.instance.js";
+import { sendSms } from "../../utils/httpsms.js";
 
 type VerifyPhoneOtpResult =
   | {
@@ -125,7 +126,7 @@ import { normalizePhone } from "../../utils/phone.js";
 
 export async function requestOtp(
   phone: string,
-): Promise<{ phone: string;}> {
+): Promise<{ phone: string }> {
   const normalizedPhone = normalizePhone(phone);
 
   const latestChallenge = await prisma.otpChallenge.findFirst({
@@ -160,7 +161,11 @@ export async function requestOtp(
 
   const otpHash = await hashOtp(otp);
 
-  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+  const expiresAt = new Date(
+    Date.now() + OTP_EXPIRY_MS,
+  );
+
+  await otpProvider.sendOtp(normalizedPhone, otp);
 
   await prisma.otpChallenge.create({
     data: {
@@ -169,8 +174,6 @@ export async function requestOtp(
       expiresAt,
     },
   });
-
-  await otpProvider.sendOtp(normalizedPhone, otp);
 
   return {
     phone: normalizedPhone,

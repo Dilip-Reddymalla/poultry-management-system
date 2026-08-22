@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "../../config/database.js";
 import { verifyPassword } from "../../utils/password.js";
 import { generateAccessToken } from "../../utils/jwt.js";
@@ -11,6 +13,16 @@ import {
 } from "../../utils/phone-selection-token.js";
 import { otpProvider } from "./otp/otp-provider.instance.js";
 import { sendSms } from "../../utils/httpsms.js";
+import {
+  generateOtp,
+  hashOtp,
+  verifyOtp,
+  OTP_EXPIRY_MS,
+  OTP_RESEND_COOLDOWN_MS,
+  OTP_MAX_ATTEMPTS,
+  OTP_RETENTION_MS,
+} from "../../utils/otp.js";
+import { normalizePhone } from "../../utils/phone.js";
 
 type VerifyPhoneOtpResult =
   | {
@@ -24,6 +36,77 @@ type VerifyPhoneOtpResult =
       users: PhoneLoginUser[];
     };
 
+// Every path that returns a session user reads exactly these fields, so the
+// shape of a SafeUser cannot drift between login, OTP login and /me. Selecting
+// (never including) also guarantees passwordHash can not leak by accident.
+const sessionUserSelect = {
+  id: true,
+  email: true,
+  isActive: true,
+  employee: {
+    select: {
+      employeeId: true,
+      name: true,
+      status: true,
+      designation: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+  roles: {
+    select: {
+      role: {
+        select: {
+          name: true,
+          permissions: {
+            select: {
+              permission: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+type SessionUserRecord = Prisma.UserGetPayload<{
+  select: typeof sessionUserSelect;
+}>;
+
+// Roles are exposed as labels; permissions are the flattened, de-duplicated set
+// the frontend uses to gate UI. Both come from the database, never from the JWT.
+function toSafeUser(user: SessionUserRecord): SafeUser {
+  const permissions = new Set<string>();
+
+  for (const userRole of user.roles) {
+    for (const rolePermission of userRole.role.permissions) {
+      permissions.add(rolePermission.permission.name);
+    }
+  }
+
+  return {
+    id: user.id,
+    employeeId: user.employee.employeeId,
+    email: user.email,
+    employee: {
+      name: user.employee.name,
+      designation: {
+        id: user.employee.designation.id,
+        name: user.employee.designation.name,
+      },
+    },
+    roles: user.roles.map((userRole) => userRole.role.name),
+    permissions: Array.from(permissions).sort(),
+  };
+}
+
 export async function login(
   input: LoginInput,
 ): Promise<{ token: string; user: SafeUser }> {
@@ -31,17 +114,9 @@ export async function login(
     where: {
       email: input.email,
     },
-    include: {
-      employee: {
-        include: {
-          designation: true,
-        },
-      },
-      roles: {
-        include: {
-          role: true,
-        },
-      },
+    select: {
+      ...sessionUserSelect,
+      passwordHash: true,
     },
   });
   if (!user) {
@@ -63,20 +138,9 @@ export async function login(
 
   const token = generateAccessToken(user.id);
 
-  const safeUser: SafeUser = {
-    id: user.id,
-    employeeId: user.employee.employeeId,
-    email: user.email,
-    employee: {
-      name: user.employee.name,
-      designation: user.employee.designation.name,
-    },
-    roles: user.roles.map((userRole) => userRole.role.name),
-  };
-
   return {
     token: token,
-    user: safeUser,
+    user: toSafeUser(user),
   };
 }
 
@@ -85,36 +149,14 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
     where: {
       id: userId,
     },
-    include: {
-      employee: {
-        include: {
-          designation: true,
-        },
-      },
-      roles: {
-        include: {
-          role: true,
-        },
-      },
-    },
+    select: sessionUserSelect,
   });
 
   if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
     throw new AppError("Authentication required", 401);
   }
 
-  const safeUser: SafeUser = {
-    id: user.id,
-    employeeId: user.employee.employeeId,
-    email: user.email,
-    employee: {
-      name: user.employee.name,
-      designation: user.employee.designation.name,
-    },
-    roles: user.roles.map((userRole) => userRole.role.name),
-  };
-
-  return safeUser;
+  return toSafeUser(user);
 }
 
 export async function getUserAuthorization(
@@ -169,17 +211,6 @@ export async function getUserAuthorization(
     permissions: Array.from(permissions),
   };
 }
-
-import {
-  generateOtp,
-  hashOtp,
-  verifyOtp,
-  OTP_EXPIRY_MS,
-  OTP_RESEND_COOLDOWN_MS,
-  OTP_MAX_ATTEMPTS,
-} from "../../utils/otp.js";
-
-import { normalizePhone } from "../../utils/phone.js";
 
 export async function requestOtp(
   phone: string,
@@ -322,39 +353,17 @@ export async function verifyPhoneOtp(
     where: {
       id: user.id,
     },
-    include: {
-      employee: {
-        include: {
-          designation: true,
-        },
-      },
-      roles: {
-        include: {
-          role: true,
-        },
-      },
-    },
+    select: sessionUserSelect,
   });
 
   if (!fullUser) {
     throw new AppError("Invalid account selection", 400);
   }
 
-  const safeUser: SafeUser = {
-    id: fullUser.id,
-    employeeId: fullUser.employee.employeeId,
-    email: fullUser.email,
-    employee: {
-      name: fullUser.employee.name,
-      designation: fullUser.employee.designation.name,
-    },
-    roles: fullUser.roles.map((userRole) => userRole.role.name),
-  };
-
   return {
     requiresUserSelection: false,
     token,
-    user: safeUser,
+    user: toSafeUser(fullUser),
   };
 }
 
@@ -373,9 +382,20 @@ export async function findUsersByPhone(
         },
       },
     },
-    include: {
-      designation: true,
-      user: true,
+    select: {
+      employeeId: true,
+      name: true,
+      designation: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+        },
+      },
     },
   });
 
@@ -383,7 +403,10 @@ export async function findUsersByPhone(
     id: employee.user!.id,
     employeeId: employee.employeeId,
     name: employee.name,
-    designation: employee.designation.name,
+    designation: {
+      id: employee.designation.id,
+      name: employee.designation.name,
+    },
   }));
 }
 
@@ -408,18 +431,7 @@ export async function selectPhoneUser(
         },
       },
     },
-    include: {
-      employee: {
-        include: {
-          designation: true,
-        },
-      },
-      roles: {
-        include: {
-          role: true,
-        },
-      },
-    },
+    select: sessionUserSelect,
   });
 
   if (!user) {
@@ -428,19 +440,42 @@ export async function selectPhoneUser(
 
   const token = generateAccessToken(user.id);
 
-  const safeUser: SafeUser = {
-    id: user.id,
-    employeeId: user.employee.employeeId,
-    email: user.email,
-    employee: {
-      name: user.employee.name,
-      designation: user.employee.designation.name,
-    },
-    roles: user.roles.map((userRole) => userRole.role.name),
-  };
-
   return {
     token,
-    user: safeUser,
+    user: toSafeUser(user),
+  };
+}
+
+// Retention cleanup for the otp_challenges table, which otherwise grows without
+// bound. Safe to run repeatedly and concurrently: it only matches challenges that
+// are already consumed or already expired, so an active challenge is never
+// deleted. Intended to be executed periodically (see `npm run otp:cleanup`).
+export async function purgeExpiredOtpChallenges(): Promise<{ deleted: number }> {
+  const now = new Date();
+
+  const cutoff = new Date(now.getTime() - OTP_RETENTION_MS);
+
+  const result = await prisma.otpChallenge.deleteMany({
+    where: {
+      createdAt: {
+        lt: cutoff,
+      },
+      OR: [
+        {
+          consumedAt: {
+            not: null,
+          },
+        },
+        {
+          expiresAt: {
+            lte: now,
+          },
+        },
+      ],
+    },
+  });
+
+  return {
+    deleted: result.count,
   };
 }

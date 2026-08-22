@@ -27,9 +27,7 @@ export const selectPhoneUserSchema = z.object({
     .string()
     .min(1, "Selection token is required"),
 
-  userId: z
-    .string()
-    .uuid("Invalid user ID"),
+  userId: z.uuid("Invalid user ID"),
 });
 
 export type SelectPhoneUserInput = z.infer<

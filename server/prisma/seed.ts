@@ -245,8 +245,36 @@ async function main() {
       description: "View farms",
     },
     {
+      name: "farm:create",
+      description: "Create farms",
+    },
+    {
+      name: "farm:update",
+      description: "Update farm details",
+    },
+    {
+      name: "farm:deactivate",
+      description: "Deactivate farms",
+    },
+    {
+      name: "farm:reactivate",
+      description: "Reactivate farms",
+    },
+    {
       name: "shed:view",
       description: "View sheds",
+    },
+    {
+      name: "shed:create",
+      description: "Create sheds",
+    },
+    {
+      name: "shed:update",
+      description: "Update shed details",
+    },
+    {
+      name: "shed:update-status",
+      description: "Change shed operational status",
     },
 
     {
@@ -391,7 +419,12 @@ async function main() {
         "employee:reactivate",
         "user:create",
         "farm:view",
+        "farm:create",
+        "farm:update",
         "shed:view",
+        "shed:create",
+        "shed:update",
+        "shed:update-status",
         "attendance:view",
         "attendance:create",
         "attendance:update",
@@ -412,6 +445,7 @@ async function main() {
         "employee:view",
         "farm:view",
         "shed:view",
+        "shed:update-status",
         "attendance:view",
         "attendance:create",
         "attendance:update",
@@ -431,6 +465,7 @@ async function main() {
         "employee:view",
         "farm:view",
         "shed:view",
+        "shed:update-status",
         "attendance:view",
         "attendance:create",
         "attendance:update",

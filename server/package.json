@@ -9,7 +9,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "prisma db seed",
-    "typecheck": "tsc --noEmit"
+    "otp:cleanup": "tsx src/scripts/purge-otp-challenges.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
@@ -31,8 +34,11 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.2.0",
     "@types/pg": "^8.21.0",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.2.2",
     "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

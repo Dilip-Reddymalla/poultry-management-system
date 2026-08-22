@@ -6,14 +6,16 @@ export interface AuthTokenPayload{
     sub: string;
 }
 
-const JWT_EXPIRES_IN = '1h';
+// Single source of truth for the session lifetime: the JWT expiry and the auth
+// cookie maxAge are both derived from it so they can never drift apart.
+export const AUTH_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export function generateAccessToken(userId:string):string{
     const payload: AuthTokenPayload = {
         sub: userId,
     };
     return jwt.sign(payload,env.JWT_SECRET,{
-        expiresIn:JWT_EXPIRES_IN,
+        expiresIn: AUTH_TOKEN_TTL_MS / 1000,
     });
 }
 

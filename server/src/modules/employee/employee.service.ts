@@ -305,6 +305,7 @@ const provisionEmployeeSelect = {
   status: true,
   designation: {
     select: {
+      id: true,
       name: true,
     },
   },
@@ -348,6 +349,15 @@ export async function provisionEmployeeUser(
     select: {
       id: true,
       name: true,
+      permissions: {
+        select: {
+          permission: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -382,15 +392,23 @@ export async function provisionEmployeeUser(
       return user;
     });
 
+    // Same SafeUser shape the auth endpoints return, so a freshly provisioned
+    // account can be rendered by the frontend without a second lookup.
     const safeUser: SafeUser = {
       id: createdUser.id,
       employeeId: employee.employeeId,
       email: createdUser.email,
       employee: {
         name: employee.name,
-        designation: employee.designation.name,
+        designation: {
+          id: employee.designation.id,
+          name: employee.designation.name,
+        },
       },
       roles: [role.name],
+      permissions: role.permissions
+        .map((rolePermission) => rolePermission.permission.name)
+        .sort(),
     };
 
     return safeUser;

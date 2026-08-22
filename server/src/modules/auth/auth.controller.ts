@@ -1,12 +1,14 @@
 import type { Request, Response } from "express";
-import { env } from "../../config/env.js";
 import type { AuthenticatedRequest } from "../../middlewares/auth.middleware.js";
+import {
+  AUTH_COOKIE_NAME,
+  authCookieOptions,
+  clearAuthCookieOptions,
+} from "../../utils/auth-cookie.js";
 
 import { getCurrentUser, login, requestOtp,verifyPhoneOtp, selectPhoneUser } from "./auth.service.js";
 import { loginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema } from "./auth.schema.js";
 
-
-const AUTH_COOKIE_NAME = "poultry_auth";
 
 export async function loginController(
   req: Request,
@@ -16,13 +18,7 @@ export async function loginController(
 
   const result = await login(input);
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 1000,
-    path: "/",
-  });
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
 
   res.status(200).json({
     success: true,
@@ -48,12 +44,7 @@ export async function logoutController(
   _req: Request,
   res: Response,
 ): Promise<void> {
-  res.clearCookie(AUTH_COOKIE_NAME, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-  });
+  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions);
 
   res.status(200).json({
     success: true,
@@ -100,13 +91,7 @@ export async function verifyOtpController(
     return;
   }
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 1000,
-    path: "/",
-  });
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
 
   res.status(200).json({
     success: true,
@@ -127,13 +112,7 @@ export async function selectPhoneUserController(
     input.userId,
   );
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 1000,
-    path: "/",
-  });
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
 
   res.status(200).json({
     success: true,

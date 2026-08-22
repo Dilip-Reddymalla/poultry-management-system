@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { AUTH_COOKIE_NAME } from "../utils/auth-cookie.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 
 export interface AuthenticatedRequest extends Request {
@@ -11,7 +12,7 @@ export function requireAuth(
   res: Response,
   next: NextFunction,
 ): void {
-  const token = req.cookies?.poultry_auth;
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
 
   if (!token || typeof token !== "string") {
     res.status(401).json({

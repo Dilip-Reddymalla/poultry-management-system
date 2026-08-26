@@ -18,6 +18,7 @@ interface NavItem {
   label: string;
   /** Permission that makes this section usable; undefined means always. */
   permission?: string;
+  systemAdminOnly?: boolean;
   icon: (props: { className?: string }) => React.ReactElement;
 }
 
@@ -55,6 +56,12 @@ const NAV_ITEMS: NavItem[] = [
     permission: "attendance:view",
     icon: CalendarIcon,
   },
+  {
+    to: "/audit-logs",
+    label: "Audit Logs",
+    systemAdminOnly: true,
+    icon: CalendarIcon,
+  },
   { to: "/profile", label: "My profile", icon: ProfileIcon },
 ];
 
@@ -66,9 +73,10 @@ export function Sidebar({
   const { user, can } = useAuth();
 
   // A section the user cannot read is not shown. The API enforces the same rule.
-  const items = NAV_ITEMS.filter(
-    (item) => item.permission === undefined || can(item.permission),
-  );
+  const items = NAV_ITEMS.filter((item) => {
+    if (item.systemAdminOnly && !user?.isSystemAdmin) return false;
+    return item.permission === undefined || can(item.permission);
+  });
 
   return (
     <div className="sidebar">

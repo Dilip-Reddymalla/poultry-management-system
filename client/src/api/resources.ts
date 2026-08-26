@@ -1,6 +1,7 @@
 import type {
   Attendance,
   AttendanceStatus,
+  AuditLog,
   Shift,
   Company,
   Employee,
@@ -320,4 +321,32 @@ export function exportAttendanceUrl(query: ExportAttendanceQuery): string {
     if (value) searchParams.append(key, String(value));
   }
   return `/api/attendance/export?${searchParams.toString()}`;
+}
+
+// -- Audit Logs --
+export interface AuditLogListQuery {
+  page?: number;
+  limit?: number;
+  entity?: string;
+  action?: "CREATE" | "UPDATE" | "DELETE" | "";
+  search?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface AuditLogListResponse {
+  logs: AuditLog[];
+  pagination: Pagination;
+}
+
+export function fetchAuditLogs(query: AuditLogListQuery, signal?: AbortSignal): Promise<AuditLogListResponse> {
+  return apiClient.get("/audit-logs", { query, signal });
+}
+
+export function exportAuditLogsUrl(query: Omit<AuditLogListQuery, "page" | "limit">): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) searchParams.append(key, String(value));
+  }
+  return `/api/audit-logs/export?${searchParams.toString()}`;
 }

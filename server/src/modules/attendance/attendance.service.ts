@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import { assertFarmWritable, farmScopedWhere, isFarmInScope } from "../auth/scope.js";
 
@@ -384,7 +385,16 @@ export async function createAttendance(
       select: attendanceSelect,
     });
 
-    return toSafeAttendance(record);
+    const safeRecord = toSafeAttendance(record);
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Attendance",
+      entityId: record.id,
+      summary: `Marked ${record.status} attendance for ${safeRecord.person.name} (${safeRecord.person.code}) on ${safeRecord.date} [${safeRecord.shift}]`,
+      changes: { status: record.status, shift: record.shift, date: input.date, latitude: input.latitude, longitude: input.longitude },
+    });
+    return safeRecord;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

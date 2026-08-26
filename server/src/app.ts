@@ -12,25 +12,21 @@ import shedRouter from "./modules/shed/shed.routes.js";
 import companyRouter from "./modules/company/company.routes.js";
 import workerRouter from "./modules/worker/worker.routes.js";
 import attendanceRouter from "./modules/attendance/attendance.routes.js";
+import auditRouter from "./modules/audit/audit.routes.js";
 import {
     designationRouter,
     roleRouter,
 } from "./modules/reference/reference.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
-
 const app = express();
 
-// The frontend is a separate origin and authenticates with the session cookie,
-// so credentials must be allowed and the origin named explicitly — the CORS spec
-// forbids a wildcard origin on credentialed requests.
 app.use(
     cors({
         origin: clientOrigin,
         credentials: true,
     }),
 );
-
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -50,6 +46,7 @@ app.use("/api/sheds", shedRouter);
 app.use("/api/employees", employeeRouter);
 app.use("/api/workers", workerRouter);
 app.use("/api/attendance", attendanceRouter);
+app.use("/api/audit-logs", auditRouter);
 app.use("/api/designations", designationRouter);
 app.use("/api/roles", roleRouter);
 

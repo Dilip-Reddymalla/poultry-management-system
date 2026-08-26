@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 import { normalizePhone } from "../../utils/phone.js";
 import type { AuthScope } from "../auth/scope.js";
 import {
@@ -236,7 +237,16 @@ export async function createEmployee(
       select: employeeSelect,
     });
 
-    return toSafeEmployee(employee);
+    const safeEmp = toSafeEmployee(employee);
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Employee",
+      entityId: employee.id,
+      summary: `Created employee ${employee.name} (${employee.employeeId})`,
+      changes: { employeeId: employee.employeeId, name: employee.name, farmId: employee.farm.id },
+    });
+    return safeEmp;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -294,7 +304,16 @@ export async function updateEmployee(
       select: employeeSelect,
     });
 
-    return toSafeEmployee(employee);
+    const safeEmp = toSafeEmployee(employee);
+    void recordAuditLog({
+      scope,
+      action: "UPDATE",
+      entity: "Employee",
+      entityId: employee.id,
+      summary: `Updated employee ${employee.name} (${employee.employeeId})`,
+      changes: input as Record<string, any>,
+    });
+    return safeEmp;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -344,7 +363,16 @@ async function setEmployeeStatus(
     select: employeeSelect,
   });
 
-  return toSafeEmployee(employee);
+  const safeEmp = toSafeEmployee(employee);
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Employee",
+    entityId: employee.id,
+    summary: `${status === "ACTIVE" ? "Reactivated" : "Deactivated"} employee ${employee.name} (${employee.employeeId})`,
+    changes: { oldStatus: existingEmployee.status, newStatus: status },
+  });
+  return safeEmp;
 }
 
 export async function deactivateEmployee(
@@ -509,6 +537,15 @@ export async function provisionEmployeeUser(
         .map((rolePermission) => rolePermission.permission.name)
         .sort(),
     };
+
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "User",
+      entityId: createdUser.id,
+      summary: `Provisioned user account for employee ${employee.name} (${employee.employeeId}) with email ${createdUser.email}`,
+      changes: { email: createdUser.email, roleId: role.id, roleName: role.name },
+    });
 
     return safeUser;
   } catch (error) {

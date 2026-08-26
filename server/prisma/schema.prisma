@@ -355,3 +355,32 @@ model OtpChallenge {
   @@index([phone, createdAt])
   @@map("otp_challenges")
 }
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  action      AuditAction
+  entity      String
+  entityId    String?
+  summary     String
+  changes     Json?
+  actorId     String?     @db.Uuid
+  actorName   String
+  actorEmail  String?
+  actorRoles  Json?
+  companyName String?
+  farmName    String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+  @@index([actorId])
+  @@map("audit_logs")
+}

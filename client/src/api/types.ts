@@ -211,3 +211,23 @@ export interface PhoneAccount {
   employeeId: string;
   otp?: string;
 }
+
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE";
+
+export interface AuditLog {
+  id: string;
+  action: AuditAction;
+  entity: string;
+  entityId: string | null;
+  summary: string;
+  changes: Record<string, any> | null;
+  actorId: string | null;
+  actorName: string;
+  actorEmail: string | null;
+  actorRoles: string[] | null;
+  companyName: string | null;
+  farmName: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}

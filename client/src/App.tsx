@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AttendanceDashboardPage } from "./features/attendance/AttendanceDashboardPage.js";
 import { AttendanceDetailPage } from "./features/attendance/AttendanceDetailPage.js";
 import { AttendancePage } from "./features/attendance/AttendancePage.js";
+import { AuditLogsPage } from "./features/audit/AuditLogsPage.js";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { OtpLoginPage } from "./features/auth/OtpLoginPage.js";
 import { SetPasswordPage } from "./features/auth/SetPasswordPage.js";
@@ -165,6 +166,7 @@ export default function App(): React.ReactElement {
               }
             />
 
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

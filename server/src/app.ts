@@ -36,15 +36,17 @@ app.use(
       if (
         allowedOrigins.includes(normalizedOrigin) ||
         env.NODE_ENV !== "production" ||
-        normalizedOrigin.endsWith(".vercel.app")
+        normalizedOrigin.endsWith(".vercel.app") ||
+        normalizedOrigin.includes("vercel.app")
       ) {
-        return callback(null, true);
+        return callback(null, origin);
       }
-      return callback(null, true);
+      return callback(null, origin);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    optionsSuccessStatus: 200,
   }),
 );
 

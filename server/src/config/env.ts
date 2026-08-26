@@ -23,7 +23,7 @@ const envSchema = z
     // Origin of the frontend app, used for CORS. Optional in development where
     // the Vite dev server origin is well known; mandatory in production, since
     // credentialed CORS cannot use a wildcard and must not be guessed.
-    CLIENT_ORIGIN: z.url("CLIENT_ORIGIN must be a valid URL").optional(),
+    CLIENT_ORIGIN: z.string().trim().optional(),
 
     // The single global System Admin. It is intentionally NOT a seeded user row:
     // it lives only in the environment so it can never be listed, edited or

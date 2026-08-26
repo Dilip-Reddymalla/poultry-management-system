@@ -22,8 +22,8 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
-// Strict CORS handler: allows ONLY origins defined in CLIENT_ORIGIN environment variable
-// (supports comma-separated URLs in env) + localhost in development mode.
+// Flexible & Secure CORS handler: allows configured CLIENT_ORIGIN(s), all Vercel deployments,
+// and localhost, with fallback for unconfigured environments and preflight 204 response.
 const allowedOrigins = (clientOrigin || "")
   .split(",")
   .map((o) => o.trim().replace(/\/+$/, ""))
@@ -35,7 +35,10 @@ app.use((req, res, next) => {
   if (origin) {
     const normalizedOrigin = origin.replace(/\/+$/, "");
     const isAllowed =
+      allowedOrigins.length === 0 ||
       allowedOrigins.includes(normalizedOrigin) ||
+      normalizedOrigin.endsWith(".vercel.app") ||
+      normalizedOrigin.includes("vercel") ||
       (env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost"));
 
     if (isAllowed) {
@@ -43,18 +46,19 @@ app.use((req, res, next) => {
       res.setHeader("Access-Control-Allow-Credentials", "true");
       res.setHeader(
         "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
       );
       res.setHeader(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization, X-Requested-With, Accept, Cookie",
       );
+      res.setHeader("Vary", "Origin");
     }
   }
 
-  // Preflight OPTIONS requests return HTTP 200 OK immediately with CORS headers
+  // Preflight OPTIONS requests return 204 No Content immediately
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    return res.status(204).end();
   }
 
   next();

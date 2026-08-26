@@ -22,44 +22,41 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
-// Configure CORS: allows requests from configured clientOrigin(s), Vercel preview/prod deployments,
-// and localhost, supporting credentials and all standard HTTP methods & headers.
+// Strict CORS handler: allows ONLY origins defined in CLIENT_ORIGIN environment variable
+// (supports comma-separated URLs in env) + localhost in development mode.
 const allowedOrigins = (clientOrigin || "")
   .split(",")
   .map((o) => o.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    const normalizedOrigin = origin.replace(/\/+$/, "");
-    if (
-      allowedOrigins.includes(normalizedOrigin) ||
-      env.NODE_ENV !== "production" ||
-      normalizedOrigin.endsWith(".vercel.app") ||
-      normalizedOrigin.includes("vercel.app")
-    ) {
-      return callback(null, origin);
-    }
-    return callback(null, origin);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  optionsSuccessStatus: 200,
-};
-
-// Enable CORS for standard requests and explicitly handle preflight OPTIONS
-app.use(cors(corsOptions));
-app.options(/(.*)/, cors(corsOptions));
-
-// Extra safety: ensure CORS & credentials headers are attached to every response (including 404/500 errors)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+    const normalizedOrigin = origin.replace(/\/+$/, "");
+    const isAllowed =
+      allowedOrigins.includes(normalizedOrigin) ||
+      (env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost"));
+
+    if (isAllowed) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Requested-With, Accept, Cookie",
+      );
+    }
   }
+
+  // Preflight OPTIONS requests return HTTP 200 OK immediately with CORS headers
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   next();
 });
 

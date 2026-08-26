@@ -197,7 +197,7 @@ export interface ExportAttendanceQuery {
   scope?: "employees" | "workers" | "all";
 }
 
-import { apiClient } from "./client.js";
+import { apiClient, API_BASE_URL } from "./client.js";
 import type { Designation, Role, ManageableShedStatus } from "./types.js";
 
 // -- Reference Data --
@@ -320,7 +320,7 @@ export function exportAttendanceUrl(query: ExportAttendanceQuery): string {
   for (const [key, value] of Object.entries(query)) {
     if (value) searchParams.append(key, String(value));
   }
-  return `/api/attendance/export?${searchParams.toString()}`;
+  return `${API_BASE_URL}/attendance/export?${searchParams.toString()}`;
 }
 
 // -- Audit Logs --
@@ -348,5 +348,5 @@ export function exportAuditLogsUrl(query: Omit<AuditLogListQuery, "page" | "limi
   for (const [key, value] of Object.entries(query)) {
     if (value) searchParams.append(key, String(value));
   }
-  return `/api/audit-logs/export?${searchParams.toString()}`;
+  return `${API_BASE_URL}/audit-logs/export?${searchParams.toString()}`;
 }

@@ -3,11 +3,12 @@
  * the session cookie, JSON handling and error shape are decided in one place.
  */
 
-const rawBaseUrl: unknown = import.meta.env.VITE_API_BASE_URL;
+const rawBaseUrl: unknown =
+  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
 export const API_BASE_URL = (
-  typeof rawBaseUrl === "string" && rawBaseUrl.length > 0
-    ? rawBaseUrl
+  typeof rawBaseUrl === "string" && rawBaseUrl.trim().length > 0
+    ? rawBaseUrl.trim()
     : "http://localhost:5000/api"
 ).replace(/\/+$/, "");
 

@@ -1,6 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-
+import cors from 'cors';
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";

@@ -41,7 +41,7 @@ export function verifyPhoneSelectionToken(
     typeof decoded.phone !== "string" ||
     !Array.isArray(decoded.userIds) ||
     !decoded.userIds.every(
-      (userId): userId is string => typeof userId === "string",
+      (userId: string): userId is string => typeof userId === "string",
     )
   ) {
     throw new Error("Invalid phone selection token");

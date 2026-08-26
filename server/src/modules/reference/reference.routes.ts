@@ -25,3 +25,18 @@ designationRouter.get(
 export const roleRouter = Router();
 
 roleRouter.get("/", requirePermission("user:create"), listRolesController);
+
+// Unified reference router for /api/reference/designations and /api/reference/roles
+export const referenceRouter = Router();
+
+referenceRouter.get(
+  "/designations",
+  requirePermission("employee:view"),
+  listDesignationsController,
+);
+
+referenceRouter.get(
+  "/roles",
+  requirePermission("user:create"),
+  listRolesController,
+);

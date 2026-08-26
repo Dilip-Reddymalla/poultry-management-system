@@ -21,5 +21,13 @@ const gracefulShutdown = async () => {
     }, 10000);
 };
 
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+});
+
 process.on("SIGTERM", gracefulShutdown);
 process.on("SIGINT", gracefulShutdown);

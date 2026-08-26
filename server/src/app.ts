@@ -16,6 +16,7 @@ import auditRouter from "./modules/audit/audit.routes.js";
 import {
     designationRouter,
     roleRouter,
+    referenceRouter,
 } from "./modules/reference/reference.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -88,6 +89,7 @@ app.use("/api/employees", employeeRouter);
 app.use("/api/workers", workerRouter);
 app.use("/api/attendance", attendanceRouter);
 app.use("/api/audit-logs", auditRouter);
+app.use("/api/reference", referenceRouter);
 app.use("/api/designations", designationRouter);
 app.use("/api/roles", roleRouter);
 

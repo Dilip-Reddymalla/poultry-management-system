@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 
 import { fileURLToPath } from "url";
 import path from "path";
+import fs from "fs";
 import { clientOrigin, env } from "./config/env.js";
 import authRouter from "./modules/auth/auth.routes.js";
 import employeeRouter from "./modules/employee/employee.routes.js";
@@ -28,27 +29,39 @@ const allowedOrigins = (clientOrigin || "")
   .map((o) => o.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const normalizedOrigin = origin.replace(/\/+$/, "");
-      if (
-        allowedOrigins.includes(normalizedOrigin) ||
-        env.NODE_ENV !== "production" ||
-        normalizedOrigin.endsWith(".vercel.app") ||
-        normalizedOrigin.includes("vercel.app")
-      ) {
-        return callback(null, origin);
-      }
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/+$/, "");
+    if (
+      allowedOrigins.includes(normalizedOrigin) ||
+      env.NODE_ENV !== "production" ||
+      normalizedOrigin.endsWith(".vercel.app") ||
+      normalizedOrigin.includes("vercel.app")
+    ) {
       return callback(null, origin);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    optionsSuccessStatus: 200,
-  }),
-);
+    }
+    return callback(null, origin);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  optionsSuccessStatus: 200,
+};
+
+// Enable CORS for standard requests and explicitly handle preflight OPTIONS
+app.use(cors(corsOptions));
+app.options(/(.*)/, cors(corsOptions));
+
+// Extra safety: ensure CORS & credentials headers are attached to every response (including 404/500 errors)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -77,13 +90,15 @@ if (env.NODE_ENV === "production") {
     const __dirname = path.dirname(__filename);
     const clientBuildPath = path.join(__dirname, "../../../client/dist");
     
-    app.use(express.static(clientBuildPath));
-    app.get("*", (req, res, next) => {
-        if (req.originalUrl.startsWith("/api/")) {
-            return next();
-        }
-        res.sendFile(path.join(clientBuildPath, "index.html"));
-    });
+    if (fs.existsSync(clientBuildPath)) {
+        app.use(express.static(clientBuildPath));
+        app.get(/(.*)/, (req, res, next) => {
+            if (req.originalUrl.startsWith("/api/")) {
+                return next();
+            }
+            res.sendFile(path.join(clientBuildPath, "index.html"));
+        });
+    }
 }
 
 // Unmatched routes would otherwise fall through to Express' HTML error page;

@@ -21,11 +21,31 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
+// Configure CORS: allows requests from configured clientOrigin(s), Vercel preview/prod deployments,
+// and localhost, supporting credentials and all standard HTTP methods & headers.
+const allowedOrigins = (clientOrigin || "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 app.use(
-    cors({
-        origin: clientOrigin,
-        credentials: true,
-    }),
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+      if (
+        allowedOrigins.includes(normalizedOrigin) ||
+        env.NODE_ENV !== "production" ||
+        normalizedOrigin.endsWith(".vercel.app")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  }),
 );
 
 app.use(express.json());

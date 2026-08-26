@@ -22,17 +22,18 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
-// Flexible & Secure CORS handler: allows configured CLIENT_ORIGIN(s), all Vercel deployments,
-// and localhost, with fallback for unconfigured environments and preflight 204 response.
+// CORS configuration: matches CLIENT_ORIGIN, all Vercel deployments (*.vercel.app),
+// and localhost in development mode, correctly reflecting origin for credentialed requests.
 const allowedOrigins = (clientOrigin || "")
   .split(",")
   .map((o) => o.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Non-browser requests (e.g. curl, postman)
+    if (!origin) return callback(null, true);
 
-  if (origin) {
     const normalizedOrigin = origin.replace(/\/+$/, "");
     const isAllowed =
       allowedOrigins.length === 0 ||
@@ -42,27 +43,18 @@ app.use((req, res, next) => {
       (env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost"));
 
     if (isAllowed) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
-      );
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-Requested-With, Accept, Cookie",
-      );
-      res.setHeader("Vary", "Origin");
+      return callback(null, origin);
     }
-  }
 
-  // Preflight OPTIONS requests return 204 No Content immediately
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Cookie"],
+  optionsSuccessStatus: 204,
+};
 
-  next();
-});
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));

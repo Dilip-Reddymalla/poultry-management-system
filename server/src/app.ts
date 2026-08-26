@@ -22,39 +22,54 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
 
-// CORS configuration: matches CLIENT_ORIGIN, all Vercel deployments (*.vercel.app),
-// and localhost in development mode, correctly reflecting origin for credentialed requests.
-const allowedOrigins = (clientOrigin || "")
-  .split(",")
-  .map((o) => o.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+// Permissive CORS middleware: allows ALL origins unconditionally to test connectivity
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // Non-browser requests (e.g. curl, postman)
-    if (!origin) return callback(null, true);
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With, Accept, Cookie",
+    );
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
 
-    const normalizedOrigin = origin.replace(/\/+$/, "");
-    const isAllowed =
-      allowedOrigins.length === 0 ||
-      allowedOrigins.includes(normalizedOrigin) ||
-      normalizedOrigin.endsWith(".vercel.app") ||
-      normalizedOrigin.includes("vercel") ||
-      (env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost"));
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
-    if (isAllowed) {
-      return callback(null, origin);
-    }
+  next();
+});
 
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Cookie"],
-  optionsSuccessStatus: 204,
-};
+// Request status & IP logger middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.socket.remoteAddress ||
+    req.ip ||
+    "unknown";
 
-app.use(cors(corsOptions));
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const statusCode = res.statusCode;
+    const method = req.method;
+    const url = req.originalUrl || req.url;
+
+    console.log(
+      `[${new Date().toISOString()}] ${method} ${url} -> Status: ${statusCode} (${duration}ms) | IP: ${clientIp}`
+    );
+  });
+
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));

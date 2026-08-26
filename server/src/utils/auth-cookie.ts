@@ -18,10 +18,12 @@ export const AUTH_COOKIE_NAME = "poultry_auth";
 // still blocking cookie-bearing requests from unrelated sites. Deploying the API
 // on a different registrable domain than the SPA would require sameSite=none —
 // a deliberate security decision, not a silent default.
+const isProduction = env.NODE_ENV === "production";
+
 const baseAuthCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   path: "/",
 };
 

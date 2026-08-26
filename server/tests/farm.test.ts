@@ -5,8 +5,8 @@ import {
   app,
   cleanupTestData,
   createActor,
+  createTestCompany,
   createTestFarm,
-  getSeededCompanyId,
   prisma,
   TEST_PREFIX,
   uniqueSuffix,
@@ -14,19 +14,25 @@ import {
 } from "./helpers.js";
 
 describe("farm write operations", () => {
-  let dgm: TestActor;
-  let assistantManager: TestActor;
+  // A Company Admin is COMPANY-scoped: it owns the full farm lifecycle, but only
+  // within its own company. A Supervisor (no farm:create/lifecycle) covers the
+  // permission denials, and a second company covers cross-company scope denial.
+  let companyAdmin: TestActor;
   let supervisor: TestActor;
   let companyId: string;
+  let homeFarmId: string;
 
   beforeAll(async () => {
     await cleanupTestData();
 
-    dgm = await createActor("DGM");
-    assistantManager = await createActor("Assistant Manager");
-    supervisor = await createActor("Supervisor");
+    const company = await createTestCompany();
+    const homeFarm = await createTestFarm("ACTIVE", company.id);
 
-    companyId = await getSeededCompanyId();
+    companyId = company.id;
+    homeFarmId = homeFarm.id;
+
+    companyAdmin = await createActor("Company Admin", { farmId: homeFarm.id });
+    supervisor = await createActor("Supervisor");
   });
 
   afterAll(async () => {
@@ -34,12 +40,12 @@ describe("farm write operations", () => {
     await prisma.$disconnect();
   });
 
-  it("creates a farm for the Assistant Manager role", async () => {
+  it("creates a farm inside the caller's own company", async () => {
     const code = `${TEST_PREFIX}${uniqueSuffix()}`;
 
     const response = await request(app)
       .post("/api/farms")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ companyId, code, name: "Created Farm" });
 
     expect(response.status).toBe(201);
@@ -61,10 +67,25 @@ describe("farm write operations", () => {
     expect(response.status).toBe(403);
   });
 
+  it("denies creating a farm in another company", async () => {
+    const otherCompany = await createTestCompany();
+
+    const response = await request(app)
+      .post("/api/farms")
+      .set("Cookie", companyAdmin.cookie)
+      .send({
+        companyId: otherCompany.id,
+        code: `${TEST_PREFIX}${uniqueSuffix()}`,
+        name: "Cross-company Farm",
+      });
+
+    expect(response.status).toBe(403);
+  });
+
   it("rejects a farm for an unknown company", async () => {
     const response = await request(app)
       .post("/api/farms")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         companyId: "00000000-0000-0000-0000-000000000000",
         code: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -77,7 +98,7 @@ describe("farm write operations", () => {
   it("rejects an invalid company ID", async () => {
     const response = await request(app)
       .post("/api/farms")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         companyId: "not-a-uuid",
         code: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -96,25 +117,25 @@ describe("farm write operations", () => {
 
     const first = await request(app)
       .post("/api/farms")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send(payload);
 
     expect(first.status).toBe(201);
 
     const second = await request(app)
       .post("/api/farms")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send(payload);
 
     expect(second.status).toBe(409);
   });
 
   it("updates a farm", async () => {
-    const farm = await createTestFarm();
+    const farm = await createTestFarm("ACTIVE", companyId);
 
     const response = await request(app)
       .patch(`/api/farms/${farm.id}`)
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ name: "Renamed Farm" });
 
     expect(response.status).toBe(200);
@@ -122,11 +143,11 @@ describe("farm write operations", () => {
   });
 
   it("does not change status or company through the generic update endpoint", async () => {
-    const farm = await createTestFarm();
+    const farm = await createTestFarm("ACTIVE", companyId);
 
     const response = await request(app)
       .patch(`/api/farms/${farm.id}`)
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         status: "INACTIVE",
         companyId: "00000000-0000-0000-0000-000000000000",
@@ -140,47 +161,65 @@ describe("farm write operations", () => {
   it("returns 404 when updating an unknown farm", async () => {
     const response = await request(app)
       .patch("/api/farms/00000000-0000-0000-0000-000000000000")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ name: "Missing Farm" });
 
     expect(response.status).toBe(404);
   });
 
-  it("runs the farm lifecycle for the DGM role", async () => {
-    const farm = await createTestFarm();
+  it("denies updating a farm in another company", async () => {
+    // Out-of-scope farms exist but are unreachable: an update into another company
+    // is a write denial (403), not a not-found.
+    const otherCompany = await createTestCompany();
+    const otherFarm = await createTestFarm("ACTIVE", otherCompany.id);
+
+    const response = await request(app)
+      .patch(`/api/farms/${otherFarm.id}`)
+      .set("Cookie", companyAdmin.cookie)
+      .send({ name: "Cross-company rename" });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("runs the farm lifecycle for the Company Admin role", async () => {
+    const farm = await createTestFarm("ACTIVE", companyId);
 
     const deactivated = await request(app)
       .patch(`/api/farms/${farm.id}/deactivate`)
-      .set("Cookie", dgm.cookie);
+      .set("Cookie", companyAdmin.cookie);
 
     expect(deactivated.status).toBe(200);
     expect(deactivated.body.farm.status).toBe("INACTIVE");
 
     const repeated = await request(app)
       .patch(`/api/farms/${farm.id}/deactivate`)
-      .set("Cookie", dgm.cookie);
+      .set("Cookie", companyAdmin.cookie);
 
     expect(repeated.status).toBe(409);
 
     const reactivated = await request(app)
       .patch(`/api/farms/${farm.id}/reactivate`)
-      .set("Cookie", dgm.cookie);
+      .set("Cookie", companyAdmin.cookie);
 
     expect(reactivated.status).toBe(200);
     expect(reactivated.body.farm.status).toBe("ACTIVE");
   });
 
-  it("denies the farm lifecycle to the Assistant Manager role", async () => {
-    const farm = await createTestFarm();
+  it("denies the farm lifecycle to the Supervisor role", async () => {
+    const farm = await createTestFarm("ACTIVE", companyId);
 
     const response = await request(app)
       .patch(`/api/farms/${farm.id}/deactivate`)
-      .set("Cookie", assistantManager.cookie);
+      .set("Cookie", supervisor.cookie);
 
     expect(response.status).toBe(403);
   });
 
   it("allows the Supervisor role to read farms", async () => {
+    // Referenced so the shared home farm is always used by at least one case and
+    // the fixture reads as intentional.
+    expect(homeFarmId).toBeDefined();
+
     const response = await request(app)
       .get("/api/farms")
       .set("Cookie", supervisor.cookie);

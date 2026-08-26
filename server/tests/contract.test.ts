@@ -105,14 +105,13 @@ describe("API contract", () => {
   });
 
   it("returns permissions and a designation object when provisioning a user", async () => {
-    const employee = await createTestEmployeeRecord();
+    const employee = await createTestEmployeeRecord(dgm.farmId);
 
     const response = await request(app)
       .post(`/api/employees/${employee.id}/user`)
       .set("Cookie", dgm.cookie)
       .send({
         email: `tmp-test-provision-${uniqueSuffix()}${TEST_EMAIL_DOMAIN}`,
-        password: "provision-password-1",
         roleId: supervisorRoleId,
       });
 

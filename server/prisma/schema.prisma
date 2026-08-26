@@ -33,8 +33,11 @@ model Farm {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
-  sheds   Shed[]
+  company     Company      @relation(fields: [companyId], references: [id])
+  sheds       Shed[]
+  employees   Employee[]
+  workers     Worker[]
+  attendances Attendance[]
 
   @@unique([companyId, code])
   @@map("farms")
@@ -54,7 +57,8 @@ model Shed {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  farm Farm @relation(fields: [farmId], references: [id])
+  farm        Farm         @relation(fields: [farmId], references: [id])
+  attendances Attendance[]
 
   @@unique([farmId, number])
   @@map("sheds")
@@ -85,22 +89,57 @@ model Employee {
 
   desiginationId String @db.Uuid()
 
+  // Every employee belongs to exactly one farm; employee data is farm-scoped and
+  // backend authorization filters on this column (never on the frontend).
+  farmId String @db.Uuid
+
   joiningDate DateTime?
   status      EmployeeStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  designation Designation @relation(fields: [desiginationId], references: [id])
+  designation Designation  @relation(fields: [desiginationId], references: [id])
+  farm        Farm         @relation(fields: [farmId], references: [id])
   user        User?
+  attendances Attendance[]
 
   // FK is not auto-indexed by Postgres; used as the designation join target and
   // as the designation filter in listEmployees.
   @@index([desiginationId])
+  // Farm-scoped listing and authorization filter on farmId.
+  @@index([farmId])
   // Phone login (findUsersByPhone) filters on phone; non-unique because several
   // employees may share a number (drives phone account selection).
   @@index([phone])
   @@map("employees")
+}
+
+// Worker
+//
+// A worker is a person recorded for operational purposes (attendance) who has no
+// login. Workers belong to a farm and never carry User/UserRole/credentials
+// unless separately provisioned as an employee later.
+
+model Worker {
+  id       String @id @default(uuid()) @db.Uuid
+  workerId String @unique
+
+  name  String
+  phone String?
+
+  farmId String @db.Uuid
+
+  status WorkerStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farm        Farm         @relation(fields: [farmId], references: [id])
+  attendances Attendance[]
+
+  @@index([farmId])
+  @@map("workers")
 }
 
 // User
@@ -109,16 +148,24 @@ model User {
   id         String @id @default(uuid()) @db.Uuid
   employeeId String @unique @db.Uuid
 
-  email        String @unique
-  passwordHash String
+  email        String  @unique
+  // Null until the account completes first-login password setup. While null,
+  // password login is impossible and the session is restricted (mustSetPassword).
+  passwordHash String?
+
+  // Backend-enforced first-login state: a freshly provisioned account signs in
+  // by OTP, then must set a password before it can use any business endpoint.
+  mustSetPassword Boolean @default(false)
 
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employee Employee   @relation(fields: [employeeId], references: [id])
-  roles    UserRole[]
+  employee            Employee     @relation(fields: [employeeId], references: [id])
+  roles               UserRole[]
+  recordedAttendances Attendance[] @relation("AttendanceRecordedBy")
+  approvedAttendances Attendance[] @relation("AttendanceApprovedBy")
 
   @@map("users")
 }
@@ -130,6 +177,12 @@ model Role {
 
   name        String  @unique
   description String?
+
+  // Scope breadth this role grants, applied relative to the user's own farm and
+  // company. WHAT the role can do lives in its permissions; WHERE it can do it is
+  // this level × the user's organizational position. System Admin is env-based
+  // and global, so no seeded role needs GLOBAL.
+  scopeLevel ScopeLevel @default(FARM)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,7 +235,67 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+// Attendance
+//
+// One record per person (employee OR worker) per shift per day on a farm.
+// Exactly one of employeeId / workerId is set; the paired unique indexes
+// prevent a duplicate record for the same person on the same date and shift.
+
+model Attendance {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Calendar day the record is for (no time component).
+  date DateTime @db.Date
+
+  farmId String @db.Uuid
+
+  employeeId String? @db.Uuid
+  workerId   String? @db.Uuid
+  shedId     String? @db.Uuid
+
+  shift  Shift            @default(MORNING_SHIFT)
+  status AttendanceStatus @default(PRESENT)
+
+  // GPS coordinates captured at the time of marking. Required — the UI blocks
+  // attendance creation when the browser denies location access.
+  latitude  Float
+  longitude Float
+
+  notes String?
+
+  // Correction/approval lifecycle. recordedBy is who entered it; approvedBy and
+  // approvedAt are set when a manager/DGM finalizes it. Both are nullable because
+  // the global System Admin has no User row to reference.
+  recordedById String?   @db.Uuid
+  approvedById String?   @db.Uuid
+  approvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farm       Farm      @relation(fields: [farmId], references: [id])
+  shed       Shed?     @relation(fields: [shedId], references: [id])
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  worker     Worker?   @relation(fields: [workerId], references: [id])
+  recordedBy User?     @relation("AttendanceRecordedBy", fields: [recordedById], references: [id])
+  approvedBy User?     @relation("AttendanceApprovedBy", fields: [approvedById], references: [id])
+
+  // One record per person per shift per day.
+  @@unique([date, shift, employeeId])
+  @@unique([date, shift, workerId])
+  @@index([farmId, date])
+  // Dashboard query: attendance marked by a specific user on a date.
+  @@index([recordedById, date])
+  @@map("attendances")
+}
+
 // ENUMS
+
+enum ScopeLevel {
+  FARM
+  COMPANY
+  GLOBAL
+}
 
 enum FarmStatus {
   ACTIVE
@@ -201,6 +314,24 @@ enum EmployeeStatus {
   INACTIVE
 }
 
+enum WorkerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+}
+
+enum Shift {
+  MORNING_SHIFT
+  AFTERNOON_SHIFT
+  NIGHT_SHIFT
+  OVERTIME
+}
 
 // Otp
 
@@ -217,7 +348,7 @@ model OtpChallenge {
 
   consumedAt DateTime?
 
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   // Active-challenge lookup filters phone and orders by createdAt desc; the
   // composite serves both equality and ordering, so a plain [phone] is redundant.

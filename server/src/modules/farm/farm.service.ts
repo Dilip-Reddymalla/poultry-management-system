@@ -2,6 +2,13 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
+import type { AuthScope } from "../auth/scope.js";
+import {
+  assertCompanyWritable,
+  assertFarmWritable,
+  farmModelScopedWhere,
+  isFarmInScope,
+} from "../auth/scope.js";
 
 import type {
   CreateFarmInput,
@@ -15,6 +22,7 @@ const farmSelect = {
   code: true,
   name: true,
   status: true,
+  companyId: true,
   company: {
     select: {
       id: true,
@@ -42,10 +50,32 @@ function toSafeFarm(farm: FarmRecord): SafeFarm {
   };
 }
 
+// Loads a farm and its owning company, reporting an out-of-scope farm as not
+// found so its existence is never leaked across companies.
+async function loadReadableFarm(
+  scope: AuthScope,
+  id: string,
+): Promise<FarmRecord> {
+  const farm = await prisma.farm.findUnique({
+    where: { id },
+    select: farmSelect,
+  });
+
+  if (!farm || !isFarmInScope(scope, { companyId: farm.companyId, id: farm.id })) {
+    throw new AppError("Farm not found", 404);
+  }
+
+  return farm;
+}
+
 export async function listFarms(
+  scope: AuthScope,
   query: ListFarmsQueryInput,
 ): Promise<SafeFarm[]> {
   const where: Prisma.FarmWhereInput = {
+    // Scope is enforced in the query: a company user only ever sees its company's
+    // farms, a farm user only its own farm.
+    ...farmModelScopedWhere(scope),
     ...(query.status !== undefined && { status: query.status }),
   };
 
@@ -60,19 +90,11 @@ export async function listFarms(
   return farms.map(toSafeFarm);
 }
 
-export async function getFarmById(id: string): Promise<SafeFarm> {
-  const farm = await prisma.farm.findUnique({
-    where: {
-      id,
-    },
-    select: farmSelect,
-  });
-
-  if (!farm) {
-    throw new AppError("Farm not found", 404);
-  }
-
-  return toSafeFarm(farm);
+export async function getFarmById(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeFarm> {
+  return toSafeFarm(await loadReadableFarm(scope, id));
 }
 
 function toWriteError(error: unknown): unknown {
@@ -101,8 +123,14 @@ async function assertCompanyExists(companyId: string): Promise<void> {
   }
 }
 
-export async function createFarm(input: CreateFarmInput): Promise<SafeFarm> {
+export async function createFarm(
+  scope: AuthScope,
+  input: CreateFarmInput,
+): Promise<SafeFarm> {
   await assertCompanyExists(input.companyId);
+
+  // A farm can only be created inside a company the caller may write to.
+  assertCompanyWritable(scope, input.companyId);
 
   try {
     const farm = await prisma.farm.create({
@@ -121,6 +149,7 @@ export async function createFarm(input: CreateFarmInput): Promise<SafeFarm> {
 }
 
 export async function updateFarm(
+  scope: AuthScope,
   id: string,
   input: UpdateFarmInput,
 ): Promise<SafeFarm> {
@@ -130,12 +159,18 @@ export async function updateFarm(
     },
     select: {
       id: true,
+      companyId: true,
     },
   });
 
   if (!existingFarm) {
     throw new AppError("Farm not found", 404);
   }
+
+  assertFarmWritable(scope, {
+    companyId: existingFarm.companyId,
+    id: existingFarm.id,
+  });
 
   try {
     const farm = await prisma.farm.update({
@@ -155,7 +190,11 @@ export async function updateFarm(
   }
 }
 
-export async function deactivateFarm(id: string): Promise<SafeFarm> {
+async function setFarmStatus(
+  scope: AuthScope,
+  id: string,
+  status: "ACTIVE" | "INACTIVE",
+): Promise<SafeFarm> {
   const existingFarm = await prisma.farm.findUnique({
     where: {
       id,
@@ -163,6 +202,7 @@ export async function deactivateFarm(id: string): Promise<SafeFarm> {
     select: {
       id: true,
       status: true,
+      companyId: true,
     },
   });
 
@@ -170,8 +210,18 @@ export async function deactivateFarm(id: string): Promise<SafeFarm> {
     throw new AppError("Farm not found", 404);
   }
 
-  if (existingFarm.status === "INACTIVE") {
-    throw new AppError("Farm is already inactive", 409);
+  assertFarmWritable(scope, {
+    companyId: existingFarm.companyId,
+    id: existingFarm.id,
+  });
+
+  if (existingFarm.status === status) {
+    throw new AppError(
+      status === "INACTIVE"
+        ? "Farm is already inactive"
+        : "Farm is already active",
+      409,
+    );
   }
 
   const farm = await prisma.farm.update({
@@ -179,7 +229,7 @@ export async function deactivateFarm(id: string): Promise<SafeFarm> {
       id,
     },
     data: {
-      status: "INACTIVE",
+      status,
     },
     select: farmSelect,
   });
@@ -187,34 +237,16 @@ export async function deactivateFarm(id: string): Promise<SafeFarm> {
   return toSafeFarm(farm);
 }
 
-export async function reactivateFarm(id: string): Promise<SafeFarm> {
-  const existingFarm = await prisma.farm.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
+export async function deactivateFarm(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeFarm> {
+  return setFarmStatus(scope, id, "INACTIVE");
+}
 
-  if (!existingFarm) {
-    throw new AppError("Farm not found", 404);
-  }
-
-  if (existingFarm.status === "ACTIVE") {
-    throw new AppError("Farm is already active", 409);
-  }
-
-  const farm = await prisma.farm.update({
-    where: {
-      id,
-    },
-    data: {
-      status: "ACTIVE",
-    },
-    select: farmSelect,
-  });
-
-  return toSafeFarm(farm);
+export async function reactivateFarm(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeFarm> {
+  return setFarmStatus(scope, id, "ACTIVE");
 }

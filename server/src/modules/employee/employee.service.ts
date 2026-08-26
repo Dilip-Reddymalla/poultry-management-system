@@ -2,8 +2,14 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
-import { hashPassword } from "../../utils/password.js";
 import { normalizePhone } from "../../utils/phone.js";
+import type { AuthScope } from "../auth/scope.js";
+import {
+  assertFarmWritable,
+  broadestScopeLevel,
+  farmScopedWhere,
+  isFarmInScope,
+} from "../auth/scope.js";
 
 import type {
   CreateEmployeeInput,
@@ -18,6 +24,8 @@ import type {
 import type { SafeUser } from "../auth/auth.types.js";
 
 // User is selected by id only, so no sensitive user field can ever be returned.
+// The farm is included so the frontend can show scope and the backend can
+// authorize by the employee's farm/company.
 const employeeSelect = {
   id: true,
   employeeId: true,
@@ -26,6 +34,14 @@ const employeeSelect = {
   photoUrl: true,
   joiningDate: true,
   status: true,
+  farm: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      companyId: true,
+    },
+  },
   designation: {
     select: {
       id: true,
@@ -52,6 +68,11 @@ function toSafeEmployee(employee: EmployeeRecord): SafeEmployee {
     photoUrl: employee.photoUrl,
     joiningDate: employee.joiningDate,
     status: employee.status,
+    farm: {
+      id: employee.farm.id,
+      code: employee.farm.code,
+      name: employee.farm.name,
+    },
     designation: {
       id: employee.designation.id,
       name: employee.designation.name,
@@ -86,10 +107,53 @@ async function assertDesignationExists(designationId: string): Promise<void> {
   }
 }
 
+// The target farm must exist and be writable by the caller (403 otherwise). Used
+// by create and by every employee mutation to keep employees farm-scoped.
+async function assertFarmWritableById(
+  scope: AuthScope,
+  farmId: string,
+): Promise<void> {
+  const farm = await prisma.farm.findUnique({
+    where: { id: farmId },
+    select: { id: true, companyId: true },
+  });
+
+  if (!farm) {
+    throw new AppError("Farm not found", 404);
+  }
+
+  assertFarmWritable(scope, farm);
+}
+
+// A read that must not leak existence: an out-of-scope employee is reported as
+// not found rather than forbidden.
+async function loadReadableEmployee(
+  scope: AuthScope,
+  id: string,
+): Promise<EmployeeRecord> {
+  const employee = await prisma.employee.findUnique({
+    where: { id },
+    select: employeeSelect,
+  });
+
+  if (
+    !employee ||
+    !isFarmInScope(scope, { companyId: employee.farm.companyId, id: employee.farm.id })
+  ) {
+    throw new AppError("Employee not found", 404);
+  }
+
+  return employee;
+}
+
 export async function listEmployees(
+  scope: AuthScope,
   query: ListEmployeesQueryInput,
 ): Promise<{ employees: SafeEmployee[]; pagination: EmployeePagination }> {
   const where: Prisma.EmployeeWhereInput = {
+    // Scope is enforced in the query, never in the frontend.
+    ...farmScopedWhere(scope),
+    ...(query.farmId !== undefined && { farmId: query.farmId }),
     ...(query.status !== undefined && { status: query.status }),
     ...(query.designationId !== undefined && {
       desiginationId: query.designationId,
@@ -126,24 +190,19 @@ export async function listEmployees(
   };
 }
 
-export async function getEmployeeById(id: string): Promise<SafeEmployee> {
-  const employee = await prisma.employee.findUnique({
-    where: {
-      id,
-    },
-    select: employeeSelect,
-  });
-
-  if (!employee) {
-    throw new AppError("Employee not found", 404);
-  }
-
-  return toSafeEmployee(employee);
+export async function getEmployeeById(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeEmployee> {
+  return toSafeEmployee(await loadReadableEmployee(scope, id));
 }
 
 export async function createEmployee(
+  scope: AuthScope,
   input: CreateEmployeeInput,
 ): Promise<SafeEmployee> {
+  await assertFarmWritableById(scope, input.farmId);
+
   await assertDesignationExists(input.designationId);
 
   const existingEmployee = await prisma.employee.findUnique({
@@ -165,6 +224,7 @@ export async function createEmployee(
         employeeId: input.employeeId,
         name: input.name,
         desiginationId: input.designationId,
+        farmId: input.farmId,
         ...(input.phone !== undefined && {
           phone: normalizePhone(input.phone),
         }),
@@ -183,6 +243,7 @@ export async function createEmployee(
 }
 
 export async function updateEmployee(
+  scope: AuthScope,
   id: string,
   input: UpdateEmployeeInput,
 ): Promise<SafeEmployee> {
@@ -192,12 +253,19 @@ export async function updateEmployee(
     },
     select: {
       id: true,
+      farm: { select: { id: true, companyId: true } },
     },
   });
 
   if (!existingEmployee) {
     throw new AppError("Employee not found", 404);
   }
+
+  // Mutating an out-of-scope employee is forbidden, not hidden.
+  assertFarmWritable(scope, {
+    companyId: existingEmployee.farm.companyId,
+    id: existingEmployee.farm.id,
+  });
 
   if (input.designationId !== undefined) {
     await assertDesignationExists(input.designationId);
@@ -232,7 +300,11 @@ export async function updateEmployee(
   }
 }
 
-export async function deactivateEmployee(id: string): Promise<SafeEmployee> {
+async function setEmployeeStatus(
+  scope: AuthScope,
+  id: string,
+  status: "ACTIVE" | "INACTIVE",
+): Promise<SafeEmployee> {
   const existingEmployee = await prisma.employee.findUnique({
     where: {
       id,
@@ -240,6 +312,7 @@ export async function deactivateEmployee(id: string): Promise<SafeEmployee> {
     select: {
       id: true,
       status: true,
+      farm: { select: { id: true, companyId: true } },
     },
   });
 
@@ -247,8 +320,18 @@ export async function deactivateEmployee(id: string): Promise<SafeEmployee> {
     throw new AppError("Employee not found", 404);
   }
 
-  if (existingEmployee.status === "INACTIVE") {
-    throw new AppError("Employee is already inactive", 409);
+  assertFarmWritable(scope, {
+    companyId: existingEmployee.farm.companyId,
+    id: existingEmployee.farm.id,
+  });
+
+  if (existingEmployee.status === status) {
+    throw new AppError(
+      status === "INACTIVE"
+        ? "Employee is already inactive"
+        : "Employee is already active",
+      409,
+    );
   }
 
   const employee = await prisma.employee.update({
@@ -256,7 +339,7 @@ export async function deactivateEmployee(id: string): Promise<SafeEmployee> {
       id,
     },
     data: {
-      status: "INACTIVE",
+      status,
     },
     select: employeeSelect,
   });
@@ -264,45 +347,35 @@ export async function deactivateEmployee(id: string): Promise<SafeEmployee> {
   return toSafeEmployee(employee);
 }
 
-export async function reactivateEmployee(id: string): Promise<SafeEmployee> {
-  const existingEmployee = await prisma.employee.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
+export async function deactivateEmployee(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeEmployee> {
+  return setEmployeeStatus(scope, id, "INACTIVE");
+}
 
-  if (!existingEmployee) {
-    throw new AppError("Employee not found", 404);
-  }
-
-  if (existingEmployee.status === "ACTIVE") {
-    throw new AppError("Employee is already active", 409);
-  }
-
-  const employee = await prisma.employee.update({
-    where: {
-      id,
-    },
-    data: {
-      status: "ACTIVE",
-    },
-    select: employeeSelect,
-  });
-
-  return toSafeEmployee(employee);
+export async function reactivateEmployee(
+  scope: AuthScope,
+  id: string,
+): Promise<SafeEmployee> {
+  return setEmployeeStatus(scope, id, "ACTIVE");
 }
 
 // Selects only non-sensitive fields needed to build a SafeUser response; the
-// passwordHash is never read back.
+// passwordHash is never read back (and is null for a freshly provisioned user).
 const provisionEmployeeSelect = {
   id: true,
   employeeId: true,
   name: true,
   status: true,
+  phone: true,
+  farmId: true,
+  farm: {
+    select: {
+      id: true,
+      companyId: true,
+    },
+  },
   designation: {
     select: {
       id: true,
@@ -316,7 +389,12 @@ const provisionEmployeeSelect = {
   },
 };
 
+// Passwordless provisioning: the account is created with no password and a
+// mustSetPassword flag. The employee signs in first by phone OTP, then sets a
+// password (see auth.setPassword). A phone number is required because it is the
+// first-login channel.
 export async function provisionEmployeeUser(
+  scope: AuthScope,
   id: string,
   input: ProvisionUserInput,
 ): Promise<SafeUser> {
@@ -331,6 +409,11 @@ export async function provisionEmployeeUser(
     throw new AppError("Employee not found", 404);
   }
 
+  assertFarmWritable(scope, {
+    companyId: employee.farm.companyId,
+    id: employee.farm.id,
+  });
+
   if (employee.status !== "ACTIVE") {
     throw new AppError(
       "Cannot provision a login for an inactive employee",
@@ -342,6 +425,13 @@ export async function provisionEmployeeUser(
     throw new AppError("Employee already has a user account", 409);
   }
 
+  if (!employee.phone) {
+    throw new AppError(
+      "Employee needs a phone number before a login can be provisioned",
+      409,
+    );
+  }
+
   const role = await prisma.role.findUnique({
     where: {
       id: input.roleId,
@@ -349,6 +439,7 @@ export async function provisionEmployeeUser(
     select: {
       id: true,
       name: true,
+      scopeLevel: true,
       permissions: {
         select: {
           permission: {
@@ -365,8 +456,6 @@ export async function provisionEmployeeUser(
     throw new AppError("Role not found", 404);
   }
 
-  const passwordHash = await hashPassword(input.password);
-
   try {
     // User and its role assignment must both succeed or neither should persist.
     const createdUser = await prisma.$transaction(async (tx) => {
@@ -374,7 +463,8 @@ export async function provisionEmployeeUser(
         data: {
           employeeId: employee.id,
           email: input.email,
-          passwordHash,
+          passwordHash: null,
+          mustSetPassword: true,
         },
         select: {
           id: true,
@@ -393,12 +483,21 @@ export async function provisionEmployeeUser(
     });
 
     // Same SafeUser shape the auth endpoints return, so a freshly provisioned
-    // account can be rendered by the frontend without a second lookup.
+    // account can be rendered by the frontend without a second lookup. It is
+    // flagged mustSetPassword: the login is not usable until setup completes.
     const safeUser: SafeUser = {
       id: createdUser.id,
       employeeId: employee.employeeId,
       email: createdUser.email,
+      isSystemAdmin: false,
+      mustSetPassword: true,
+      scope: {
+        level: broadestScopeLevel([role.scopeLevel]),
+        companyId: employee.farm.companyId,
+        farmId: employee.farmId,
+      },
       employee: {
+        id: employee.id,
         name: employee.name,
         designation: {
           id: employee.designation.id,

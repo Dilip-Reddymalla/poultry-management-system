@@ -1,0 +1,1 @@
+import { Prisma } from '@prisma/client'; import { attendanceSelect } from './src/modules/attendance/attendance.service'; type AttendanceRecord = Prisma.AttendanceGetPayload<{ select: typeof attendanceSelect }>; type ShedType = AttendanceRecord['shed']; const a: ShedType = {} as any; a.number;

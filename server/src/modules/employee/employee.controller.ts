@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 
+import { getScope } from "../../middlewares/authorize.middleware.js";
+
 import {
   createEmployee,
   deactivateEmployee,
@@ -23,7 +25,7 @@ export async function listEmployeesController(
 ): Promise<void> {
   const query = listEmployeesQuerySchema.parse(req.query);
 
-  const { employees, pagination } = await listEmployees(query);
+  const { employees, pagination } = await listEmployees(getScope(req), query);
 
   res.status(200).json({
     success: true,
@@ -38,7 +40,7 @@ export async function getEmployeeController(
 ): Promise<void> {
   const params = employeeIdParamSchema.parse(req.params);
 
-  const employee = await getEmployeeById(params.id);
+  const employee = await getEmployeeById(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -52,7 +54,7 @@ export async function createEmployeeController(
 ): Promise<void> {
   const input = createEmployeeSchema.parse(req.body);
 
-  const employee = await createEmployee(input);
+  const employee = await createEmployee(getScope(req), input);
 
   res.status(201).json({
     success: true,
@@ -69,7 +71,7 @@ export async function updateEmployeeController(
 
   const input = updateEmployeeSchema.parse(req.body);
 
-  const employee = await updateEmployee(params.id, input);
+  const employee = await updateEmployee(getScope(req), params.id, input);
 
   res.status(200).json({
     success: true,
@@ -84,7 +86,7 @@ export async function deactivateEmployeeController(
 ): Promise<void> {
   const params = employeeIdParamSchema.parse(req.params);
 
-  const employee = await deactivateEmployee(params.id);
+  const employee = await deactivateEmployee(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -99,7 +101,7 @@ export async function reactivateEmployeeController(
 ): Promise<void> {
   const params = employeeIdParamSchema.parse(req.params);
 
-  const employee = await reactivateEmployee(params.id);
+  const employee = await reactivateEmployee(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -116,7 +118,7 @@ export async function provisionEmployeeUserController(
 
   const input = provisionUserSchema.parse(req.body);
 
-  const user = await provisionEmployeeUser(params.id, input);
+  const user = await provisionEmployeeUser(getScope(req), params.id, input);
 
   res.status(201).json({
     success: true,

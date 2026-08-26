@@ -5,6 +5,7 @@ import {
   app,
   cleanupTestData,
   createActor,
+  createTestCompany,
   createTestFarm,
   prisma,
   TEST_PREFIX,
@@ -13,21 +14,28 @@ import {
 } from "./helpers.js";
 
 describe("shed write operations", () => {
-  let assistantManager: TestActor;
+  // Creates run as a COMPANY-scoped Company Admin so the inactive-farm case is a
+  // real 409 (writable, but the farm is not ACTIVE) rather than a scope 403.
+  // Status changes run as a FARM-scoped Incharge that shares the active farm, and
+  // a Supervisor (shed:view only) covers the permission denials and reads.
+  let companyAdmin: TestActor;
   let incharge: TestActor;
   let supervisor: TestActor;
+  let companyId: string;
   let farmId: string;
 
   beforeAll(async () => {
     await cleanupTestData();
 
-    assistantManager = await createActor("Assistant Manager");
-    incharge = await createActor("Incharge");
-    supervisor = await createActor("Supervisor");
+    const company = await createTestCompany();
+    const farm = await createTestFarm("ACTIVE", company.id);
 
-    const farm = await createTestFarm();
-
+    companyId = company.id;
     farmId = farm.id;
+
+    companyAdmin = await createActor("Company Admin", { farmId });
+    incharge = await createActor("Incharge", { farmId });
+    supervisor = await createActor("Supervisor", { farmId });
   });
 
   afterAll(async () => {
@@ -40,7 +48,7 @@ describe("shed write operations", () => {
 
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ farmId, number, capacity: 5000 });
 
     if (response.status !== 201) {
@@ -55,7 +63,7 @@ describe("shed write operations", () => {
 
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ farmId, number, capacity: 4200 });
 
     expect(response.status).toBe(201);
@@ -81,7 +89,7 @@ describe("shed write operations", () => {
   it("rejects a shed for an unknown farm", async () => {
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         farmId: "00000000-0000-0000-0000-000000000000",
         number: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -94,7 +102,7 @@ describe("shed write operations", () => {
   it("rejects an invalid farm ID", async () => {
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         farmId: "not-a-uuid",
         number: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -104,12 +112,12 @@ describe("shed write operations", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects a shed under an inactive farm", async () => {
-    const inactiveFarm = await createTestFarm("INACTIVE");
+  it("rejects a shed under an inactive farm in the caller's company", async () => {
+    const inactiveFarm = await createTestFarm("INACTIVE", companyId);
 
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         farmId: inactiveFarm.id,
         number: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -122,7 +130,7 @@ describe("shed write operations", () => {
   it("rejects a negative capacity", async () => {
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({
         farmId,
         number: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -137,7 +145,7 @@ describe("shed write operations", () => {
 
     const response = await request(app)
       .post("/api/sheds")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ farmId, number: shed.number, capacity: 1000 });
 
     expect(response.status).toBe(409);
@@ -148,7 +156,7 @@ describe("shed write operations", () => {
 
     const response = await request(app)
       .patch(`/api/sheds/${shed.id}`)
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ capacity: 7500 });
 
     expect(response.status).toBe(200);
@@ -157,11 +165,11 @@ describe("shed write operations", () => {
 
   it("never moves a shed to another farm through the update endpoint", async () => {
     const shed = await createShed();
-    const otherFarm = await createTestFarm();
+    const otherFarm = await createTestFarm("ACTIVE", companyId);
 
     const response = await request(app)
       .patch(`/api/sheds/${shed.id}`)
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ farmId: otherFarm.id, status: "INACTIVE", capacity: 6000 });
 
     expect(response.status).toBe(200);
@@ -172,7 +180,7 @@ describe("shed write operations", () => {
   it("returns 404 when updating an unknown shed", async () => {
     const response = await request(app)
       .patch("/api/sheds/00000000-0000-0000-0000-000000000000")
-      .set("Cookie", assistantManager.cookie)
+      .set("Cookie", companyAdmin.cookie)
       .send({ capacity: 100 });
 
     expect(response.status).toBe(404);

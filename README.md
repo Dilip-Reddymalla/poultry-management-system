@@ -25,16 +25,23 @@ Express + Prisma + PostgreSQL backend.
   deactivate/reactivate lifecycle endpoints.
 - **Shed management** — list/get sheds plus create, update, and controlled status
   transitions (`AVAILABLE` / `MAINTENANCE` / `INACTIVE`).
+- **Reference data** — read-only `GET /api/designations`, `GET /api/roles` and
+  `GET /api/companies` lists so forms never hardcode options.
+- **Frontend application** — cookie-session bootstrap through `GET /api/auth/me`,
+  protected routing, permission-aware navigation, and working dashboard,
+  employee, farm, shed and profile screens (see [`client/README.md`](client/README.md)).
+- **Installable PWA** — the frontend is a production-quality Progressive Web App:
+  installable and launchable standalone, with a manifest, branded icons and a
+  service worker that precaches only static app assets (never authenticated API
+  data) and shows a clear offline notice when the network drops
+  (see [`client/README.md`](client/README.md#progressive-web-app)).
+- **Attendance & Shift Management** — shift-wise attendance recording (`MORNING_SHIFT`, `AFTERNOON_SHIFT`, `NIGHT_SHIFT`, `OVERTIME`), mandatory GPS geolocation recording, deduplication of already marked individuals, shift-wise Attendance Dashboard grouped by shed, user profile attendance history with filters, and Accountant Excel spreadsheet exports.
 - **OTP retention cleanup** — a reusable service plus `npm run otp:cleanup`
   script that prunes consumed/expired OTP challenges without touching active ones.
 - **Automated tests** — Vitest + Supertest integration suite covering auth/RBAC,
-  employee, farm, and shed behaviour against the real database.
+  reference data, employee, farm, shed, and attendance behaviour against the real database.
 
-Planned but not yet implemented: attendance, batch, production, approval, and
-report features, and full user CRUD. Some of their permissions are already seeded
-so roles are ready, but no endpoints exist — the attendance, batch, and
-production modules are blocked because `server/prisma/schema.prisma` has no
-`Attendance`, `Batch`, or `Production` model yet.
+Planned for future expansion: batch management, flock production tracking, and automated report generation. Some of their permissions are already seeded so roles are ready.
 
 ## Getting started
 
@@ -59,7 +66,12 @@ production modules are blocked because `server/prisma/schema.prisma` has no
    npx prisma migrate dev
    npm run seed
    ```
-5. **Run the dev servers** (in separate terminals):
+5. **Configure the client** (optional — the default API base URL already points
+   at the dev server):
+   ```bash
+   cd client && cp .env.example .env
+   ```
+6. **Run the dev servers** (in separate terminals):
    ```bash
    cd server && npm run dev
    cd client && npm run dev
@@ -92,6 +104,17 @@ npm run build        # compile to dist/
 npm run start        # run the compiled server
 ```
 
+## Frontend commands
+
+Run from `client/`:
+
+```bash
+npm run typecheck    # tsc -b
+npm run lint         # ESLint
+npm run build        # type-check then build to dist/
+npm run preview      # serve the built bundle
+```
+
 ## Documentation
 
 - Backend setup, environment variables, API reference, authentication,
@@ -107,4 +130,7 @@ npm run start        # run the compiled server
 - Keep environment values in local `.env` files; never commit real secrets. The
   `.env.example` files contain placeholders only.
 - The root `.env.example` supplies the Docker Compose Postgres credentials and a
-  matching `DATABASE_URL`; the server reads its own `server/.env`.
+  matching `DATABASE_URL`; the server reads its own `server/.env`, and the client
+  reads `client/.env` (only `VITE_API_BASE_URL`, which is not a secret).
+- The client never stores a token. The session is an httpOnly cookie issued by
+  the API, so every frontend request is sent with `credentials: "include"`.

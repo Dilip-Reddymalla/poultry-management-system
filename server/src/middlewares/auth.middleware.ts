@@ -2,9 +2,13 @@ import type { NextFunction, Request, Response } from "express";
 
 import { AUTH_COOKIE_NAME } from "../utils/auth-cookie.js";
 import { verifyAccessToken } from "../utils/jwt.js";
+import type { AuthScope } from "../modules/auth/scope.js";
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
+  // Populated by the authorize middleware once resolved, so a controller behind
+  // requirePermission can read the caller's scope without a second lookup.
+  scope?: AuthScope;
 }
 
 export function requireAuth(

@@ -1,18 +1,25 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
-import { verifyPassword } from "../../utils/password.js";
+import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { generateAccessToken } from "../../utils/jwt.js";
 import { AppError } from "../../utils/app-error.js";
 
 import type { LoginInput } from "./auth.schema.js";
-import type { SafeUser, PhoneLoginUser, UserAuthorization } from "./auth.types.js";
+import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
+import { broadestScopeLevel } from "./scope.js";
+import {
+  SYSTEM_ADMIN_USER_ID,
+  buildSystemAdminSafeUser,
+  isSystemAdminEmail,
+  isSystemAdminId,
+  verifySystemAdminPassword,
+} from "./system-admin.js";
 import {
   generatePhoneSelectionToken,
   verifyPhoneSelectionToken,
 } from "../../utils/phone-selection-token.js";
 import { otpProvider } from "./otp/otp-provider.instance.js";
-import { sendSms } from "../../utils/httpsms.js";
 import {
   generateOtp,
   hashOtp,
@@ -43,11 +50,19 @@ const sessionUserSelect = {
   id: true,
   email: true,
   isActive: true,
+  mustSetPassword: true,
   employee: {
     select: {
+      id: true,
       employeeId: true,
       name: true,
       status: true,
+      farmId: true,
+      farm: {
+        select: {
+          companyId: true,
+        },
+      },
       designation: {
         select: {
           id: true,
@@ -61,6 +76,7 @@ const sessionUserSelect = {
       role: {
         select: {
           name: true,
+          scopeLevel: true,
           permissions: {
             select: {
               permission: {
@@ -82,6 +98,7 @@ type SessionUserRecord = Prisma.UserGetPayload<{
 
 // Roles are exposed as labels; permissions are the flattened, de-duplicated set
 // the frontend uses to gate UI. Both come from the database, never from the JWT.
+// scope mirrors the caller's organizational reach (see scope.ts) for the UI.
 function toSafeUser(user: SessionUserRecord): SafeUser {
   const permissions = new Set<string>();
 
@@ -91,11 +108,23 @@ function toSafeUser(user: SessionUserRecord): SafeUser {
     }
   }
 
+  const level = broadestScopeLevel(
+    user.roles.map((userRole) => userRole.role.scopeLevel),
+  );
+
   return {
     id: user.id,
     employeeId: user.employee.employeeId,
     email: user.email,
+    isSystemAdmin: false,
+    mustSetPassword: user.mustSetPassword,
+    scope: {
+      level,
+      companyId: user.employee.farm.companyId,
+      farmId: user.employee.farmId,
+    },
     employee: {
+      id: user.employee.id,
       name: user.employee.name,
       designation: {
         id: user.employee.designation.id,
@@ -110,6 +139,19 @@ function toSafeUser(user: SessionUserRecord): SafeUser {
 export async function login(
   input: LoginInput,
 ): Promise<{ token: string; user: SafeUser }> {
+  // The System Admin authenticates against the environment, never the database.
+  // It is checked first and by email so a company user can never shadow it.
+  if (isSystemAdminEmail(input.email)) {
+    if (!verifySystemAdminPassword(input.password)) {
+      throw new AppError("Invalid email or password", 401);
+    }
+
+    return {
+      token: generateAccessToken(SYSTEM_ADMIN_USER_ID),
+      user: await buildSystemAdminSafeUser(),
+    };
+  }
+
   const user = await prisma.user.findUnique({
     where: {
       email: input.email,
@@ -130,6 +172,13 @@ export async function login(
     throw new AppError("Invalid email or password", 401);
   }
 
+  // A provisioned account has no password until first-login setup completes, so
+  // password login is impossible until then. This also prevents bypassing the
+  // set-password step by calling /login directly.
+  if (user.passwordHash === null) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
   const passwordValid = await verifyPassword(input.password, user.passwordHash);
 
   if (!passwordValid) {
@@ -145,6 +194,10 @@ export async function login(
 }
 
 export async function getCurrentUser(userId: string): Promise<SafeUser> {
+  if (isSystemAdminId(userId)) {
+    return buildSystemAdminSafeUser();
+  }
+
   const user = await prisma.user.findUnique({
     where: {
       id: userId,
@@ -159,38 +212,25 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
   return toSafeUser(user);
 }
 
-export async function getUserAuthorization(
+// First-login password setup. The account signed in by OTP (so requireAuth
+// passed) and is in the mustSetPassword state; this is the only way to leave it.
+// The token is rotated so the new session is unrestricted immediately.
+export async function setPassword(
   userId: string,
-): Promise<UserAuthorization> {
+  password: string,
+): Promise<{ token: string; user: SafeUser }> {
+  if (isSystemAdminId(userId)) {
+    // The System Admin password lives in the environment and is never set here.
+    throw new AppError("Password setup is not available for this account", 403);
+  }
+
   const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
+    where: { id: userId },
     select: {
+      id: true,
       isActive: true,
-      employee: {
-        select: {
-          status: true,
-        },
-      },
-      roles: {
-        select: {
-          role: {
-            select: {
-              name: true,
-              permissions: {
-                select: {
-                  permission: {
-                    select: {
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      mustSetPassword: true,
+      employee: { select: { status: true } },
     },
   });
 
@@ -198,17 +238,25 @@ export async function getUserAuthorization(
     throw new AppError("Authentication required", 401);
   }
 
-  const permissions = new Set<string>();
-
-  for (const userRole of user.roles) {
-    for (const rolePermission of userRole.role.permissions) {
-      permissions.add(rolePermission.permission.name);
-    }
+  if (!user.mustSetPassword) {
+    // Password is already set; this endpoint only serves the first-login state.
+    throw new AppError("Password has already been set", 409);
   }
 
+  const passwordHash = await hashPassword(password);
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      mustSetPassword: false,
+    },
+    select: sessionUserSelect,
+  });
+
   return {
-    roles: user.roles.map((userRole) => userRole.role.name),
-    permissions: Array.from(permissions),
+    token: generateAccessToken(updated.id),
+    user: toSafeUser(updated),
   };
 }
 

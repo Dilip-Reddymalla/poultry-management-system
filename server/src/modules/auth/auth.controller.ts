@@ -6,8 +6,8 @@ import {
   clearAuthCookieOptions,
 } from "../../utils/auth-cookie.js";
 
-import { getCurrentUser, login, requestOtp,verifyPhoneOtp, selectPhoneUser } from "./auth.service.js";
-import { loginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema } from "./auth.schema.js";
+import { getCurrentUser, login, requestOtp,verifyPhoneOtp, selectPhoneUser, setPassword } from "./auth.service.js";
+import { loginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema } from "./auth.schema.js";
 
 
 export async function loginController(
@@ -117,6 +117,27 @@ export async function selectPhoneUserController(
   res.status(200).json({
     success: true,
     message: "Login successful",
+    user: result.user,
+  });
+}
+
+export async function setPasswordController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+
+  const input = setPasswordSchema.parse(req.body);
+
+  const result = await setPassword(authReq.userId, input.password);
+
+  // Rotate the session so the account leaves the restricted first-login state
+  // without needing to sign in again.
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+
+  res.status(200).json({
+    success: true,
+    message: "Password set successfully",
     user: result.user,
   });
 }

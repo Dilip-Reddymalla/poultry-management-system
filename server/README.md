@@ -1,8 +1,8 @@
 # Server API
 
 Backend API for the Poultry Management System. It exposes a JSON HTTP API for
-authentication, authorization, employee management, user provisioning, and farm
-and shed management (reads plus writes and lifecycle transitions).
+authentication, authorization, employee management, user provisioning, farm and
+shed management, and shift-wise attendance tracking with Excel exports.
 
 ## Tech stack
 
@@ -26,7 +26,7 @@ server/
 ├─ prisma.config.ts        # Prisma 7 config: datasource URL + seed command
 ├─ vitest.config.ts        # test runner config
 ├─ tsconfig.test.json      # type-checks src + tests together
-├─ tests/                  # Supertest integration tests (auth/RBAC, employee, farm, shed, API contract)
+├─ tests/                  # Supertest integration tests (auth/RBAC, reference, employee, farm, shed, API contract)
 └─ src/
    ├─ app.ts               # Express app, middleware, route mounting
    ├─ server.ts            # HTTP bootstrap
@@ -35,9 +35,11 @@ server/
    ├─ scripts/             # operational one-off scripts (OTP retention cleanup)
    ├─ utils/               # jwt, auth-cookie, password, otp, phone, httpsms, app-error
    └─ modules/
+      ├─ attendance/       # attendance CRUD + shifts + GPS + deduplication + Excel export
       ├─ auth/             # login, /me, logout, OTP phone login, OTP cleanup service
       ├─ employee/         # employee CRUD + lifecycle + user provisioning
       ├─ farm/             # farm reads + writes + lifecycle
+      ├─ reference/        # read-only designation, role and company lookups
       └─ shed/             # shed reads + writes + status transitions
 ```
 
@@ -315,6 +317,28 @@ requires the session cookie. No auth route requires a permission.
 
 The `user` object is identical in all four cases — see
 [Frontend Integration Contract](#frontend-integration-contract) for the shape.
+
+### Reference data (`/api/designations`, `/api/roles`, `/api/companies`)
+
+Read-only lookup lists for the forms that write the real records. Each requires
+authentication plus the permission of the screen that needs it — no
+reference-only permissions were added.
+
+| Method | Path | Permission | Request | Success | Notable errors |
+|--------|------|------------|---------|---------|----------------|
+| GET | `/api/designations` | `employee:view` | — | `200 { success, designations: [{ id, name }] }` (name asc) | `401`; `403` |
+| GET | `/api/roles` | `user:create` | — | `200 { success, roles: [{ id, name, description }] }` (name asc) | `401`; `403` |
+| GET | `/api/companies` | `farm:view` | — | `200 { success, companies: [{ id, name, code }] }` (code asc) | `401`; `403` |
+
+- Read-only by design: these tables are seeded operational reference data, so no
+  create/update/delete endpoints exist.
+- The lists are small and fixed, so they are unpaginated per the
+  [list response standard](#list-response-standard).
+- Only the fields a form needs are selected; `permissions` join rows behind a role
+  and every timestamp/internal column stay out of the response.
+- Reused permissions match where the data is consumed: designations feed the
+  employee form and list filter, roles only the "create login" form
+  (`user:create`), companies only the farm form (`farm:view`).
 
 ### Employees (`/api/employees`)
 
@@ -597,6 +621,36 @@ against them.
 }
 ```
 
+Reference data — `GET /designations`, `GET /roles`, `GET /companies`:
+
+```json
+{
+  "success": true,
+  "designations": [{ "id": "0a1f...", "name": "Supervisor" }]
+}
+```
+
+```json
+{
+  "success": true,
+  "roles": [
+    { "id": "7c42...", "name": "Accountant", "description": "Financial records" }
+  ]
+}
+```
+
+```json
+{
+  "success": true,
+  "companies": [
+    { "id": "225c8591-...", "name": "Poultry Management Company", "code": "PMS" }
+  ]
+}
+```
+
+Populate every designation, role and company selector from these endpoints.
+Hardcoded option lists drift from the seed and break as soon as a row is added.
+
 Relations are always returned as small nested objects with the fields a UI
 actually renders. Prisma internals, join rows and the misspelled database column
 `desiginationId` are never exposed — the API only ever uses `designation` /
@@ -714,13 +768,15 @@ Current coverage:
 | [`tests/farm.test.ts`](tests/farm.test.ts) | Assistant Manager create/update, Supervisor create denied, unknown company → `404`, duplicate code → `409`, `status`/`companyId` ignored by generic update, DGM-only deactivate/reactivate incl. repeat → `409` |
 | [`tests/shed.test.ts`](tests/shed.test.ts) | create under an active farm, unknown farm → `404`, inactive farm → `409`, duplicate number → `409`, negative capacity → `400`, farm never changed by update, status transition + repeat → `409`, `OCCUPIED` rejected (`400` as input, `409` as current state), Supervisor status change denied |
 | [`tests/contract.test.ts`](tests/contract.test.ts) | health envelope, unknown route → JSON `404`, validation error exposes both `errors` and `formErrors`, `/auth/me` returns resolved `permissions` + `designation` object with no leaked secrets or `desigination*` field names, login and `/auth/me` return an identical user, provisioning returns the same user shape |
+| [`tests/reference.test.ts`](tests/reference.test.ts) | all three lists → `401` without a cookie, designations/roles/companies return only their safe fields sorted, no `pagination` object, Supervisor denied designations (`employee:view`) and roles (`user:create`) but allowed companies (`farm:view`) |
 
 ## Implemented vs planned
 
 **Implemented:** email/password login, phone+OTP login with multi-account
 selection, cookie sessions with live revocation, RBAC, employee CRUD + lifecycle,
 user provisioning, farm reads/writes/lifecycle, shed reads/writes/status
-transitions, OTP retention cleanup, idempotent seed, automated integration tests.
+transitions, read-only designation/role/company reference lists, OTP retention
+cleanup, idempotent seed, automated integration tests.
 
 **Planned (not yet implemented):** attendance, batch, production, approval, and
 report features. Some of their permissions are already seeded

@@ -12,6 +12,8 @@ const photoUrlSchema = z.url("Invalid photo URL");
 
 const designationIdSchema = z.uuid("Invalid designation ID");
 
+const farmIdSchema = z.uuid("Invalid farm ID");
+
 const statusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
 export const employeeIdParamSchema = z.object({
@@ -28,6 +30,9 @@ export const listEmployeesQuerySchema = z.object({
     .default(20),
   status: statusSchema.optional(),
   designationId: designationIdSchema.optional(),
+  // Narrows within the caller's scope; a farmId outside scope simply yields no
+  // rows (the scope filter still applies) rather than leaking another farm.
+  farmId: farmIdSchema.optional(),
   search: z.string().trim().min(1, "Search must not be empty").optional(),
 });
 
@@ -35,6 +40,9 @@ export const createEmployeeSchema = z.object({
   employeeId: employeeIdSchema,
   name: nameSchema,
   designationId: designationIdSchema,
+  // Every employee belongs to exactly one farm; the caller must be allowed to
+  // write to it (enforced in the service, never trusted from here alone).
+  farmId: farmIdSchema,
   phone: phoneSchema.optional(),
   photoUrl: photoUrlSchema.optional(),
   joiningDate: z.coerce.date().optional(),
@@ -53,10 +61,11 @@ export const updateEmployeeSchema = z
   .partial();
 
 // A single role is assigned at provisioning time, matching how the seed
-// provisions the DGM user. Additional roles can be layered on later.
+// provisions the DGM user. Additional roles can be layered on later. No password
+// is accepted: provisioning is passwordless (phone-OTP first login, then the
+// employee sets their own password), so a password never travels through here.
 export const provisionUserSchema = z.object({
   email: emailSchema,
-  password: z.string().min(8, "Password must be at least 8 characters"),
   roleId: z.uuid("Invalid role ID"),
 });
 

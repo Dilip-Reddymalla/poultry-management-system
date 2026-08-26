@@ -21,6 +21,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
@@ -43,8 +44,6 @@
   "allowScripts": {
     "esbuild@0.28.2": true,
     "argon2@0.45.1": true,
-    "@firebase/util@1.15.3": true,
-    "protobufjs@7.6.5": true,
     "prisma@7.9.1": true,
     "@prisma/engines@7.9.1": true
   }

@@ -30,6 +30,14 @@ export const selectPhoneUserSchema = z.object({
   userId: z.uuid("Invalid user ID"),
 });
 
+// First-login password setup. Same minimum as employee provisioning used before
+// it went passwordless, so the strength floor is unchanged.
+export const setPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export type SetPasswordInput = z.infer<typeof setPasswordSchema>;
+
 export type SelectPhoneUserInput = z.infer<
   typeof selectPhoneUserSchema
 >;

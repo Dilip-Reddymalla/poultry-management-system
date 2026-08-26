@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 
+import { getScope } from "../../middlewares/authorize.middleware.js";
+
 import {
   createShed,
   getShedById,
@@ -21,7 +23,7 @@ export async function listShedsController(
 ): Promise<void> {
   const query = listShedsQuerySchema.parse(req.query);
 
-  const sheds = await listSheds(query);
+  const sheds = await listSheds(getScope(req), query);
 
   res.status(200).json({
     success: true,
@@ -35,7 +37,7 @@ export async function getShedController(
 ): Promise<void> {
   const params = shedIdParamSchema.parse(req.params);
 
-  const shed = await getShedById(params.id);
+  const shed = await getShedById(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -49,7 +51,7 @@ export async function createShedController(
 ): Promise<void> {
   const input = createShedSchema.parse(req.body);
 
-  const shed = await createShed(input);
+  const shed = await createShed(getScope(req), input);
 
   res.status(201).json({
     success: true,
@@ -66,7 +68,7 @@ export async function updateShedController(
 
   const input = updateShedSchema.parse(req.body);
 
-  const shed = await updateShed(params.id, input);
+  const shed = await updateShed(getScope(req), params.id, input);
 
   res.status(200).json({
     success: true,
@@ -83,7 +85,7 @@ export async function updateShedStatusController(
 
   const input = updateShedStatusSchema.parse(req.body);
 
-  const shed = await updateShedStatus(params.id, input);
+  const shed = await updateShedStatus(getScope(req), params.id, input);
 
   res.status(200).json({
     success: true,

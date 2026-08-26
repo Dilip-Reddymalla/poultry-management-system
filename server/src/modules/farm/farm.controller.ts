@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 
+import { getScope } from "../../middlewares/authorize.middleware.js";
+
 import {
   createFarm,
   deactivateFarm,
@@ -21,7 +23,7 @@ export async function listFarmsController(
 ): Promise<void> {
   const query = listFarmsQuerySchema.parse(req.query);
 
-  const farms = await listFarms(query);
+  const farms = await listFarms(getScope(req), query);
 
   res.status(200).json({
     success: true,
@@ -35,7 +37,7 @@ export async function getFarmController(
 ): Promise<void> {
   const params = farmIdParamSchema.parse(req.params);
 
-  const farm = await getFarmById(params.id);
+  const farm = await getFarmById(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -49,7 +51,7 @@ export async function createFarmController(
 ): Promise<void> {
   const input = createFarmSchema.parse(req.body);
 
-  const farm = await createFarm(input);
+  const farm = await createFarm(getScope(req), input);
 
   res.status(201).json({
     success: true,
@@ -66,7 +68,7 @@ export async function updateFarmController(
 
   const input = updateFarmSchema.parse(req.body);
 
-  const farm = await updateFarm(params.id, input);
+  const farm = await updateFarm(getScope(req), params.id, input);
 
   res.status(200).json({
     success: true,
@@ -81,7 +83,7 @@ export async function deactivateFarmController(
 ): Promise<void> {
   const params = farmIdParamSchema.parse(req.params);
 
-  const farm = await deactivateFarm(params.id);
+  const farm = await deactivateFarm(getScope(req), params.id);
 
   res.status(200).json({
     success: true,
@@ -96,7 +98,7 @@ export async function reactivateFarmController(
 ): Promise<void> {
   const params = farmIdParamSchema.parse(req.params);
 
-  const farm = await reactivateFarm(params.id);
+  const farm = await reactivateFarm(getScope(req), params.id);
 
   res.status(200).json({
     success: true,

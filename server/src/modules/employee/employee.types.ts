@@ -8,6 +8,11 @@ export interface SafeEmployee {
   photoUrl: string | null;
   joiningDate: Date | null;
   status: EmployeeStatus;
+  farm: {
+    id: string;
+    code: string;
+    name: string;
+  };
   designation: {
     id: string;
     name: string;

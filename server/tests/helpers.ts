@@ -11,6 +11,11 @@ export const TEST_PREFIX = "TMP-TEST-";
 export const TEST_EMAIL_DOMAIN = "@example.test";
 export const TEST_PASSWORD = "test-password-123";
 
+// The single global System Admin authenticates against these env values (the
+// same ones the running server validated at boot), never a database row.
+export const SYSTEM_ADMIN_EMAIL = process.env.SYSTEM_ADMIN_EMAIL;
+export const SYSTEM_ADMIN_PASSWORD = process.env.SYSTEM_ADMIN_PASSWORD;
+
 export { AUTH_COOKIE_NAME };
 
 export { app, prisma };
@@ -23,11 +28,24 @@ export function uniqueSuffix(): string {
   return `${Date.now().toString(36)}-${counter}`;
 }
 
+let phoneCounter = 0;
+
+// A digits-only phone (survives normalizePhone unchanged) that is unique per
+// call, so a provisioned employee resolves to exactly one account at phone
+// login. Provisioning requires the employee to have a phone at all.
+export function uniquePhone(): string {
+  phoneCounter += 1;
+
+  return `9198${Date.now().toString().slice(-7)}${phoneCounter}`;
+}
+
 export interface TestActor {
   employeeRowId: string;
   employeeId: string;
   userId: string;
   email: string;
+  farmId: string;
+  companyId: string;
   cookie: string;
 }
 
@@ -49,7 +67,17 @@ async function getWorkerDesignationId(): Promise<string> {
 }
 
 export async function getSeededCompanyId(): Promise<string> {
+  // Must resolve to a real seeded company, never a test fixture. Otherwise a
+  // farm created without an explicit company (e.g. a FARM-scoped actor's farm)
+  // could attach to a test company and skew that company's farmCount.
   const company = await prisma.company.findFirst({
+    where: {
+      code: {
+        not: {
+          startsWith: TEST_PREFIX,
+        },
+      },
+    },
     select: {
       id: true,
     },
@@ -95,18 +123,89 @@ export async function login(email: string): Promise<string> {
   return extractAuthCookie(response.headers["set-cookie"]);
 }
 
+// Signs in the env-based System Admin. Tests that need global access call this;
+// they must run with SYSTEM_ADMIN_* configured (they are in the dev/test .env).
+export async function loginSystemAdmin(): Promise<string> {
+  if (!SYSTEM_ADMIN_EMAIL || !SYSTEM_ADMIN_PASSWORD) {
+    throw new Error(
+      "SYSTEM_ADMIN_EMAIL/SYSTEM_ADMIN_PASSWORD must be set to test System Admin access",
+    );
+  }
+
+  const response = await request(app).post("/api/auth/login").send({
+    email: SYSTEM_ADMIN_EMAIL,
+    password: SYSTEM_ADMIN_PASSWORD,
+  });
+
+  if (response.status !== 200) {
+    throw new Error(
+      `System Admin login failed with status ${String(response.status)}`,
+    );
+  }
+
+  return extractAuthCookie(response.headers["set-cookie"]);
+}
+
+export async function createTestCompany(): Promise<{ id: string; code: string }> {
+  return prisma.company.create({
+    data: {
+      code: `${TEST_PREFIX}${uniqueSuffix()}`,
+      name: "Test Company",
+    },
+    select: {
+      id: true,
+      code: true,
+    },
+  });
+}
+
+export async function createTestFarm(
+  status: "ACTIVE" | "INACTIVE" = "ACTIVE",
+  companyId?: string,
+): Promise<{ id: string; code: string; companyId: string }> {
+  const resolvedCompanyId = companyId ?? (await getSeededCompanyId());
+
+  return prisma.farm.create({
+    data: {
+      companyId: resolvedCompanyId,
+      code: `${TEST_PREFIX}${uniqueSuffix()}`,
+      name: "Test Farm",
+      status,
+    },
+    select: {
+      id: true,
+      code: true,
+      companyId: true,
+    },
+  });
+}
+
 // Creates an employee + login account holding exactly one seeded role, so the
-// real role/permission matrix is what the tests exercise.
-export async function createActor(roleName: string): Promise<TestActor> {
+// real role/permission matrix is what the tests exercise. The employee is placed
+// in `opts.farmId` (or a fresh test farm), which fixes the caller's scope: a
+// FARM-scoped role only reaches that farm, a COMPANY-scoped role its company.
+export async function createActor(
+  roleName: string,
+  opts: { farmId?: string } = {},
+): Promise<TestActor> {
   const suffix = uniqueSuffix();
 
   const designationId = await getDesignationId();
+
+  const farm =
+    opts.farmId !== undefined
+      ? await prisma.farm.findUniqueOrThrow({
+          where: { id: opts.farmId },
+          select: { id: true, companyId: true },
+        })
+      : await createTestFarm();
 
   const employee = await prisma.employee.create({
     data: {
       employeeId: `${TEST_PREFIX}${suffix}`,
       name: `Test ${roleName}`,
       desiginationId: designationId,
+      farmId: farm.id,
       status: "ACTIVE",
     },
     select: {
@@ -153,52 +252,84 @@ export async function createActor(roleName: string): Promise<TestActor> {
     employeeId: employee.employeeId,
     userId: user.id,
     email,
+    farmId: farm.id,
+    companyId: farm.companyId,
     cookie: await login(email),
   };
 }
 
-export async function createTestFarm(
-  status: "ACTIVE" | "INACTIVE" = "ACTIVE",
-): Promise<{ id: string; code: string }> {
-  const companyId = await getSeededCompanyId();
-
-  return prisma.farm.create({
-    data: {
-      companyId,
-      code: `${TEST_PREFIX}${uniqueSuffix()}`,
-      name: "Test Farm",
-      status,
-    },
-    select: {
-      id: true,
-      code: true,
-    },
-  });
-}
-
-export async function createTestEmployeeRecord(): Promise<{ id: string }> {
+export async function createTestEmployeeRecord(
+  farmId: string,
+  opts: { phone?: string } = {},
+): Promise<{ id: string; phone: string }> {
   const designationId = await getDesignationId();
 
-  return prisma.employee.create({
+  const phone = opts.phone ?? uniquePhone();
+
+  const employee = await prisma.employee.create({
     data: {
       employeeId: `${TEST_PREFIX}${uniqueSuffix()}`,
       name: "Test Employee",
       desiginationId: designationId,
+      farmId,
+      phone,
       status: "ACTIVE",
     },
     select: {
       id: true,
     },
   });
+
+  return { id: employee.id, phone };
 }
 
-// Deletion order respects the RESTRICT foreign keys: users before employees and
-// sheds before farms.
+export async function createTestWorker(
+  farmId: string,
+  status: "ACTIVE" | "INACTIVE" = "ACTIVE",
+): Promise<{ id: string; workerId: string }> {
+  return prisma.worker.create({
+    data: {
+      workerId: `${TEST_PREFIX}${uniqueSuffix()}`,
+      name: "Test Worker",
+      farmId,
+      status,
+    },
+    select: {
+      id: true,
+      workerId: true,
+    },
+  });
+}
+
+// Deletion respects the RESTRICT foreign keys: attendance references farms,
+// employees, workers and users, so it goes first; then users (→ employees),
+// workers and employees (→ farms), sheds (→ farms), farms (→ companies), and
+// finally the test companies themselves.
 export async function cleanupTestData(): Promise<void> {
+  await prisma.attendance.deleteMany({
+    where: {
+      OR: [
+        { farm: { code: { startsWith: TEST_PREFIX } } },
+        { employee: { employeeId: { startsWith: TEST_PREFIX } } },
+        { worker: { workerId: { startsWith: TEST_PREFIX } } },
+        { recordedBy: { email: { endsWith: TEST_EMAIL_DOMAIN } } },
+        { approvedBy: { email: { endsWith: TEST_EMAIL_DOMAIN } } },
+      ],
+    },
+  });
+
   await prisma.user.deleteMany({
     where: {
       email: {
         endsWith: TEST_EMAIL_DOMAIN,
+      },
+    },
+  });
+
+  await prisma.worker.deleteMany({
+    where: {
+      workerId: {
+        startsWith: TEST_PREFIX,
       },
     },
   });
@@ -231,6 +362,14 @@ export async function cleanupTestData(): Promise<void> {
   });
 
   await prisma.farm.deleteMany({
+    where: {
+      code: {
+        startsWith: TEST_PREFIX,
+      },
+    },
+  });
+
+  await prisma.company.deleteMany({
     where: {
       code: {
         startsWith: TEST_PREFIX,

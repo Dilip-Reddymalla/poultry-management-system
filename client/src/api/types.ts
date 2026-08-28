@@ -97,7 +97,7 @@ export interface Shed {
 
 export interface Employee {
   id: string;
-  employeeId: string;
+  employeeId?: string;
   name: string;
   email: string | null;
   phone: string | null;
@@ -121,7 +121,7 @@ export interface Employee {
 
 export interface Worker {
   id: string;
-  workerId: string;
+  workerId?: string;
   name: string;
   phone: string;
   farmId: string;

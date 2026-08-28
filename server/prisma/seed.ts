@@ -310,10 +310,14 @@ async function main() {
         "farm:view",
         "shed:view",
         "employee:view",
+        "employee:update",
         "employee:deactivate",
         "employee:reactivate",
         "worker:view",
+        "worker:create",
+        "worker:update",
         "attendance:view",
+        "attendance:update",
         "report:view",
         "report:export",
       ],
@@ -331,6 +335,7 @@ async function main() {
     `✅ Assigned ${companyAdminPermissions.length} permissions to Company Admin, ${dgmPermissions.length} to DGM`,
   );
 
+  /*
   // DEMO ORGANIZATION -------------------------------------------------------
   //
   // The System Admin is intentionally NOT seeded here — it comes only from the
@@ -550,8 +555,6 @@ async function main() {
     name: "PMS Company Admin",
     phone: "919000000001",
     designation: "Company Admin",
-    // A company admin still has a home farm; COMPANY scope widens their reach to
-    // the whole company. SR-1 is created just below, so create it first.
     farmId: await upsertFarm(pmsId, "SR-1", "SR-1 Farm"),
   });
 
@@ -567,7 +570,6 @@ async function main() {
     role: "Company Admin",
   });
 
-  // Existing SR-1 DGM (EMP001) keeps the SEED_DGM_EMAIL login.
   const sr1DgmEmpId = await upsertEmployee({
     employeeId: "EMP001",
     name: "System DGM",
@@ -662,7 +664,6 @@ async function main() {
     recordedById: sr1DgmUserId,
   });
 
-  // PMS second farm SR-2 (demonstrates multi-farm within a company).
   const sr2Id = await upsertFarm(pmsId, "SR-2", "SR-2 Farm");
   await upsertSheds(sr2Id, 6);
 
@@ -696,8 +697,6 @@ async function main() {
     longitude: 77.5946,
     recordedById: sr2DgmUserId,
   });
-
-  // --- Company GNF (new) — proves cross-company isolation ----------------------
 
   const gnfId = await upsertCompany("GNF", "Green Nest Farms");
   const gn1Id = await upsertFarm(gnfId, "GN-1", "GN-1 Farm");
@@ -756,9 +755,9 @@ async function main() {
     longitude: 77.5946,
     recordedById: gn1DgmUserId,
   });
+  */
 
-  console.log("✅ Seeded 2 companies, 3 farms, sheds, employees, workers, attendance");
-  console.log("🌱 Database seed completed successfully.");
+  console.log("🌱 Database seed completed successfully (roles, designations & permissions only).");
 }
 
 main()

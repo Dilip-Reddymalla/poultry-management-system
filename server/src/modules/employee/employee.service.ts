@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
-import { recordAuditLog } from "../audit/audit.service.js";
+import { recordAuditLog, RecordAuditParams } from "../audit/audit.service.js";
 import { normalizePhone } from "../../utils/phone.js";
 import type { AuthScope } from "../auth/scope.js";
 import {
@@ -22,6 +22,9 @@ import type {
   EmployeePagination,
   SafeEmployee,
 } from "./employee.types.js";
+
+import {getFarmById} from "../farm/farm.service.js"
+
 import type { SafeUser } from "../auth/auth.types.js";
 
 // User is selected by id only, so no sensitive user field can ever be returned.
@@ -198,6 +201,12 @@ export async function getEmployeeById(
   return toSafeEmployee(await loadReadableEmployee(scope, id));
 }
 
+export async function createEmployeeId(scope:AuthScope,input:CreateEmployeeInput):Promise<string>{
+  const totalEmpolyees = await listEmployees(scope,{page:1,limit:1})
+  const farmName = (await getFarmById(scope,input.farmId)).name
+  return `${farmName}-E${totalEmpolyees.pagination.total+1}`
+}
+
 export async function createEmployee(
   scope: AuthScope,
   input: CreateEmployeeInput,
@@ -206,9 +215,11 @@ export async function createEmployee(
 
   await assertDesignationExists(input.designationId);
 
+  const employeeId = input.employeeId ? input.employeeId: await createEmployeeId(scope,input);
+
   const existingEmployee = await prisma.employee.findUnique({
     where: {
-      employeeId: input.employeeId,
+      employeeId: employeeId,
     },
     select: {
       id: true,
@@ -222,7 +233,7 @@ export async function createEmployee(
   try {
     const employee = await prisma.employee.create({
       data: {
-        employeeId: input.employeeId,
+        employeeId: employeeId,
         name: input.name,
         desiginationId: input.designationId,
         farmId: input.farmId,
@@ -238,14 +249,15 @@ export async function createEmployee(
     });
 
     const safeEmp = toSafeEmployee(employee);
-    void recordAuditLog({
+    const audit:RecordAuditParams = {
       scope,
       action: "CREATE",
       entity: "Employee",
       entityId: employee.id,
       summary: `Created employee ${employee.name} (${employee.employeeId})`,
       changes: { employeeId: employee.employeeId, name: employee.name, farmId: employee.farm.id },
-    });
+    }
+    void recordAuditLog(audit);
     return safeEmp;
   } catch (error) {
     throw toWriteError(error);
@@ -280,7 +292,6 @@ export async function updateEmployee(
   if (input.designationId !== undefined) {
     await assertDesignationExists(input.designationId);
   }
-
   try {
     const employee = await prisma.employee.update({
       where: {
@@ -364,14 +375,15 @@ async function setEmployeeStatus(
   });
 
   const safeEmp = toSafeEmployee(employee);
-  void recordAuditLog({
+  const audit:RecordAuditParams = {
     scope,
     action: "UPDATE",
     entity: "Employee",
     entityId: employee.id,
     summary: `${status === "ACTIVE" ? "Reactivated" : "Deactivated"} employee ${employee.name} (${employee.employeeId})`,
     changes: { oldStatus: existingEmployee.status, newStatus: status },
-  });
+  }
+  void recordAuditLog(audit);
   return safeEmp;
 }
 

@@ -29,7 +29,7 @@ function initialState(worker: Worker | null): FormState {
   return {
     workerId: worker?.workerId ?? "",
     name: worker?.name ?? "",
-    farmId: worker?.farm.id ?? "",
+    farmId: worker?.farmId ?? "",
     phone: worker?.phone ?? "",
   };
 }
@@ -124,7 +124,6 @@ export function WorkerFormDialog({
           <TextField
             id="worker-id"
             label="Worker ID"
-            required
             value={form.workerId}
             hint="The number on their card, for example WRK-021."
             errors={error?.fieldErrors.workerId}

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { emailSchema } from "../auth/auth.schema.js";
 
-const employeeIdSchema = z.string().trim().min(1, "Employee ID is required");
+const employeeIdSchema = z.string().trim().min(0, "Employee ID is required").optional();
 
 const nameSchema = z.string().trim().min(1, "Name is required");
 
@@ -37,7 +37,7 @@ export const listEmployeesQuerySchema = z.object({
 });
 
 export const createEmployeeSchema = z.object({
-  employeeId: employeeIdSchema,
+  employeeId: employeeIdSchema.optional(),
   name: nameSchema,
   designationId: designationIdSchema,
   // Every employee belongs to exactly one farm; the caller must be allowed to

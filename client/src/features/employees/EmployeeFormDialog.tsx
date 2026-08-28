@@ -20,7 +20,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { toDateInputValue } from "../../lib/display.js";
 
 interface FormState {
-  employeeId: string;
+  employeeId?: string;
   name: string;
   farmId: string;
   designationId: string;
@@ -140,7 +140,6 @@ export function EmployeeFormDialog({
           <TextField
             id="employeeId"
             label="Employee ID"
-            required
             value={form.employeeId}
             hint="The number on their card, for example EMP-104."
             errors={error?.fieldErrors.employeeId}

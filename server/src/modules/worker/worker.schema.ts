@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const workerIdSchema = z.string().trim().min(1, "Worker ID is required");
+const workerIdSchema = z.string().trim().min(0, "Worker ID is optional").optional();
 
 const nameSchema = z.string().trim().min(1, "Name is required");
 
@@ -29,7 +29,7 @@ export const listWorkersQuerySchema = z.object({
 });
 
 export const createWorkerSchema = z.object({
-  workerId: workerIdSchema,
+  workerId: workerIdSchema.optional(),
   name: nameSchema,
   // Every worker belongs to exactly one farm; the caller must be allowed to write
   // to it (enforced in the service).

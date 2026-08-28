@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { fetchEmployees, fetchWorkers, bulkCreateAttendance, fetchSheds, fetchFarms, fetchMarkedPersonIds } from "../../api/resources.js";
-import type { AttendanceStatus, Farm, Shed, Shift } from "../../api/types.js";
+import { fetchEmployees, fetchWorkers, bulkCreateAttendance, fetchSheds, fetchFarms, fetchMarkedPersonIds, type EmployeeListResult, type WorkerListResult } from "../../api/resources.js";
+import type {
+  AttendanceStatus,
+  Farm,
+  Shed,
+  Shift,
+  PersonType,
+} from "../../api/types.js";
 import { ATTENDANCE_STATUSES } from "../../api/types.js";
 import { Button, Spinner } from "../../components/ui.js";
 import { Dialog } from "../../components/Dialog.js";
@@ -10,6 +16,7 @@ import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { statusLabel } from "../../lib/display.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { ShiftChoice } from "./ShiftChoice.js";
+
 
 interface BulkAttendanceDialogProps {
   defaultDate: string;
@@ -30,12 +37,12 @@ export function BulkAttendanceDialog({
   
   const [date, setDate] = useState(defaultDate);
   const [shift, setShift] = useState<Shift>("MORNING_SHIFT");
-  const [farmId, setFarmId] = useState(defaultFarmId ?? "");
+  const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
   const [shedId, setShedId] = useState("");
   const [status, setStatus] = useState<AttendanceStatus>("PRESENT");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  
+  const [personType, setPersonType] = useState<PersonType>("EMPLOYEE");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { latitude, longitude, error: locationError, loading: locationLoading } = useGeolocation();
@@ -43,29 +50,37 @@ export function BulkAttendanceDialog({
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
   });
+  const farmOptions = farms.data ?? [];
+  const soleFarmId = farmOptions.length === 1 ? farmOptions[0]!.id : "";
+  const farmId = chosenFarmId || defaultFarmId || soleFarmId || (user?.scope.farmId ?? "");
 
   const sheds = useResource<Shed[]>(
     `sheds:picker:${farmId}`,
-    () => fetchSheds({ farmId, status: "AVAILABLE" }),
-    { enabled: farmId !== "" }
+    () => fetchSheds(farmId ? { farmId, status: "AVAILABLE" } : { status: "AVAILABLE" })
   );
 
   const markedIds = useResource(
     `marked-ids:${date}:${shift}:${farmId}`,
-    (signal) => fetchMarkedPersonIds({ date, shift, farmId }, signal),
-    { enabled: farmId !== "" && date !== "" && shift !== undefined }
+    (signal) => fetchMarkedPersonIds(farmId ? { date, shift, farmId } : { date, shift } as any, signal),
+    { enabled: date !== "" && shift !== undefined }
   );
 
-  const employees = useResource(
-    `employees:bulk:${farmId}:${search}`,
-    (signal) => fetchEmployees({ farmId, status: "ACTIVE", search, limit: 100 }, signal),
-    { enabled: farmId !== "" }
+  const employees = useResource<EmployeeListResult>(
+    `employees:bulk:${farmId}:${search}:${personType}`,
+    (signal) => fetchEmployees(
+      farmId ? { farmId, status: "ACTIVE", search, limit: 100 } : { status: "ACTIVE", search, limit: 100 },
+      signal,
+    ),
+    { enabled: personType === "EMPLOYEE" }
   );
 
-  const workers = useResource(
-    `workers:bulk:${farmId}:${search}`,
-    (signal) => fetchWorkers({ farmId, status: "ACTIVE", search, limit: 100 }, signal),
-    { enabled: farmId !== "" }
+  const workers = useResource<WorkerListResult>(
+    `workers:bulk:${farmId}:${search}:${personType}`,
+    (signal) => fetchWorkers(
+      farmId ? { farmId, status: "ACTIVE", search, limit: 100 } : { status: "ACTIVE", search, limit: 100 },
+      signal
+    ),
+    { enabled: personType === "WORKER" }
   );
 
   const markedEmployeeSet = new Set(markedIds.data?.employeeIds ?? []);
@@ -159,11 +174,11 @@ export function BulkAttendanceDialog({
             Date
             <input type="date" className="input" value={date} onChange={(e) => { setDate(e.target.value); setSelectedIds(new Set()); }} required />
           </label>
-          {showFarm && (
+          {showFarm && !soleFarmId && (
             <label className="filters__field">
               Farm
-              <select className="input select" value={farmId} onChange={(e) => { setFarmId(e.target.value); setShedId(""); setSelectedIds(new Set()); }} required>
-                <option value="" disabled>Select Farm</option>
+              <select className="input select" value={farmId} onChange={(e) => { setChosenFarmId(e.target.value); setShedId(""); setSelectedIds(new Set()); }} required>
+                <option value="">Select Farm</option>
                 {farms.data?.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </label>
@@ -183,6 +198,20 @@ export function BulkAttendanceDialog({
         />
 
         <div className="filters">
+          <label className="filters__field">
+            Person Type
+            <select
+              className="input select"
+              value={personType}
+              onChange={(e) => {
+                setPersonType(e.target.value as PersonType);
+                setSelectedIds(new Set());
+              }}
+            >
+              <option value="EMPLOYEE">Employees</option>
+              <option value="WORKER">Workers</option>
+            </select>
+          </label>
           <label className="filters__field">
             Search
             <input type="text" className="input" placeholder="Search name or code..." value={search} onChange={(e) => setSearch(e.target.value)} />

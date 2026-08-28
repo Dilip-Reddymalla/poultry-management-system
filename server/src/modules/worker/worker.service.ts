@@ -15,6 +15,9 @@ import type {
   ListWorkersQueryInput,
   UpdateWorkerInput,
 } from "./worker.schema.js";
+
+import {getFarmById} from "../farm/farm.service.js"
+
 import type { SafeWorker, WorkerPagination } from "./worker.types.js";
 
 const workerSelect = {
@@ -150,15 +153,27 @@ export async function getWorkerById(
   return toSafeWorker(await loadReadableWorker(scope, id));
 }
 
+export async function createWorkerId(scope:AuthScope,input:CreateWorkerInput):Promise<string>{
+  const totalWorkers = await listWorkers(scope,{page:1,limit:1})
+  const farmName = (await getFarmById(scope,input.farmId)).name;
+  return `${farmName}-W${totalWorkers.pagination.total+1}`
+}
+
 export async function createWorker(
   scope: AuthScope,
   input: CreateWorkerInput,
 ): Promise<SafeWorker> {
   await assertFarmWritableById(scope, input.farmId);
 
+  const newWorkerId:string = await createWorkerId(scope,input);
+
+  const inputId = input.workerId;
+
+  const finalWorkerId = inputId? inputId: newWorkerId;
+
   const existingWorker = await prisma.worker.findUnique({
     where: {
-      workerId: input.workerId,
+      workerId: finalWorkerId,
     },
     select: {
       id: true,
@@ -172,7 +187,7 @@ export async function createWorker(
   try {
     const worker = await prisma.worker.create({
       data: {
-        workerId: input.workerId,
+        workerId: finalWorkerId,
         name: input.name,
         farmId: input.farmId,
         ...(input.phone !== undefined && {

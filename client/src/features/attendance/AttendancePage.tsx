@@ -127,7 +127,7 @@ export function AttendancePage({
         }
         actions={
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            {user?.role === "ACCOUNTANT" || user?.role === "SYSTEM_ADMIN" ? (
+            {/*user?.role === "ACCOUNTANT" || user?.role === "SYSTEM_ADMIN" || */can("report:export") ? (
               <Button
                 variant="secondary"
                 onClick={() => {

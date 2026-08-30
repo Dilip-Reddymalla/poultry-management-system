@@ -57,6 +57,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: CalendarIcon,
   },
   {
+    to: "/attendance/face",
+    label: "Face Attendance",
+    permission: "attendance:create",
+    icon: PeopleIcon,
+  },
+  {
     to: "/audit-logs",
     label: "Audit Logs",
     systemAdminOnly: true,

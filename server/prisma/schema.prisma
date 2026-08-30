@@ -87,6 +87,10 @@ model Employee {
   phone    String?
   photoUrl String?
 
+  // 512-D ArcFace face embedding for pgvector similarity search.
+  // Managed via raw SQL — Prisma cannot read/write vector columns natively.
+  faceEmbedding Unsupported("vector(512)")?
+
   desiginationId String @db.Uuid()
 
   // Every employee belongs to exactly one farm; employee data is farm-scoped and
@@ -125,8 +129,13 @@ model Worker {
   id       String @id @default(uuid()) @db.Uuid
   workerId String @unique
 
-  name  String
-  phone String?
+  name     String
+  phone    String?
+  photoUrl String?
+
+  // 512-D ArcFace face embedding for pgvector similarity search.
+  // Managed via raw SQL — Prisma cannot read/write vector columns natively.
+  faceEmbedding Unsupported("vector(512)")?
 
   farmId String @db.Uuid
 
@@ -262,6 +271,13 @@ model Attendance {
   longitude Float
 
   notes String?
+
+  // Face-AI verification fields (populated when attendance is marked via face recognition).
+  verificationMode String?  @default("MANUAL") // "MANUAL" | "FACE_AI"
+  livenessScore    Float?
+  qualityScore     Float?
+  confidenceScore  Float?
+  snapshotUrl      String?  // Cloudinary URL of the attendance snapshot image
 
   // Correction/approval lifecycle. recordedBy is who entered it; approvedBy and
   // approvedAt are set when a manager/DGM finalizes it. Both are nullable because

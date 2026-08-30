@@ -9,6 +9,7 @@ import {
 } from "../../api/resources.js";
 import type { Farm, Worker } from "../../api/types.js";
 import { Dialog } from "../../components/Dialog.js";
+import { CameraPhotoInput } from "../../components/CameraPhotoInput.js";
 import {
   Button,
   FormAlert,
@@ -50,6 +51,7 @@ export function WorkerFormDialog({
   const editing = worker !== null;
 
   const [form, setForm] = useState<FormState>(() => initialState(worker));
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -87,12 +89,15 @@ export function WorkerFormDialog({
 
     try {
       const saved = editing
-        ? await updateWorker(worker.id, payload)
-        : await createWorker({
-            ...payload,
-            workerId: form.workerId,
-            farmId: effectiveFarmId,
-          });
+        ? await updateWorker(worker.id, payload, photoFile)
+        : await createWorker(
+            {
+              ...payload,
+              workerId: form.workerId,
+              farmId: effectiveFarmId,
+            },
+            photoFile,
+          );
 
       onSaved(saved, editing ? "updated" : "created");
     } catch (caught) {
@@ -176,6 +181,12 @@ export function WorkerFormDialog({
           hint="Optional. For contact only — workers do not sign in."
           errors={error?.fieldErrors.phone}
           onChange={field("phone")}
+        />
+
+        <CameraPhotoInput
+          label="Worker Face Photo (Live / Upload)"
+          currentPhotoUrl={(worker as any)?.photoUrl}
+          onChange={(file) => setPhotoFile(file)}
         />
 
         <div className="dialog__footer">

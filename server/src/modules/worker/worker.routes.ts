@@ -10,6 +10,7 @@ import {
 } from "./worker.controller.js";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
+import { uploadPhoto } from "../../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -18,8 +19,11 @@ const router = Router();
 // adding dedicated permissions.
 router.get("/", requirePermission("worker:view"), listWorkersController);
 router.get("/:id", requirePermission("worker:view"), getWorkerController);
-router.post("/", requirePermission("worker:create"), createWorkerController);
-router.patch("/:id", requirePermission("worker:update"), updateWorkerController);
+
+// Create / Update accept an optional `photo` file for face enrollment.
+router.post("/", requirePermission("worker:create"), uploadPhoto, createWorkerController);
+router.patch("/:id", requirePermission("worker:update"), uploadPhoto, updateWorkerController);
+
 router.patch(
   "/:id/deactivate",
   requirePermission("worker:update"),

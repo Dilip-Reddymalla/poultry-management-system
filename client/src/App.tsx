@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AttendanceDashboardPage } from "./features/attendance/AttendanceDashboardPage.js";
 import { AttendanceDetailPage } from "./features/attendance/AttendanceDetailPage.js";
 import { AttendancePage } from "./features/attendance/AttendancePage.js";
+import { FaceAttendancePage } from "./features/attendance/FaceAttendancePage.js";
 import { AuditLogsPage } from "./features/audit/AuditLogsPage.js";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { OtpLoginPage } from "./features/auth/OtpLoginPage.js";
@@ -154,6 +155,14 @@ export default function App(): React.ReactElement {
               element={
                 <RequirePermission permission="attendance:view">
                   <AttendancePage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/attendance/face"
+              element={
+                <RequirePermission permission="attendance:create">
+                  <FaceAttendancePage />
                 </RequirePermission>
               }
             />

@@ -25,6 +25,7 @@ const workerSelect = {
   workerId: true,
   name: true,
   phone: true,
+  photoUrl: true,
   status: true,
   farmId: true,
   farm: {
@@ -47,6 +48,7 @@ function toSafeWorker(worker: WorkerRecord): SafeWorker {
     workerId: worker.workerId,
     name: worker.name,
     phone: worker.phone,
+    photoUrl: worker.photoUrl,
     status: worker.status,
     farm: {
       id: worker.farm.id,
@@ -159,9 +161,16 @@ export async function createWorkerId(scope:AuthScope,input:CreateWorkerInput):Pr
   return `${farmName}-W${totalWorkers.pagination.total+1}`
 }
 
+/** Optional face-AI data attached during create/update. */
+export interface FaceEnrollmentData {
+  photoUrl?: string | undefined;
+  faceEmbedding?: number[] | undefined;
+}
+
 export async function createWorker(
   scope: AuthScope,
   input: CreateWorkerInput,
+  faceData: FaceEnrollmentData = {},
 ): Promise<SafeWorker> {
   await assertFarmWritableById(scope, input.farmId);
 
@@ -193,9 +202,28 @@ export async function createWorker(
         ...(input.phone !== undefined && {
           phone: normalizePhone(input.phone),
         }),
+        ...(faceData.photoUrl !== undefined && { photoUrl: faceData.photoUrl }),
       },
       select: workerSelect,
     });
+
+    // Store face embedding via raw SQL (Prisma cannot write vector columns).
+    if (faceData.faceEmbedding) {
+      try {
+        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
+        await prisma.$queryRawUnsafe(
+          `UPDATE workers SET face_embedding = $1::vector WHERE id = $2`,
+          vectorLiteral,
+          worker.id,
+        );
+      } catch {
+        await prisma.$queryRawUnsafe(
+          `UPDATE workers SET face_embedding = $1::float8[] WHERE id = $2`,
+          faceData.faceEmbedding,
+          worker.id,
+        );
+      }
+    }
 
     return toSafeWorker(worker);
   } catch (error) {
@@ -207,6 +235,7 @@ export async function updateWorker(
   scope: AuthScope,
   id: string,
   input: UpdateWorkerInput,
+  faceData: FaceEnrollmentData = {},
 ): Promise<SafeWorker> {
   const existingWorker = await prisma.worker.findUnique({
     where: {
@@ -238,9 +267,28 @@ export async function updateWorker(
         ...(input.phone !== undefined && {
           phone: input.phone === null ? null : normalizePhone(input.phone),
         }),
+        ...(faceData.photoUrl !== undefined && { photoUrl: faceData.photoUrl }),
       },
       select: workerSelect,
     });
+
+    // Update face embedding via raw SQL.
+    if (faceData.faceEmbedding) {
+      try {
+        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
+        await prisma.$queryRawUnsafe(
+          `UPDATE workers SET face_embedding = $1::vector WHERE id = $2`,
+          vectorLiteral,
+          worker.id,
+        );
+      } catch {
+        await prisma.$queryRawUnsafe(
+          `UPDATE workers SET face_embedding = $1::float8[] WHERE id = $2`,
+          faceData.faceEmbedding,
+          worker.id,
+        );
+      }
+    }
 
     return toSafeWorker(worker);
   } catch (error) {

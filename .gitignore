@@ -2,6 +2,31 @@
 node_modules/
 **/node_modules/
 
+# Python Virtual Environments & Caches
+.venv/
+venv/
+ENV/
+env/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# AI Models (explicitly tracked)
+!*.onnx
+!*.pth
+
+# Test Images & Generated Debug Test Outputs (Excluded per user request)
+test_data/
+**/test_data/
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+
 # Environment variables
 .env
 .env.*
@@ -25,9 +50,10 @@ lerna-debug.log*
 coverage/
 **/coverage/
 
-# OS files
+# OS & Temp files
 .DS_Store
 Thumbs.db
+*.tmp
 
 # Editor / IDE
 .vscode/
@@ -37,10 +63,11 @@ Thumbs.db
 *.swp
 *.swo
 
-# Local tooling
+# Local tooling & AI agent logs
 .agents/
 .claude/
 .windsurf/
+.gemini/
 
 # Prisma / generated code
 prisma/*.db

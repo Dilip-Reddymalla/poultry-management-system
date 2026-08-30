@@ -124,6 +124,7 @@ export interface Worker {
   workerId?: string;
   name: string;
   phone: string;
+  photoUrl?: string | null;
   farmId: string;
   farm: any;
   status: WorkerStatus;

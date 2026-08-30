@@ -9,6 +9,7 @@ import {
 } from "../../api/resources.js";
 import type { Designation, Employee, Farm } from "../../api/types.js";
 import { Dialog } from "../../components/Dialog.js";
+import { CameraPhotoInput } from "../../components/CameraPhotoInput.js";
 import {
   Button,
   FormAlert,
@@ -61,6 +62,7 @@ export function EmployeeFormDialog({
   const editing = employee !== null;
 
   const [form, setForm] = useState<FormState>(() => initialState(employee));
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -102,12 +104,15 @@ export function EmployeeFormDialog({
 
     try {
       const saved = editing
-        ? await updateEmployee(employee.id, payload)
-        : await createEmployee({
-            ...payload,
-            employeeId: form.employeeId,
-            farmId: effectiveFarmId,
-          });
+        ? await updateEmployee(employee.id, payload, photoFile)
+        : await createEmployee(
+            {
+              ...payload,
+              employeeId: form.employeeId,
+              farmId: effectiveFarmId,
+            },
+            photoFile,
+          );
 
       onSaved(saved, editing ? "updated" : "created");
     } catch (caught) {
@@ -126,8 +131,8 @@ export function EmployeeFormDialog({
       title={editing ? "Edit employee" : "Add employee"}
       description={
         editing
-          ? "Employee ID and status are managed elsewhere."
-          : "Records the person. A login can be added afterwards."
+          ? "Employee ID, farm and user account are managed elsewhere."
+          : "An employee record must exist before a user account can be assigned."
       }
       onClose={onClose}
     >
@@ -141,7 +146,7 @@ export function EmployeeFormDialog({
             id="employeeId"
             label="Employee ID"
             value={form.employeeId}
-            hint="The number on their card, for example EMP-104."
+            hint="For example EMP-001."
             errors={error?.fieldErrors.employeeId}
             onChange={field("employeeId")}
           />
@@ -153,7 +158,7 @@ export function EmployeeFormDialog({
           </p>
         ) : (
           <SelectField
-            id="employee-farm"
+            id="farmId"
             label="Farm"
             required
             disabled={soleFarmId !== ""}
@@ -219,13 +224,10 @@ export function EmployeeFormDialog({
           onChange={field("joiningDate")}
         />
 
-        <TextField
-          id="photoUrl"
-          label="Photo URL"
-          type="url"
-          value={form.photoUrl}
-          errors={error?.fieldErrors.photoUrl}
-          onChange={field("photoUrl")}
+        <CameraPhotoInput
+          label="Employee Face Photo (Live / Upload)"
+          currentPhotoUrl={form.photoUrl || null}
+          onChange={(file) => setPhotoFile(file)}
         />
 
         <div className="dialog__footer">

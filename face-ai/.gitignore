@@ -1,0 +1,18 @@
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Test data & generated debug images
+test_data/
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+.pytest_cache/
+
+# Local env files
+.env
+.env.local

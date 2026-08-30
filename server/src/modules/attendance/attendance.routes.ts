@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
+import { uploadImage } from "../../middlewares/upload.middleware.js";
 import {
   approveAttendanceController,
   bulkCreateAttendanceController,
@@ -11,6 +12,10 @@ import {
   listAttendanceController,
   updateAttendanceController,
 } from "./attendance.controller.js";
+import {
+  processFrameController,
+  bulkMarkFaceAttendanceController,
+} from "./face-attendance.controller.js";
 
 const router = Router();
 
@@ -54,6 +59,22 @@ router.post(
   bulkCreateAttendanceController,
 );
 
+// ── Face AI Attendance ──────────────────────────────────────────────────────
+// Process a camera frame: detect faces → match via pgvector → return candidates.
+router.post(
+  "/face/process-frame",
+  requirePermission("attendance:create"),
+  uploadImage,
+  processFrameController,
+);
+
+// Bulk-mark attendance after operator confirms face identities.
+router.post(
+  "/face/bulk-mark",
+  requirePermission("attendance:create"),
+  bulkMarkFaceAttendanceController,
+);
+
 router.patch(
   "/:id",
   requirePermission("attendance:update"),
@@ -68,3 +89,4 @@ router.post(
 );
 
 export default router;
+

@@ -39,6 +39,19 @@ const envSchema = z
       .string()
       .min(12, "SYSTEM_ADMIN_PASSWORD must be at least 12 characters long")
       .optional(),
+
+    // Cloudinary cloud image storage — required for Face AI enrollment.
+    CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
+    CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
+    CLOUDINARY_API_SECRET: z.string().trim().min(1).optional(),
+
+    // FastAPI Face AI service URL (defaults to local dev server).
+    FASTAPI_AI_URL: z
+      .string()
+      .trim()
+      .url("FASTAPI_AI_URL must be a valid URL")
+      .optional()
+      .default("http://127.0.0.1:8000"),
   })
   .refine(
     (value) =>

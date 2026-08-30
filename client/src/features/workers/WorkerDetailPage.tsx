@@ -136,6 +136,21 @@ export function WorkerDetailPage(): React.ReactElement {
 
       <div className="split">
         <Panel title="Record">
+          {record.photoUrl ? (
+            <div style={{ marginBottom: 16, textAlign: "center" }}>
+              <img
+                src={record.photoUrl}
+                alt={record.name}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "3px solid var(--primary, #6366f1)",
+                }}
+              />
+            </div>
+          ) : null}
           <DetailList
             items={[
               {

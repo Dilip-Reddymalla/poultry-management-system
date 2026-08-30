@@ -7,6 +7,7 @@ export interface SafeWorker {
   workerId: string;
   name: string;
   phone: string | null;
+  photoUrl: string | null;
   status: WorkerStatus;
   farm: {
     id: string;

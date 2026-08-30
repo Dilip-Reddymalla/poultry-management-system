@@ -1,14 +1,17 @@
 {
   "name": "poultry-management-system",
   "version": "1.0.0",
-  "description": "",
+  "description": "Poultry Farm Management System",
   "main": "index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "npm --prefix server run dev",
+    "dev:node": "npm --prefix server run dev:node",
+    "dev:face-ai": "npm --prefix server run dev:face-ai",
+    "dev:client": "npm --prefix client run dev"
   },
   "keywords": [],
-  "type": "commonjs"
+  "type": "module"
 }

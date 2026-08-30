@@ -197,7 +197,7 @@ export interface ExportAttendanceQuery {
   scope?: "employees" | "workers" | "all";
 }
 
-import { apiClient, API_BASE_URL } from "./client.js";
+import { apiClient, API_BASE_URL, ApiError } from "./client.js";
 import type { Designation, Role, ManageableShedStatus } from "./types.js";
 
 // -- Reference Data --
@@ -219,10 +219,50 @@ export function fetchEmployee(id: string): Promise<Employee> {
 export function setEmployeeActive(id: string, active: boolean): Promise<Employee> {
   return apiClient.patch(`/employees/${id}`, { status: active ? "ACTIVE" : "INACTIVE" }).then((res: any) => res.employee);
 }
-export function createEmployee(data: EmployeeInput): Promise<Employee> {
+export function createEmployee(data: EmployeeInput, photo?: File | Blob | null): Promise<Employee> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "employee.jpg");
+    return fetch(`${API_BASE_URL}/employees`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to create employee", payload.errors, payload.formErrors);
+      }
+      return payload.employee;
+    });
+  }
   return apiClient.post("/employees", data).then((res: any) => res.employee);
 }
-export function updateEmployee(id: string, data: Partial<EmployeeInput>): Promise<Employee> {
+export function updateEmployee(id: string, data: Partial<EmployeeInput>, photo?: File | Blob | null): Promise<Employee> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "employee.jpg");
+    return fetch(`${API_BASE_URL}/employees/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to update employee", payload.errors, payload.formErrors);
+      }
+      return payload.employee;
+    });
+  }
   return apiClient.patch(`/employees/${id}`, data).then((res: any) => res.employee);
 }
 export function provisionEmployeeUser(id: string, data?: { email: string; roleId: string }): Promise<any> {
@@ -286,10 +326,50 @@ export function fetchWorker(id: string): Promise<Worker> {
 export function setWorkerActive(id: string, active: boolean): Promise<Worker> {
   return apiClient.patch(`/workers/${id}`, { status: active ? "ACTIVE" : "INACTIVE" }).then((res: any) => res.worker);
 }
-export function createWorker(data: WorkerInput): Promise<Worker> {
+export function createWorker(data: WorkerInput, photo?: File | Blob | null): Promise<Worker> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "worker.jpg");
+    return fetch(`${API_BASE_URL}/workers`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to create worker", payload.errors, payload.formErrors);
+      }
+      return payload.worker;
+    });
+  }
   return apiClient.post("/workers", data).then((res: any) => res.worker);
 }
-export function updateWorker(id: string, data: Partial<WorkerInput>): Promise<Worker> {
+export function updateWorker(id: string, data: Partial<WorkerInput>, photo?: File | Blob | null): Promise<Worker> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "worker.jpg");
+    return fetch(`${API_BASE_URL}/workers/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to update worker", payload.errors, payload.formErrors);
+      }
+      return payload.worker;
+    });
+  }
   return apiClient.patch(`/workers/${id}`, data).then((res: any) => res.worker);
 }
 

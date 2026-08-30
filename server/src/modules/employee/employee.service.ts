@@ -207,9 +207,16 @@ export async function createEmployeeId(scope:AuthScope,input:CreateEmployeeInput
   return `${farmName}-E${totalEmpolyees.pagination.total+1}`
 }
 
+/** Optional face-AI data attached during create/update. */
+export interface FaceEnrollmentData {
+  photoUrl?: string | undefined;
+  faceEmbedding?: number[] | undefined;
+}
+
 export async function createEmployee(
   scope: AuthScope,
   input: CreateEmployeeInput,
+  faceData: FaceEnrollmentData = {},
 ): Promise<SafeEmployee> {
   await assertFarmWritableById(scope, input.farmId);
 
@@ -230,6 +237,10 @@ export async function createEmployee(
     throw new AppError("Employee ID already exists", 409);
   }
 
+  // Use photoUrl from face enrollment (Cloudinary) if provided, otherwise fall
+  // back to the plain URL string from the request body.
+  const resolvedPhotoUrl = faceData.photoUrl ?? input.photoUrl;
+
   try {
     const employee = await prisma.employee.create({
       data: {
@@ -240,13 +251,31 @@ export async function createEmployee(
         ...(input.phone !== undefined && {
           phone: normalizePhone(input.phone),
         }),
-        ...(input.photoUrl !== undefined && { photoUrl: input.photoUrl }),
+        ...(resolvedPhotoUrl !== undefined && { photoUrl: resolvedPhotoUrl }),
         ...(input.joiningDate !== undefined && {
           joiningDate: input.joiningDate,
         }),
       },
       select: employeeSelect,
     });
+
+    // Store face embedding via raw SQL (Prisma cannot write vector columns).
+    if (faceData.faceEmbedding) {
+      try {
+        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
+        await prisma.$queryRawUnsafe(
+          `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
+          vectorLiteral,
+          employee.id,
+        );
+      } catch {
+        await prisma.$queryRawUnsafe(
+          `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
+          faceData.faceEmbedding,
+          employee.id,
+        );
+      }
+    }
 
     const safeEmp = toSafeEmployee(employee);
     const audit:RecordAuditParams = {
@@ -268,6 +297,7 @@ export async function updateEmployee(
   scope: AuthScope,
   id: string,
   input: UpdateEmployeeInput,
+  faceData: FaceEnrollmentData = {},
 ): Promise<SafeEmployee> {
   const existingEmployee = await prisma.employee.findUnique({
     where: {
@@ -292,6 +322,11 @@ export async function updateEmployee(
   if (input.designationId !== undefined) {
     await assertDesignationExists(input.designationId);
   }
+
+  // Use photoUrl from face enrollment (Cloudinary) if provided, otherwise
+  // fall back to the plain URL string from the request body.
+  const resolvedPhotoUrl = faceData.photoUrl ?? input.photoUrl;
+
   try {
     const employee = await prisma.employee.update({
       where: {
@@ -307,13 +342,31 @@ export async function updateEmployee(
         ...(input.phone !== undefined && {
           phone: input.phone === null ? null : normalizePhone(input.phone),
         }),
-        ...(input.photoUrl !== undefined && { photoUrl: input.photoUrl }),
+        ...(resolvedPhotoUrl !== undefined && { photoUrl: resolvedPhotoUrl }),
         ...(input.joiningDate !== undefined && {
           joiningDate: input.joiningDate,
         }),
       },
       select: employeeSelect,
     });
+
+    // Update face embedding via raw SQL.
+    if (faceData.faceEmbedding) {
+      try {
+        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
+        await prisma.$queryRawUnsafe(
+          `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
+          vectorLiteral,
+          employee.id,
+        );
+      } catch {
+        await prisma.$queryRawUnsafe(
+          `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
+          faceData.faceEmbedding,
+          employee.id,
+        );
+      }
+    }
 
     const safeEmp = toSafeEmployee(employee);
     void recordAuditLog({

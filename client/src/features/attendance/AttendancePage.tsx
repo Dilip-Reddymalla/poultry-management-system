@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   fetchAttendance,
@@ -42,6 +42,7 @@ export function AttendancePage({
 } = {}): React.ReactElement {
   const { can, user } = useAuth();
   const { notify } = useToast();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
 
   const employeeId = propEmployeeId ?? params.get("employeeId") ?? "";
@@ -139,6 +140,14 @@ export function AttendancePage({
             ) : null}
             {can("attendance:create") ? (
               <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    navigate("/attendance/face");
+                  }}
+                >
+                  🎯 Face Attendance
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => {

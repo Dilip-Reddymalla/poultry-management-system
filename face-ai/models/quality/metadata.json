@@ -1,0 +1,79 @@
+{
+    "model_id": "face_det_lite",
+    "model_name": "Lightweight-Face-Detection",
+    "runtime": "onnx",
+    "precision": "w8a16",
+    "tool_versions": {
+        "qairt": "2.45.0.260326154327",
+        "onnx_runtime": "1.27.1"
+    },
+    "model_files": {
+        "face_det_lite.onnx": {
+            "inputs": {
+                "input": {
+                    "shape": [
+                        1,
+                        1,
+                        480,
+                        640
+                    ],
+                    "dtype": "uint16",
+                    "quantization_parameters": {
+                        "scale": 0.000015259021893143654,
+                        "zero_point": 0
+                    },
+                    "io_type": "image",
+                    "image_metadata": {
+                        "color_format": "grayscale"
+                    },
+                    "value_range": [
+                        0.0,
+                        1.0
+                    ]
+                }
+            },
+            "outputs": {
+                "heatmap": {
+                    "shape": [
+                        1,
+                        1,
+                        60,
+                        80
+                    ],
+                    "dtype": "uint16",
+                    "quantization_parameters": {
+                        "scale": 0.00011156859545735642,
+                        "zero_point": 47397
+                    }
+                },
+                "bbox": {
+                    "shape": [
+                        1,
+                        4,
+                        60,
+                        80
+                    ],
+                    "dtype": "uint16",
+                    "quantization_parameters": {
+                        "scale": 0.0012028587516397238,
+                        "zero_point": 2261
+                    }
+                },
+                "landmark": {
+                    "shape": [
+                        1,
+                        10,
+                        60,
+                        80
+                    ],
+                    "dtype": "uint16",
+                    "quantization_parameters": {
+                        "scale": 0.0007150633609853685,
+                        "zero_point": 25230
+                    }
+                }
+            }
+        }
+    },
+    "use_case": "Object Detection"
+}

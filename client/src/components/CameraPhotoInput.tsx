@@ -32,34 +32,49 @@ export function CameraPhotoInput({
   }, []);
 
   // Clean up stream on unmount
-  // Attach stream to video element once mode becomes camera
+  // Attach stream to video element once mode becomes camera or facingMode changes
   useEffect(() => {
     if (mode === "camera" && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
       videoRef.current.play().catch(() => {});
     }
-  }, [mode]);
+  }, [mode, facingMode]);
 
   const startCamera = async (targetFacingMode?: "user" | "environment") => {
     setCameraError(null);
     const modeToUse = targetFacingMode || facingMode;
-    if (targetFacingMode && targetFacingMode !== facingMode) {
-      setFacingMode(targetFacingMode);
-    }
+    setFacingMode(modeToUse);
     stopCamera();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: modeToUse },
+        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: { ideal: modeToUse } },
       });
       streamRef.current = stream;
       setMode("camera");
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
     } catch (err: any) {
-      setCameraError(
-        err.name === "NotAllowedError"
-          ? "Camera access denied. Please allow camera permissions."
-          : "Unable to access camera: " + (err.message || "Unknown error"),
-      );
-      stopCamera();
+      // Fallback try without facingMode constraint if strict constraint failed
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        streamRef.current = fallbackStream;
+        setMode("camera");
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallbackStream;
+          videoRef.current.play().catch(() => {});
+        }
+      } catch (fallbackErr: any) {
+        setCameraError(
+          err.name === "NotAllowedError" || fallbackErr.name === "NotAllowedError"
+            ? "Camera access denied. Please allow camera permissions."
+            : "Unable to access camera: " + (err.message || fallbackErr.message || "Unknown error"),
+        );
+        stopCamera();
+      }
     }
   };
 

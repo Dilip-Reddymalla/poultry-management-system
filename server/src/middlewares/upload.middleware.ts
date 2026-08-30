@@ -22,3 +22,24 @@ export const uploadPhoto = upload.single("photo");
 
 /** Multer middleware that accepts a single image file under field name `image`. */
 export const uploadImage = upload.single("image");
+
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedExts = [".xlsx", ".xls", ".csv"];
+    const fileName = file.originalname.toLowerCase();
+    const hasAllowedExt = allowedExts.some((ext) => fileName.endsWith(ext));
+    if (hasAllowedExt) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .xlsx, .xls, and .csv Excel files are allowed"));
+    }
+  },
+});
+
+/** Multer middleware that accepts a single spreadsheet file under field name `file`. */
+export const uploadExcel = excelUpload.single("file");
+

@@ -7,10 +7,12 @@ import {
   listWorkersController,
   reactivateWorkerController,
   updateWorkerController,
+  importWorkersExcelController,
+  downloadWorkerExcelTemplateController,
 } from "./worker.controller.js";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
-import { uploadPhoto } from "../../middlewares/upload.middleware.js";
+import { uploadPhoto, uploadExcel } from "../../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -18,6 +20,8 @@ const router = Router();
 // a form of update, so deactivate/reactivate reuse worker:update rather than
 // adding dedicated permissions.
 router.get("/", requirePermission("worker:view"), listWorkersController);
+router.get("/import-template", requirePermission("worker:create"), downloadWorkerExcelTemplateController);
+router.post("/import-excel", requirePermission("worker:create"), uploadExcel, importWorkersExcelController);
 router.get("/:id", requirePermission("worker:view"), getWorkerController);
 
 // Create / Update accept an optional `photo` file for face enrollment.

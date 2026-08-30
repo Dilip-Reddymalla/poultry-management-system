@@ -384,13 +384,13 @@ export function FaceAttendancePage(): React.ReactElement {
     };
   }, [stopCamera]);
 
-  // Attach stream to video element once cameraActive renders the video tag
+  // Attach stream to video element once cameraActive renders the video tag or facingMode changes
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
       videoRef.current.play().catch(() => {});
     }
-  }, [cameraActive]);
+  }, [cameraActive, facingMode]);
 
   const startCamera = async (targetFacingMode?: "user" | "environment") => {
     setCameraError(null);
@@ -399,16 +399,14 @@ export function FaceAttendancePage(): React.ReactElement {
     setSubmitResult(null);
     setError(null);
     const modeToUse = targetFacingMode || facingMode;
-    if (targetFacingMode && targetFacingMode !== facingMode) {
-      setFacingMode(targetFacingMode);
-    }
+    setFacingMode(modeToUse);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: modeToUse },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: modeToUse } },
       });
       streamRef.current = stream;
       setCameraActive(true);
@@ -417,12 +415,22 @@ export function FaceAttendancePage(): React.ReactElement {
         videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
-      setCameraError(
-        err.name === "NotAllowedError"
-          ? "Camera access denied. Please grant permission."
-          : "Could not open camera: " + (err.message || "Unknown error"),
-      );
-      stopCamera();
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = fallbackStream;
+        setCameraActive(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallbackStream;
+          videoRef.current.play().catch(() => {});
+        }
+      } catch (fallbackErr: any) {
+        setCameraError(
+          err.name === "NotAllowedError" || fallbackErr.name === "NotAllowedError"
+            ? "Camera access denied. Please grant permission."
+            : "Could not open camera: " + (err.message || fallbackErr.message || "Unknown error"),
+        );
+        stopCamera();
+      }
     }
   };
 

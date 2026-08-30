@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { AppError } from "../utils/app-error.js";
 
 // ---------------------------------------------------------------------------
 // Types mirroring the FastAPI response schemas
@@ -80,27 +81,44 @@ export async function analyzeImage(
 ): Promise<FaceAIResponse> {
   const url = `${env.FASTAPI_AI_URL}/api/v1/recognition/analyze`;
 
-  // Build multipart/form-data manually using standard FormData + Blob API
-  const formData = new FormData();
-  const arrayBuffer = imageBuffer.buffer.slice(
-    imageBuffer.byteOffset,
-    imageBuffer.byteOffset + imageBuffer.byteLength,
-  ) as ArrayBuffer;
-  const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
-  formData.append("file", blob, filename);
+  try {
+    // Build multipart/form-data manually using standard FormData + Blob API
+    const formData = new FormData();
+    const arrayBuffer = imageBuffer.buffer.slice(
+      imageBuffer.byteOffset,
+      imageBuffer.byteOffset + imageBuffer.byteLength,
+    ) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+    formData.append("file", blob, filename);
 
-  const response = await fetch(url, {
-    method: "POST",
-    body: formData,
-  });
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(
-      `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
-    );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new AppError(
+        `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+        502,
+      );
+    }
+
+    const data = (await response.json()) as FaceAIResponse;
+    return data;
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    if (
+      err?.cause?.code === "ECONNREFUSED" ||
+      err?.code === "ECONNREFUSED" ||
+      (err?.message && err.message.includes("fetch failed"))
+    ) {
+      throw new AppError(
+        `Face AI service is unavailable (ECONNREFUSED at ${env.FASTAPI_AI_URL}). Please ensure the Python Face AI server is running on port 8000.`,
+        503,
+      );
+    }
+    throw new AppError(err?.message || "Failed to analyze image with Face AI service", 500);
   }
-
-  const data = (await response.json()) as FaceAIResponse;
-  return data;
 }
+

@@ -29,6 +29,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatDate } from "../../lib/display.js";
 import { EmployeeFormDialog } from "./EmployeeFormDialog.js";
+import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 
 const PAGE_SIZE = 20;
 
@@ -48,6 +49,7 @@ export function EmployeesPage(): React.ReactElement {
   const [farmId, setFarmId] = useState("");
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
 
   // Typing should not fire a request per keystroke.
   useEffect(() => {
@@ -96,15 +98,23 @@ export function EmployeesPage(): React.ReactElement {
         description="Everyone on the register, with the designation they work under."
         actions={
           can("employee:create") ? (
-            <Button
-              variant="primary"
-              onClick={() => {
-                setCreating(true);
-              }}
-            >
-              <PlusIcon className="button__icon" />
-              Add employee
-            </Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                variant="secondary"
+                onClick={() => setImportingExcel(true)}
+              >
+                📊 Import Excel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setCreating(true);
+                }}
+              >
+                <PlusIcon className="button__icon" />
+                Add employee
+              </Button>
+            </div>
           ) : null
         }
       />
@@ -302,6 +312,17 @@ export function EmployeesPage(): React.ReactElement {
             setCreating(false);
           }}
           onSaved={handleCreated}
+        />
+      ) : null}
+
+      {importingExcel ? (
+        <ExcelImportDialog
+          type="employee"
+          onClose={() => setImportingExcel(false)}
+          onSuccess={() => {
+            employees.reload();
+            notify("success", "Employee import completed.");
+          }}
         />
       ) : null}
     </div>

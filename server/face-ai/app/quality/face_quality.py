@@ -65,8 +65,11 @@ class FaceQualityAnalyzer:
         if providers is None:
             providers = ["CPUExecutionProvider"]
 
+        opts = ort.SessionOptions()
+        opts.log_severity_level = 3
         self.session = ort.InferenceSession(
             str(self.model_path),
+            sess_options=opts,
             providers=providers,
         )
 

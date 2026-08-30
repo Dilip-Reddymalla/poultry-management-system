@@ -430,3 +430,53 @@ export function exportAuditLogsUrl(query: Omit<AuditLogListQuery, "page" | "limi
   }
   return `${API_BASE_URL}/audit-logs/export?${searchParams.toString()}`;
 }
+
+// -- Excel Imports --
+export interface ExcelImportSummary {
+  totalCount: number;
+  addedCount: number;
+  failedCount: number;
+  failedExcelBase64?: string;
+  filename?: string;
+}
+
+export function importEmployeesExcel(file: File): Promise<{ success: boolean; message: string; summary: ExcelImportSummary }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetch(`${API_BASE_URL}/employees/import-excel`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  }).then(async (res) => {
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new ApiError(res.status, payload.message || "Failed to import employees", payload.errors, payload.formErrors);
+    }
+    return payload;
+  });
+}
+
+export function downloadEmployeeTemplateUrl(): string {
+  return `${API_BASE_URL}/employees/import-template`;
+}
+
+export function importWorkersExcel(file: File): Promise<{ success: boolean; message: string; summary: ExcelImportSummary }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetch(`${API_BASE_URL}/workers/import-excel`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  }).then(async (res) => {
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new ApiError(res.status, payload.message || "Failed to import workers", payload.errors, payload.formErrors);
+    }
+    return payload;
+  });
+}
+
+export function downloadWorkerTemplateUrl(): string {
+  return `${API_BASE_URL}/workers/import-template`;
+}
+

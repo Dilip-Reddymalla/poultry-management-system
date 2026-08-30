@@ -8,14 +8,18 @@ import {
   deactivateEmployeeController,
   reactivateEmployeeController,
   provisionEmployeeUserController,
+  importEmployeesExcelController,
+  downloadEmployeeExcelTemplateController,
 } from "./employee.controller.js";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
-import { uploadPhoto } from "../../middlewares/upload.middleware.js";
+import { uploadPhoto, uploadExcel } from "../../middlewares/upload.middleware.js";
 
 const router = Router();
 
 router.get("/", requirePermission("employee:view"), listEmployeesController);
+router.get("/import-template", requirePermission("employee:create"), downloadEmployeeExcelTemplateController);
+router.post("/import-excel", requirePermission("employee:create"), uploadExcel, importEmployeesExcelController);
 router.get("/:id", requirePermission("employee:view"), getEmployeeController);
 router.post("/", requirePermission("employee:create"), uploadPhoto, createEmployeeController);
 router.patch(

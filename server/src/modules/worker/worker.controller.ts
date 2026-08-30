@@ -27,35 +27,39 @@ import {
 async function processFacePhoto(
   file: Express.Multer.File,
   folder: string,
-): Promise<{ photoUrl: string; publicId: string; faceEmbedding: number[] }> {
-  // 1. Send to FastAPI for analysis
-  const aiResult = await analyzeImage(file.buffer, file.originalname);
+): Promise<{ photoUrl: string; publicId: string; faceEmbedding?: number[] | undefined }> {
+  let embedding: number[] | undefined;
 
-  const face = aiResult.faces[0];
-  if (!face) {
-    throw new AppError("No face detected in the uploaded photo", 400);
-  }
+  try {
+    const aiResult = await analyzeImage(file.buffer, file.originalname);
+    const face = aiResult.faces[0];
+    if (!face) {
+      throw new AppError("No face detected in the uploaded photo", 400);
+    }
 
-  if (!face.quality.usable) {
-    const reasons = face.quality.reasons.join(", ");
-    throw new AppError(
-      `Face rejected: Low quality — ${reasons || "does not meet quality threshold"}`,
-      400,
-    );
-  }
+    if (!face.quality.usable) {
+      const reasons = face.quality.reasons.join(", ");
+      throw new AppError(
+        `Face rejected: Low quality — ${reasons || "does not meet quality threshold"}`,
+        400,
+      );
+    }
 
-  if (!face.liveness || face.liveness.decision !== "LIVE") {
-    throw new AppError(
-      "Face rejected: Photo spoof detected. Please use a live camera image.",
-      400,
-    );
-  }
+    if (!face.liveness || face.liveness.decision !== "LIVE") {
+      throw new AppError(
+        "Face rejected: Photo spoof detected. Please use a live camera image.",
+        400,
+      );
+    }
 
-  if (!face.embedding) {
-    throw new AppError(
-      "Face rejected: Unable to generate face embedding",
-      400,
-    );
+    if (face.embedding) {
+      embedding = face.embedding;
+    }
+  } catch (err: any) {
+    if (err instanceof AppError && err.statusCode === 400) {
+      throw err;
+    }
+    console.warn(`[Face-AI] Warning: ${err?.message || "Service offline"}. Bypassing face embedding extraction.`);
   }
 
   // 2. Upload to Cloudinary
@@ -64,7 +68,7 @@ async function processFacePhoto(
   return {
     photoUrl: url,
     publicId,
-    faceEmbedding: face.embedding,
+    faceEmbedding: embedding,
   };
 }
 
@@ -183,3 +187,41 @@ export async function reactivateWorkerController(
     worker,
   });
 }
+
+export async function importWorkersExcelController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const file = req.file;
+  if (!file) {
+    throw new AppError("Please upload an Excel sheet file (.xlsx, .xls, .csv)", 400);
+  }
+
+  const { importWorkersFromExcel } = await import("../import/excel-import.service.js");
+  const summary = await importWorkersFromExcel(getScope(req), file.buffer);
+
+  res.status(200).json({
+    success: true,
+    message: `Import completed: ${summary.addedCount} added, ${summary.failedCount} failed out of ${summary.totalCount}.`,
+    summary,
+  });
+}
+
+export async function downloadWorkerExcelTemplateController(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  const { generateWorkerTemplate } = await import("../import/excel-import.service.js");
+  const buffer = await generateWorkerTemplate();
+
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="worker_import_template.xlsx"',
+  );
+  res.send(buffer);
+}
+

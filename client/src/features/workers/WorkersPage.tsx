@@ -22,6 +22,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
+import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 
 const PAGE_SIZE = 20;
 
@@ -38,6 +39,7 @@ export function WorkersPage(): React.ReactElement {
   const [farmId, setFarmId] = useState("");
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [importingExcel, setImportingExcel] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -71,15 +73,23 @@ export function WorkersPage(): React.ReactElement {
         description="Field staff recorded for attendance. Workers never sign in."
         actions={
           can("worker:create") ? (
-            <Button
-              variant="primary"
-              onClick={() => {
-                setCreating(true);
-              }}
-            >
-              <PlusIcon className="button__icon" />
-              Add worker
-            </Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                variant="secondary"
+                onClick={() => setImportingExcel(true)}
+              >
+                📊 Import Excel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setCreating(true);
+                }}
+              >
+                <PlusIcon className="button__icon" />
+                Add worker
+              </Button>
+            </div>
           ) : null
         }
       />
@@ -240,6 +250,17 @@ export function WorkersPage(): React.ReactElement {
             setCreating(false);
             notify("success", `${worker.name} added.`);
             workers.reload();
+          }}
+        />
+      ) : null}
+
+      {importingExcel ? (
+        <ExcelImportDialog
+          type="worker"
+          onClose={() => setImportingExcel(false)}
+          onSuccess={() => {
+            workers.reload();
+            notify("success", "Worker import completed.");
           }}
         />
       ) : null}

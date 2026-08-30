@@ -40,8 +40,11 @@ class SCRFDDetector:
         self.strides = [8, 16, 32]
 
         # Load ONNX model.
+        opts = ort.SessionOptions()
+        opts.log_severity_level = 3
         self.session = ort.InferenceSession(
             str(self.model_path),
+            sess_options=opts,
             providers=["CPUExecutionProvider"],
         )
 

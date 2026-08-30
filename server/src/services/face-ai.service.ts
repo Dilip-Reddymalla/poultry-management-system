@@ -80,6 +80,11 @@ export async function analyzeImage(
   filename: string,
 ): Promise<FaceAIResponse> {
   const url = `${env.FASTAPI_AI_URL}/api/v1/recognition/analyze`;
+  const startTime = Date.now();
+
+  console.log(
+    `[Face-AI Client] 🔍 Sending image analysis request to ${url} (File: ${filename}, Size: ${(imageBuffer.length / 1024).toFixed(1)} KB)`,
+  );
 
   try {
     // Build multipart/form-data manually using standard FormData + Blob API
@@ -96,8 +101,13 @@ export async function analyzeImage(
       body: formData,
     });
 
+    const duration = Date.now() - startTime;
+
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error(
+        `[Face-AI Client] ❌ Target ${url} responded with HTTP ${response.status} in ${duration}ms: ${errorBody}`,
+      );
       throw new AppError(
         `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
         502,
@@ -105,20 +115,37 @@ export async function analyzeImage(
     }
 
     const data = (await response.json()) as FaceAIResponse;
+    console.log(
+      `[Face-AI Client] ✅ Analysis succeeded in ${duration}ms. Detected ${data.face_count} face(s).`,
+    );
     return data;
   } catch (err: any) {
+    const duration = Date.now() - startTime;
     if (err instanceof AppError) throw err;
+
+    console.error(`[Face-AI Client] ❌ Connection failure requesting ${url} (${duration}ms):`, {
+      message: err?.message,
+      code: err?.code || err?.cause?.code,
+      syscall: err?.cause?.syscall || err?.syscall,
+      address: err?.cause?.address || err?.address,
+      port: err?.cause?.port || err?.port,
+      cause: err?.cause,
+    });
+
     if (
       err?.cause?.code === "ECONNREFUSED" ||
       err?.code === "ECONNREFUSED" ||
       (err?.message && err.message.includes("fetch failed"))
     ) {
       throw new AppError(
-        `Face AI service is unavailable (ECONNREFUSED at ${env.FASTAPI_AI_URL}). Please ensure the Python Face AI server is running on port 8000.`,
+        `Face AI service is unavailable (ECONNREFUSED connecting to ${url}). Check target URL FASTAPI_AI_URL=${env.FASTAPI_AI_URL} and verify Python Face AI process is running.`,
         503,
       );
     }
-    throw new AppError(err?.message || "Failed to analyze image with Face AI service", 500);
+    throw new AppError(
+      `Failed to analyze image with Face AI service (${err?.message || "Unknown error"})`,
+      500,
+    );
   }
 }
 

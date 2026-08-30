@@ -38,6 +38,17 @@ export const errorMiddleware: ErrorRequestHandler = (
   }
 
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) {
+      console.error(
+        `[Express AppError ${err.statusCode}] Path: ${res.req.originalUrl || res.req.url} — ${err.message}`,
+        err.stack || "",
+      );
+    } else {
+      console.warn(
+        `[Express AppError ${err.statusCode}] Path: ${res.req.originalUrl || res.req.url} — ${err.message}`,
+      );
+    }
+
     res.status(err.statusCode).json({
       success: false,
       message: err.message,

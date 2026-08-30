@@ -44,6 +44,7 @@ class Settings(BaseModel):
     quality_use_sharpness: bool = True
 
     # Liveness Parameters
+    enable_liveness: bool = False
     liveness_threshold: float = 0.50
     liveness_crop_scale: float = 2.7
 

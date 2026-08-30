@@ -110,7 +110,7 @@ export async function processFrame(
 
 function deriveFaceStatus(face: FaceAIFaceResult): string {
   if (!face.quality.usable) return "REJECTED_LOW_QUALITY";
-  if (!face.liveness || face.liveness.decision !== "LIVE") return "SPOOF";
+  if (face.liveness && face.liveness.decision === "SPOOF") return "SPOOF";
   return "LIVE";
 }
 

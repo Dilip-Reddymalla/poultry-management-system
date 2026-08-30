@@ -223,39 +223,46 @@ class FacePipeline:
                 continue
 
             # 3. Liveness Anti-Spoofing Analysis
-            l_raw = self.liveness.analyze(
-                image=image,
-                bbox=bbox,
-                crop_scale=settings.liveness_crop_scale,
-            )
-
-            liveness_res = LivenessResult(
-                decision=l_raw["decision"],
-                score=l_raw["score"],
-                scores=l_raw["scores"],
-            )
-
-            # If Liveness SPOOF -> Stop pipeline for this face
-            if l_raw["decision"] == "SPOOF":
-                rec_res = RecognitionResult(
-                    status="SPOOF",
-                    identity=None,
-                    similarity=None,
-                    candidates=[],
+            if settings.enable_liveness:
+                l_raw = self.liveness.analyze(
+                    image=image,
+                    bbox=bbox,
+                    crop_scale=settings.liveness_crop_scale,
                 )
-                faces_res.append(
-                    FaceAnalysisResult(
-                        face_index=idx,
-                        bbox=bbox,
-                        detection_confidence=det_conf,
-                        landmarks=landmarks_list,
-                        quality=quality_res,
-                        liveness=liveness_res,
-                        recognition=rec_res,
-                        embedding=None,
+
+                liveness_res = LivenessResult(
+                    decision=l_raw["decision"],
+                    score=l_raw["score"],
+                    scores=l_raw["scores"],
+                )
+
+                # If Liveness SPOOF -> Stop pipeline for this face
+                if l_raw["decision"] == "SPOOF":
+                    rec_res = RecognitionResult(
+                        status="SPOOF",
+                        identity=None,
+                        similarity=None,
+                        candidates=[],
                     )
+                    faces_res.append(
+                        FaceAnalysisResult(
+                            face_index=idx,
+                            bbox=bbox,
+                            detection_confidence=det_conf,
+                            landmarks=landmarks_list,
+                            quality=quality_res,
+                            liveness=liveness_res,
+                            recognition=rec_res,
+                            embedding=None,
+                        )
+                    )
+                    continue
+            else:
+                liveness_res = LivenessResult(
+                    decision="LIVE",
+                    score=1.0,
+                    scores={"SPOOF": 0.0, "LIVE": 1.0},
                 )
-                continue
 
             # 4. Face Alignment & 5. ArcFace Embedding
             aligned_face = self.aligner.align_detection(image, det)

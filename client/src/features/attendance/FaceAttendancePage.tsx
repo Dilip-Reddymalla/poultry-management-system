@@ -282,6 +282,7 @@ export function FaceAttendancePage(): React.ReactElement {
 
   // Camera state
   const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Image & processing
@@ -391,18 +392,30 @@ export function FaceAttendancePage(): React.ReactElement {
     }
   }, [cameraActive]);
 
-  const startCamera = async () => {
+  const startCamera = async (targetFacingMode?: "user" | "environment") => {
     setCameraError(null);
     setImagePreviewUrl(null);
     setResult(null);
     setSubmitResult(null);
     setError(null);
+    const modeToUse = targetFacingMode || facingMode;
+    if (targetFacingMode && targetFacingMode !== facingMode) {
+      setFacingMode(targetFacingMode);
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: modeToUse },
       });
       streamRef.current = stream;
       setCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
     } catch (err: any) {
       setCameraError(
         err.name === "NotAllowedError"
@@ -411,6 +424,11 @@ export function FaceAttendancePage(): React.ReactElement {
       );
       stopCamera();
     }
+  };
+
+  const toggleCamera = async () => {
+    const nextFacing = facingMode === "user" ? "environment" : "user";
+    await startCamera(nextFacing);
   };
 
   const captureFrameAndProcess = async () => {
@@ -643,28 +661,53 @@ export function FaceAttendancePage(): React.ReactElement {
           ))}
         </select>
 
+        {/* Camera Select */}
+        <select
+          style={styles.select}
+          value={facingMode}
+          onChange={(e) => {
+            const newFacing = e.target.value as "user" | "environment";
+            setFacingMode(newFacing);
+            if (cameraActive) {
+              startCamera(newFacing);
+            }
+          }}
+        >
+          <option value="user">📷 Front Camera</option>
+          <option value="environment">📸 Back Camera</option>
+        </select>
+
         {/* Camera Actions */}
         {!cameraActive ? (
           <button
             style={{ ...styles.btn, ...styles.btnPrimary }}
-            onClick={startCamera}
+            onClick={() => startCamera()}
           >
             🎥 Start Live Camera
           </button>
         ) : (
-          <button
-            style={{
-              ...styles.btn,
-              ...styles.btnPrimary,
-              background: "#4f46e5",
-              ...(processing || !selectedFarmId ? styles.btnDisabled : {}),
-            }}
-            disabled={processing || !selectedFarmId}
-            onClick={captureFrameAndProcess}
-          >
-            {processing && <span style={styles.spinner} />}
-            {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
-          </button>
+          <>
+            <button
+              style={{
+                ...styles.btn,
+                ...styles.btnPrimary,
+                background: "#4f46e5",
+                ...(processing || !selectedFarmId ? styles.btnDisabled : {}),
+              }}
+              disabled={processing || !selectedFarmId}
+              onClick={captureFrameAndProcess}
+            >
+              {processing && <span style={styles.spinner} />}
+              {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
+            </button>
+            <button
+              style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
+              onClick={toggleCamera}
+              title="Switch between front and back camera"
+            >
+              🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
+            </button>
+          </>
         )}
 
         {cameraActive && (

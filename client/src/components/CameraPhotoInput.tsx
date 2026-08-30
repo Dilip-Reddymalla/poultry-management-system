@@ -13,6 +13,7 @@ export function CameraPhotoInput({
   onChange,
 }: CameraPhotoInputProps): React.ReactElement {
   const [mode, setMode] = useState<"idle" | "camera">("idle");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     currentPhotoUrl ?? null,
   );
@@ -39,11 +40,16 @@ export function CameraPhotoInput({
     }
   }, [mode]);
 
-  const startCamera = async () => {
+  const startCamera = async (targetFacingMode?: "user" | "environment") => {
     setCameraError(null);
+    const modeToUse = targetFacingMode || facingMode;
+    if (targetFacingMode && targetFacingMode !== facingMode) {
+      setFacingMode(targetFacingMode);
+    }
+    stopCamera();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: "user" },
+        video: { width: { ideal: 640 }, height: { ideal: 640 }, facingMode: modeToUse },
       });
       streamRef.current = stream;
       setMode("camera");
@@ -55,6 +61,11 @@ export function CameraPhotoInput({
       );
       stopCamera();
     }
+  };
+
+  const toggleCamera = async () => {
+    const nextFacing = facingMode === "user" ? "environment" : "user";
+    await startCamera(nextFacing);
   };
 
   const capturePhoto = () => {
@@ -152,6 +163,7 @@ export function CameraPhotoInput({
               gap: 8,
               marginTop: 10,
               justifyContent: "center",
+              flexWrap: "wrap",
             }}
           >
             <Button
@@ -161,6 +173,13 @@ export function CameraPhotoInput({
               disabled={!!cameraError}
             >
               📸 Capture Live Photo
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={toggleCamera}
+            >
+              🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
             </Button>
             <Button
               type="button"
@@ -237,9 +256,12 @@ export function CameraPhotoInput({
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button type="button" variant="secondary" onClick={startCamera}>
-                📷 Take Live Photo
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Button type="button" variant="secondary" onClick={() => startCamera("user")}>
+                📷 Front Cam
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => startCamera("environment")}>
+                📷 Back Cam
               </Button>
               <Button
                 type="button"

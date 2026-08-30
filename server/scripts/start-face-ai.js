@@ -22,9 +22,15 @@ if (process.platform === "win32" && fs.existsSync(winVenv)) {
 
 console.log(`[Face-AI Launcher] Using Python: ${pythonExecutable}`);
 
+const isProd = process.env.NODE_ENV === "production";
+const uvicornArgs = ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"];
+if (!isProd) {
+  uvicornArgs.push("--reload");
+}
+
 const child = spawn(
   pythonExecutable,
-  ["-m", "uvicorn", "app.main:app", "--port", "8000", "--reload"],
+  uvicornArgs,
   {
     cwd: faceAiDir,
     stdio: "inherit",

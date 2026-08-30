@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently -n \"EXPRESS,FACE-AI\" -c \"blue,magenta\" \"tsx watch src/server.ts\" \"npm run dev:face-ai\"",
     "dev:node": "tsx watch src/server.ts",
-    "dev:face-ai": "cd face-ai && (.venv\\Scripts\\python -m uvicorn app.main:app --port 8000 --reload || .venv/bin/python -m uvicorn app.main:app --port 8000 --reload || python -m uvicorn app.main:app --port 8000 --reload)",
+    "dev:face-ai": "node scripts/start-face-ai.js",
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "prisma db seed",

@@ -10,6 +10,7 @@ import {
 import type { Designation, Employee, Farm } from "../../api/types.js";
 import { Dialog } from "../../components/Dialog.js";
 import { CameraPhotoInput } from "../../components/CameraPhotoInput.js";
+import { PhoneField } from "../../components/PhoneField.js";
 import {
   Button,
   FormAlert,
@@ -205,14 +206,13 @@ export function EmployeeFormDialog({
           ))}
         </SelectField>
 
-        <TextField
+        <PhoneField
           id="phone"
           label="Phone number"
-          type="tel"
           value={form.phone}
-          hint="Used for OTP sign-in. Include the country code."
+          hint="Used for OTP or password sign-in. Select country code."
           errors={error?.fieldErrors.phone}
-          onChange={field("phone")}
+          onChange={(val) => setForm((curr) => ({ ...curr, phone: val }))}
         />
 
         <TextField

@@ -6,8 +6,8 @@ import {
   clearAuthCookieOptions,
 } from "../../utils/auth-cookie.js";
 
-import { getCurrentUser, login, requestOtp,verifyPhoneOtp, selectPhoneUser, setPassword } from "./auth.service.js";
-import { loginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema } from "./auth.schema.js";
+import { getCurrentUser, login, loginWithPhone, requestOtp, verifyPhoneOtp, selectPhoneUser, setPassword } from "./auth.service.js";
+import { loginSchema, phoneLoginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema } from "./auth.schema.js";
 
 
 export async function loginController(
@@ -23,6 +23,35 @@ export async function loginController(
   res.status(200).json({
     success: true,
     message: "Login successful",
+    user: result.user,
+  });
+}
+
+export async function phoneLoginController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = phoneLoginSchema.parse(req.body);
+
+  const result = await loginWithPhone(input);
+
+  if (result.requiresUserSelection) {
+    res.status(200).json({
+      success: true,
+      message: "Credentials verified. Select an account.",
+      requiresUserSelection: true,
+      selectionToken: result.selectionToken,
+      users: result.users,
+    });
+    return;
+  }
+
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+
+  res.status(200).json({
+    success: true,
+    message: "Login successful",
+    requiresUserSelection: false,
     user: result.user,
   });
 }

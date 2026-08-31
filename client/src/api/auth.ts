@@ -45,6 +45,19 @@ export function requestOtp(phone: string): Promise<{ phone: string }> {
   });
 }
 
+export type PhoneSignInResponse = VerifyOtpResponse;
+
+export function signInWithPhone(
+  phone: string,
+  password: string,
+): Promise<PhoneSignInResponse> {
+  return apiRequest<PhoneSignInResponse>("/auth/phone/login", {
+    method: "POST",
+    body: { phone, password },
+    keepSessionOnUnauthorized: true,
+  });
+}
+
 export type VerifyOtpResponse =
   | { requiresUserSelection: false; user: SessionUser }
   | {

@@ -10,6 +10,7 @@ import {
 import type { Farm, Worker } from "../../api/types.js";
 import { Dialog } from "../../components/Dialog.js";
 import { CameraPhotoInput } from "../../components/CameraPhotoInput.js";
+import { PhoneField } from "../../components/PhoneField.js";
 import {
   Button,
   FormAlert,
@@ -173,14 +174,13 @@ export function WorkerFormDialog({
           onChange={field("name")}
         />
 
-        <TextField
+        <PhoneField
           id="worker-phone"
           label="Phone number"
-          type="tel"
           value={form.phone}
           hint="Optional. For contact only — workers do not sign in."
           errors={error?.fieldErrors.phone}
-          onChange={field("phone")}
+          onChange={(val) => setForm((curr) => ({ ...curr, phone: val }))}
         />
 
         <CameraPhotoInput

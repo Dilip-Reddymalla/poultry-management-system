@@ -149,3 +149,96 @@ export async function analyzeImage(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Profile enrollment — selects the best face from a multi-face image
+// ---------------------------------------------------------------------------
+
+export interface ProfileEnrollFaceResult extends FaceAIFaceResult {}
+
+export interface ProfileEnrollResponse {
+  success: boolean;
+  filename: string;
+  image_width: number;
+  image_height: number;
+  total_faces_detected: number;
+  selected_face: ProfileEnrollFaceResult | null;
+  selection_reason: string;
+  process_time_ms: number;
+}
+
+/**
+ * Send an image to the Face AI profile enrollment endpoint.
+ *
+ * Unlike the generic `analyzeImage`, this endpoint automatically selects the
+ * single best face (most centered, highest confidence) from the image for
+ * embedding storage.  Designed for employee / worker profile photos.
+ */
+export async function analyzeProfilePhoto(
+  imageBuffer: Buffer,
+  filename: string,
+): Promise<ProfileEnrollResponse> {
+  const url = `${env.FASTAPI_AI_URL}/api/v1/recognition/profile-enroll`;
+  const startTime = Date.now();
+
+  console.log(
+    `[Face-AI Client] 🔍 Sending profile enrollment request to ${url} (File: ${filename}, Size: ${(imageBuffer.length / 1024).toFixed(1)} KB)`,
+  );
+
+  try {
+    const formData = new FormData();
+    const arrayBuffer = imageBuffer.buffer.slice(
+      imageBuffer.byteOffset,
+      imageBuffer.byteOffset + imageBuffer.byteLength,
+    ) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+    formData.append("file", blob, filename);
+
+    const response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    const duration = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(
+        `[Face-AI Client] ❌ Profile enrollment ${url} responded with HTTP ${response.status} in ${duration}ms: ${errorBody}`,
+      );
+      throw new AppError(
+        `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+        502,
+      );
+    }
+
+    const data = (await response.json()) as ProfileEnrollResponse;
+    console.log(
+      `[Face-AI Client] ✅ Profile enrollment succeeded in ${duration}ms. ${data.total_faces_detected} face(s) detected, selected: ${data.selected_face ? `#${data.selected_face.face_index}` : "none"}.`,
+    );
+    return data;
+  } catch (err: any) {
+    const duration = Date.now() - startTime;
+    if (err instanceof AppError) throw err;
+
+    console.error(`[Face-AI Client] ❌ Connection failure requesting ${url} (${duration}ms):`, {
+      message: err?.message,
+      code: err?.code || err?.cause?.code,
+    });
+
+    if (
+      err?.cause?.code === "ECONNREFUSED" ||
+      err?.code === "ECONNREFUSED" ||
+      (err?.message && err.message.includes("fetch failed"))
+    ) {
+      throw new AppError(
+        `Face AI service is unavailable (ECONNREFUSED connecting to ${url}). Check FASTAPI_AI_URL=${env.FASTAPI_AI_URL}.`,
+        503,
+      );
+    }
+    throw new AppError(
+      `Failed to analyze profile photo with Face AI service (${err?.message || "Unknown error"})`,
+      500,
+    );
+  }
+}
+

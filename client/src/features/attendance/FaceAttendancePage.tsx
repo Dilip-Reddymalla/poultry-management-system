@@ -626,7 +626,7 @@ export function FaceAttendancePage(): React.ReactElement {
       </div>
 
       {/* Controls Header */}
-      <div style={styles.controls}>
+      <div style={styles.controls} className="face-controls">
         {/* Farm Select */}
         <select
           style={styles.select}
@@ -684,72 +684,6 @@ export function FaceAttendancePage(): React.ReactElement {
           <option value="user">📷 Front Camera</option>
           <option value="environment">📸 Back Camera</option>
         </select>
-
-        {/* Camera Actions */}
-        {!cameraActive ? (
-          <button
-            style={{ ...styles.btn, ...styles.btnPrimary }}
-            onClick={() => startCamera()}
-          >
-            🎥 Start Live Camera
-          </button>
-        ) : (
-          <>
-            <button
-              style={{
-                ...styles.btn,
-                ...styles.btnPrimary,
-                background: "#4f46e5",
-                ...(processing || !selectedFarmId ? styles.btnDisabled : {}),
-              }}
-              disabled={processing || !selectedFarmId}
-              onClick={captureFrameAndProcess}
-            >
-              {processing && <span style={styles.spinner} />}
-              {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
-            </button>
-            <button
-              style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
-              onClick={toggleCamera}
-              title="Switch between front and back camera"
-            >
-              🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
-            </button>
-          </>
-        )}
-
-        {cameraActive && (
-          <button
-            style={{ ...styles.btn, background: "#f3f4f6", color: "#374151" }}
-            onClick={stopCamera}
-          >
-            ⏹ Stop Camera
-          </button>
-        )}
-
-        <button
-          style={{ ...styles.btn, background: "#f3f4f6", color: "#374151" }}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          📁 Upload Image
-        </button>
-
-        {result && liveFaces.length > 0 && (
-          <button
-            style={{
-              ...styles.btn,
-              ...styles.btnSuccess,
-              ...(submitting || confirmedCount === 0 || !shiftCheck.allowed
-                ? styles.btnDisabled
-                : {}),
-            }}
-            disabled={submitting || confirmedCount === 0 || !shiftCheck.allowed}
-            onClick={handleSubmitAttendance}
-          >
-            {submitting && <span style={styles.spinner} />}
-            ✅ Mark Attendance ({confirmedCount})
-          </button>
-        )}
       </div>
 
       {/* GPS & Shift Status Info Banner */}
@@ -864,10 +798,93 @@ export function FaceAttendancePage(): React.ReactElement {
               Live Camera Ready
             </h3>
             <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 16 }}>
-              Click <strong>Start Live Camera</strong> above to stream live video for face attendance recognition.
+              Select a farm and start the live camera or upload an image to begin face recognition.
             </p>
           </div>
         )}
+
+        {/* Camera & Capture Action Buttons — Directly under the camera feed */}
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            marginTop: 20,
+            paddingTop: 16,
+            borderTop: "1px solid var(--border, #f3f4f6)",
+          }}
+          className="face-capture-actions"
+        >
+          {!cameraActive ? (
+            <button
+              style={{ ...styles.btn, ...styles.btnPrimary, padding: "12px 24px", fontSize: 15 }}
+              onClick={() => startCamera()}
+            >
+              🎥 Start Live Camera
+            </button>
+          ) : (
+            <>
+              <button
+                style={{
+                  ...styles.btn,
+                  ...styles.btnPrimary,
+                  background: "#4f46e5",
+                  fontSize: 16,
+                  padding: "12px 28px",
+                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.35)",
+                  ...(processing || !selectedFarmId ? styles.btnDisabled : {}),
+                }}
+                disabled={processing || !selectedFarmId}
+                onClick={captureFrameAndProcess}
+              >
+                {processing && <span style={styles.spinner} />}
+                {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
+              </button>
+              <button
+                style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
+                onClick={toggleCamera}
+                title="Switch between front and back camera"
+              >
+                🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
+              </button>
+              <button
+                style={{ ...styles.btn, background: "#fee2e2", color: "#991b1b" }}
+                onClick={stopCamera}
+              >
+                ⏹ Stop Camera
+              </button>
+            </>
+          )}
+
+          <button
+            style={{ ...styles.btn, background: "#f3f4f6", color: "#374151" }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            📁 Upload Image
+          </button>
+
+          {result && liveFaces.length > 0 && (
+            <button
+              style={{
+                ...styles.btn,
+                ...styles.btnSuccess,
+                fontSize: 16,
+                padding: "12px 28px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
+                ...(submitting || confirmedCount === 0 || !shiftCheck.allowed
+                  ? styles.btnDisabled
+                  : {}),
+              }}
+              disabled={submitting || confirmedCount === 0 || !shiftCheck.allowed}
+              onClick={handleSubmitAttendance}
+            >
+              {submitting && <span style={styles.spinner} />}
+              ✅ Mark Attendance ({confirmedCount})
+            </button>
+          )}
+        </div>
 
         <input
           ref={fileInputRef}

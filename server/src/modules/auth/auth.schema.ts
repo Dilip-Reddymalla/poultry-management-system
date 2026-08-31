@@ -42,6 +42,13 @@ export type SelectPhoneUserInput = z.infer<
   typeof selectPhoneUserSchema
 >;
 
+export const phoneLoginSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type PhoneLoginInput = z.infer<typeof phoneLoginSchema>;
+
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;

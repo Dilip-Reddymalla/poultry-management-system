@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { getScope } from "../../middlewares/authorize.middleware.js";
-import { analyzeImage } from "../../services/face-ai.service.js";
+import { analyzeProfilePhoto } from "../../services/face-ai.service.js";
 import { uploadImage as cloudinaryUpload } from "../../services/cloudinary.service.js";
 import { AppError } from "../../utils/app-error.js";
 
@@ -32,10 +32,16 @@ async function processFacePhoto(
   let embedding: number[] | undefined;
 
   try {
-    const aiResult = await analyzeImage(file.buffer, file.originalname);
-    const face = aiResult.faces[0];
+    // Use the dedicated profile enrollment pipeline which automatically
+    // selects the most centered, highest-confidence face from the image.
+    const enrollResult = await analyzeProfilePhoto(file.buffer, file.originalname);
+    const face = enrollResult.selected_face;
+
     if (!face) {
-      throw new AppError("No face detected in the uploaded photo", 400);
+      throw new AppError(
+        enrollResult.selection_reason || "No usable face detected in the uploaded photo",
+        400,
+      );
     }
 
     if (!face.quality.usable) {
@@ -56,6 +62,10 @@ async function processFacePhoto(
     if (face.embedding) {
       embedding = face.embedding;
     }
+
+    console.log(
+      `[Face-AI] Profile enrollment: ${enrollResult.selection_reason}`,
+    );
   } catch (err: any) {
     if (err instanceof AppError && err.statusCode === 400) {
       throw err;

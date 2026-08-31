@@ -237,6 +237,51 @@
   flex-wrap: wrap;
 }
 
+.page-header__actions > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Phone field with country code */
+.phone-field-group {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.phone-field-group__country {
+  flex: 0 0 auto;
+  max-width: 150px;
+  min-width: 110px;
+}
+
+.phone-field-group__number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Face attendance controls */
+.face-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Face capture action buttons under camera feed */
+.face-capture-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 .backlink {
   display: inline-flex;
   align-items: center;
@@ -1573,6 +1618,45 @@ button.strip__cell:hover {
     text-transform: uppercase;
     color: var(--ink-faint);
   }
+
+  .page-header__actions {
+    width: 100%;
+  }
+
+  .page-header__actions > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  .page-header__actions .button,
+  .page-header__actions > div > .button {
+    flex: 1 1 calc(50% - var(--space-2));
+    min-width: 130px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .face-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .face-controls select,
+  .face-controls button {
+    width: 100% !important;
+    min-width: 100% !important;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .face-capture-actions button {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 140px;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1605,8 +1689,45 @@ button.strip__cell:hover {
     width: 100%;
   }
 
-  .page-header__actions .button {
-    flex: 1 1 auto;
+  .page-header__actions > div {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  .page-header__actions .button,
+  .page-header__actions > div > .button {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .face-capture-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .face-capture-actions button {
+    flex: 1 1 100%;
+    width: 100% !important;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .phone-field-group {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .phone-field-group__country {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .phone-field-group__number {
+    width: 100%;
   }
 
   .table tbody tr {

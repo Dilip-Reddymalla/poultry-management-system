@@ -23,6 +23,7 @@ from app.api.schemas.recognition import (
     RecognitionResult,
     FaceAnalysisResult,
     ImageAnalysisResponse,
+    ProfileEnrollResponse,
 )
 
 logger = logging.getLogger("face_ai.pipeline")
@@ -354,4 +355,110 @@ class FacePipeline:
             face_count=len(faces_res),
             faces=faces_res,
             process_time_ms=round(elapsed_ms, 2),
+        )
+
+    def profile_enroll(self, image: np.ndarray, filename: str) -> ProfileEnrollResponse:
+        """
+        Profile enrollment pipeline.
+
+        Runs the full face analysis, then selects the single best face for
+        profile embedding storage.  Selection criteria (composite score):
+          - **Centrality (70%)**: How close the face bounding-box center is to
+            the image center.  A face dead-center scores 1.0.
+          - **Detection confidence (30%)**: The SCRFD detection confidence.
+
+        Only faces that pass quality and liveness are eligible.
+        """
+        # Run the standard analysis first.
+        full_result = self.analyze_image(image, filename)
+
+        if full_result.face_count == 0:
+            return ProfileEnrollResponse(
+                success=True,
+                filename=filename,
+                image_width=full_result.image_width,
+                image_height=full_result.image_height,
+                total_faces_detected=0,
+                selected_face=None,
+                selection_reason="No faces detected in the image.",
+                process_time_ms=full_result.process_time_ms,
+            )
+
+        # Filter to faces that have a usable embedding (passed quality + liveness).
+        eligible = [f for f in full_result.faces if f.embedding is not None]
+
+        if not eligible:
+            return ProfileEnrollResponse(
+                success=True,
+                filename=filename,
+                image_width=full_result.image_width,
+                image_height=full_result.image_height,
+                total_faces_detected=full_result.face_count,
+                selected_face=None,
+                selection_reason=(
+                    f"{full_result.face_count} face(s) detected but none passed "
+                    "quality and liveness checks."
+                ),
+                process_time_ms=full_result.process_time_ms,
+            )
+
+        if len(eligible) == 1:
+            face = eligible[0]
+            return ProfileEnrollResponse(
+                success=True,
+                filename=filename,
+                image_width=full_result.image_width,
+                image_height=full_result.image_height,
+                total_faces_detected=full_result.face_count,
+                selected_face=face,
+                selection_reason=(
+                    f"Single usable face #{face.face_index} selected "
+                    f"(confidence {face.detection_confidence:.2f})."
+                ),
+                process_time_ms=full_result.process_time_ms,
+            )
+
+        # Multiple eligible faces — score each by centrality + confidence.
+        img_cx = full_result.image_width / 2.0
+        img_cy = full_result.image_height / 2.0
+        # Max possible distance from center (corner to center).
+        max_dist = ((img_cx ** 2) + (img_cy ** 2)) ** 0.5
+
+        best_face = None
+        best_score = -1.0
+        best_centrality = 0.0
+        best_conf = 0.0
+
+        for face in eligible:
+            x1, y1, x2, y2 = face.bbox[0], face.bbox[1], face.bbox[2], face.bbox[3]
+            face_cx = (x1 + x2) / 2.0
+            face_cy = (y1 + y2) / 2.0
+            dist = ((face_cx - img_cx) ** 2 + (face_cy - img_cy) ** 2) ** 0.5
+            centrality = 1.0 - (dist / max_dist) if max_dist > 0 else 1.0
+            conf = face.detection_confidence
+
+            # Composite: 70% centrality, 30% confidence.
+            composite = 0.7 * centrality + 0.3 * conf
+
+            if composite > best_score:
+                best_score = composite
+                best_face = face
+                best_centrality = centrality
+                best_conf = conf
+
+        assert best_face is not None
+
+        return ProfileEnrollResponse(
+            success=True,
+            filename=filename,
+            image_width=full_result.image_width,
+            image_height=full_result.image_height,
+            total_faces_detected=full_result.face_count,
+            selected_face=best_face,
+            selection_reason=(
+                f"Selected face #{best_face.face_index} from {len(eligible)} eligible faces: "
+                f"highest composite score (centrality {best_centrality:.2f}, "
+                f"confidence {best_conf:.2f})."
+            ),
+            process_time_ms=full_result.process_time_ms,
         )

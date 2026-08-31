@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   loginController,
+  phoneLoginController,
   getCurrentUserController,
   logoutController,
   requestOtpController,
@@ -15,6 +16,7 @@ import { requireAuth } from "../../middlewares/auth.middleware.js";
 const router = Router();
 
 router.post("/login", loginController);
+router.post("/phone/login", phoneLoginController);
 router.get("/me", requireAuth, getCurrentUserController);
 router.post("/logout", logoutController);
 router.post("/phone/request-otp", requestOtpController);

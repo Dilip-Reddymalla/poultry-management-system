@@ -76,3 +76,30 @@ class ImageAnalysisResponse(BaseModel):
     face_count: int = Field(..., example=1)
     faces: list[FaceAnalysisResult] = Field(default_factory=list)
     process_time_ms: float = Field(..., example=145.2)
+
+
+class ProfileEnrollResponse(BaseModel):
+    """Response for the profile face enrollment endpoint.
+
+    Returns the single best face from the image — the most centered face with
+    the highest detection confidence — suitable for storing as a profile
+    embedding.
+    """
+
+    success: bool = Field(default=True, example=True)
+    filename: str = Field(..., example="photo.jpg")
+    image_width: int = Field(..., example=1920)
+    image_height: int = Field(..., example=1080)
+    total_faces_detected: int = Field(
+        ..., example=3, description="How many faces were found in the image before selection."
+    )
+    selected_face: FaceAnalysisResult | None = Field(
+        default=None,
+        description="The single best face selected for enrollment. None if no usable face was found.",
+    )
+    selection_reason: str = Field(
+        ...,
+        example="Selected face #2: highest composite score (centrality 0.92, confidence 0.98).",
+        description="Human-readable reason for the face selection.",
+    )
+    process_time_ms: float = Field(..., example=145.2)

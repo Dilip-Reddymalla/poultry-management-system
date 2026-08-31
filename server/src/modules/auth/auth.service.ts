@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { generateAccessToken } from "../../utils/jwt.js";
 import { AppError } from "../../utils/app-error.js";
 
-import type { LoginInput } from "./auth.schema.js";
+import type { LoginInput, PhoneLoginInput } from "./auth.schema.js";
 import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
 import { broadestScopeLevel } from "./scope.js";
 import {
@@ -489,6 +489,79 @@ export async function selectPhoneUser(
   const token = generateAccessToken(user.id);
 
   return {
+    token,
+    user: toSafeUser(user),
+  };
+}
+
+export async function loginWithPhone(
+  input: PhoneLoginInput,
+): Promise<VerifyPhoneOtpResult> {
+  const normalizedPhone = normalizePhone(input.phone);
+
+  const users = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      passwordHash: {
+        not: null,
+      },
+      employee: {
+        is: {
+          phone: normalizedPhone,
+          status: "ACTIVE",
+        },
+      },
+    },
+    select: {
+      ...sessionUserSelect,
+      passwordHash: true,
+    },
+  });
+
+  if (users.length === 0) {
+    throw new AppError("Invalid phone number or password", 401);
+  }
+
+  const validUsers: SessionUserRecord[] = [];
+  for (const user of users) {
+    if (user.passwordHash) {
+      const isValid = await verifyPassword(input.password, user.passwordHash);
+      if (isValid) {
+        validUsers.push(user);
+      }
+    }
+  }
+
+  if (validUsers.length === 0) {
+    throw new AppError("Invalid phone number or password", 401);
+  }
+
+  if (validUsers.length > 1) {
+    const selectionToken = generatePhoneSelectionToken(
+      normalizedPhone,
+      validUsers.map((u) => u.id),
+    );
+
+    return {
+      requiresUserSelection: true,
+      selectionToken,
+      users: validUsers.map((u) => ({
+        id: u.id,
+        employeeId: u.employee.employeeId,
+        name: u.employee.name,
+        designation: {
+          id: u.employee.designation.id,
+          name: u.employee.designation.name,
+        },
+      })),
+    };
+  }
+
+  const user = validUsers[0]!;
+  const token = generateAccessToken(user.id);
+
+  return {
+    requiresUserSelection: false,
     token,
     user: toSafeUser(user),
   };

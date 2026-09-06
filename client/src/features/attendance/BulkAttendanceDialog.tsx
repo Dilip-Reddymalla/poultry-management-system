@@ -79,9 +79,12 @@ export function BulkAttendanceDialog({
     `employees:bulk:${farmId}:${trimmedSearch}:${personType}`,
     (signal) =>
       fetchEmployees(
-        farmId
-          ? { farmId, status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 }
-          : { status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 },
+        {
+          ...(farmId ? { farmId } : {}),
+          status: "ACTIVE",
+          ...(trimmedSearch ? { search: trimmedSearch } : {}),
+          limit: 100,
+        },
         signal,
       ),
     { enabled: personType === "EMPLOYEE" }
@@ -91,13 +94,17 @@ export function BulkAttendanceDialog({
     `workers:bulk:${farmId}:${trimmedSearch}:${personType}`,
     (signal) =>
       fetchWorkers(
-        farmId
-          ? { farmId, status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 }
-          : { status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 },
-        signal
+        {
+          ...(farmId ? { farmId } : {}),
+          status: "ACTIVE",
+          ...(trimmedSearch ? { search: trimmedSearch } : {}),
+          limit: 100,
+        },
+        signal,
       ),
     { enabled: personType === "WORKER" }
   );
+
 
   const markedEmployeeSet = new Set(markedIds.data?.employeeIds ?? []);
   const markedWorkerSet = new Set(markedIds.data?.workerIds ?? []);

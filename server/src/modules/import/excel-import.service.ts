@@ -151,20 +151,23 @@ export async function importEmployeesFromExcel(
 
   headerRow.eachCell((cell, colNumber) => {
     const headerStr = getCellValueString(cell.value).toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (headerStr.includes("employeeid") || headerStr === "id" || headerStr === "empid") {
+    if (headerStr.includes("employeeid") || headerStr === "empid") {
       colIndexMap["employeeId"] = colNumber;
-    } else if (headerStr.includes("name") || headerStr === "fullname") {
-      colIndexMap["name"] = colNumber;
-    } else if (headerStr.includes("designation") || headerStr.includes("role") || headerStr.includes("job")) {
-      colIndexMap["designation"] = colNumber;
     } else if (headerStr.includes("farm")) {
       colIndexMap["farm"] = colNumber;
+    } else if (headerStr.includes("designation") || headerStr.includes("role") || headerStr.includes("job")) {
+      colIndexMap["designation"] = colNumber;
     } else if (headerStr.includes("phone") || headerStr.includes("mobile") || headerStr.includes("contact")) {
       colIndexMap["phone"] = colNumber;
-    } else if (headerStr.includes("joining") || headerStr.includes("date")) {
+    } else if (headerStr.includes("joining") || headerStr.includes("date") || headerStr.includes("doj")) {
       colIndexMap["joiningDate"] = colNumber;
+    } else if (headerStr.includes("name") || headerStr === "fullname" || headerStr === "employeename") {
+      colIndexMap["name"] = colNumber;
+    } else if (headerStr === "id") {
+      colIndexMap["employeeId"] = colNumber;
     }
   });
+
 
   // Default column mappings if headers were simple index-based or custom
   if (!colIndexMap["name"]) colIndexMap["name"] = 2; // Default 2nd col
@@ -389,16 +392,19 @@ export async function importWorkersFromExcel(
 
   headerRow.eachCell((cell, colNumber) => {
     const headerStr = getCellValueString(cell.value).toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (headerStr.includes("workerid") || headerStr === "id" || headerStr === "wrkid") {
+    if (headerStr.includes("workerid") || headerStr === "wrkid") {
       colIndexMap["workerId"] = colNumber;
-    } else if (headerStr.includes("name") || headerStr === "fullname") {
-      colIndexMap["name"] = colNumber;
     } else if (headerStr.includes("farm")) {
       colIndexMap["farm"] = colNumber;
     } else if (headerStr.includes("phone") || headerStr.includes("mobile") || headerStr.includes("contact")) {
       colIndexMap["phone"] = colNumber;
+    } else if (headerStr.includes("name") || headerStr === "fullname" || headerStr === "workername") {
+      colIndexMap["name"] = colNumber;
+    } else if (headerStr === "id") {
+      colIndexMap["workerId"] = colNumber;
     }
   });
+
 
   if (!colIndexMap["name"]) colIndexMap["name"] = 2;
   if (!colIndexMap["farm"]) colIndexMap["farm"] = 3;

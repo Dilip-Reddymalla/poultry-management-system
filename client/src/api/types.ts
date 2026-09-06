@@ -183,6 +183,10 @@ export interface Attendance {
     name: string;
   };
   approvedAt: string | null;
+  verificationMode?: string | null;
+  livenessScore?: number | null;
+  confidenceScore?: number | null;
+  snapshotUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -42,6 +42,10 @@ export interface SafeAttendance {
   recordedBy: SafeAttendanceActor | null;
   approvedBy: SafeAttendanceActor | null;
   approvedAt: Date | null;
+  verificationMode?: string | null;
+  livenessScore?: number | null;
+  confidenceScore?: number | null;
+  snapshotUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -162,13 +162,17 @@ export async function listEmployees(
     ...(query.designationId !== undefined && {
       desiginationId: query.designationId,
     }),
-    ...(query.search !== undefined && {
-      name: {
-        contains: query.search,
-        mode: "insensitive",
-      },
-    }),
+    ...(query.search && query.search.trim() !== ""
+      ? {
+          OR: [
+            { name: { contains: query.search.trim(), mode: "insensitive" } },
+            { employeeId: { contains: query.search.trim(), mode: "insensitive" } },
+            { phone: { contains: query.search.trim() } },
+          ],
+        }
+      : {}),
   };
+
 
   const [employees, total] = await prisma.$transaction([
     prisma.employee.findMany({

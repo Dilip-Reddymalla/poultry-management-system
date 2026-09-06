@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { fetchEmployees, fetchWorkers, bulkCreateAttendance, fetchSheds, fetchFarms, fetchMarkedPersonIds, type EmployeeListResult, type WorkerListResult } from "../../api/resources.js";
+import {
+  fetchEmployees,
+  fetchWorkers,
+  bulkCreateAttendance,
+  fetchSheds,
+  fetchFarms,
+  fetchMarkedPersonIds,
+  type EmployeeListResult,
+  type WorkerListResult,
+} from "../../api/resources.js";
 import type {
   AttendanceStatus,
   Farm,
@@ -17,7 +26,6 @@ import { statusLabel } from "../../lib/display.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { ShiftChoice } from "./ShiftChoice.js";
 
-
 interface BulkAttendanceDialogProps {
   defaultDate: string;
   defaultFarmId: string | null;
@@ -34,7 +42,7 @@ export function BulkAttendanceDialog({
   const { user } = useAuth();
   const { notify } = useToast();
   const showFarm = user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
-  
+
   const [date, setDate] = useState(defaultDate);
   const [shift, setShift] = useState<Shift>("MORNING_SHIFT");
   const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
@@ -61,43 +69,75 @@ export function BulkAttendanceDialog({
 
   const markedIds = useResource(
     `marked-ids:${date}:${shift}:${farmId}`,
-    (signal) => fetchMarkedPersonIds(farmId ? { date, shift, farmId } : { date, shift } as any, signal),
+    (signal) => fetchMarkedPersonIds(farmId ? { date, shift, farmId } : ({ date, shift } as any), signal),
     { enabled: date !== "" && shift !== undefined }
   );
 
+  const trimmedSearch = search.trim();
+
   const employees = useResource<EmployeeListResult>(
-    `employees:bulk:${farmId}:${search}:${personType}`,
-    (signal) => fetchEmployees(
-      farmId ? { farmId, status: "ACTIVE", search, limit: 100 } : { status: "ACTIVE", search, limit: 100 },
-      signal,
-    ),
+    `employees:bulk:${farmId}:${trimmedSearch}:${personType}`,
+    (signal) =>
+      fetchEmployees(
+        farmId
+          ? { farmId, status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 }
+          : { status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 },
+        signal,
+      ),
     { enabled: personType === "EMPLOYEE" }
   );
 
   const workers = useResource<WorkerListResult>(
-    `workers:bulk:${farmId}:${search}:${personType}`,
-    (signal) => fetchWorkers(
-      farmId ? { farmId, status: "ACTIVE", search, limit: 100 } : { status: "ACTIVE", search, limit: 100 },
-      signal
-    ),
+    `workers:bulk:${farmId}:${trimmedSearch}:${personType}`,
+    (signal) =>
+      fetchWorkers(
+        farmId
+          ? { farmId, status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 }
+          : { status: "ACTIVE", search: trimmedSearch || undefined, limit: 100 },
+        signal
+      ),
     { enabled: personType === "WORKER" }
   );
 
   const markedEmployeeSet = new Set(markedIds.data?.employeeIds ?? []);
   const markedWorkerSet = new Set(markedIds.data?.workerIds ?? []);
 
-  const allPeople = [
-    ...(employees.data?.employees || [])
-      .filter(e => !markedEmployeeSet.has(e.id))
-      .map(e => ({ type: "EMPLOYEE" as const, id: e.id, name: e.name, code: e.employeeId, phone: e.phone })),
-    ...(workers.data?.workers || [])
-      .filter(w => !markedWorkerSet.has(w.id))
-      .map(w => ({ type: "WORKER" as const, id: w.id, name: w.name, code: w.workerId, phone: w.phone }))
-  ];
+  // Isolate people strictly by the selected personType so Employees and Workers are never mixed
+  const currentPeople =
+    personType === "EMPLOYEE"
+      ? (employees.data?.employees || [])
+          .filter((e) => !markedEmployeeSet.has(e.id))
+          .map((e) => ({
+            type: "EMPLOYEE" as const,
+            id: e.id,
+            name: e.name,
+            code: e.employeeId ?? "—",
+            phone: e.phone,
+          }))
+      : (workers.data?.workers || [])
+          .filter((w) => !markedWorkerSet.has(w.id))
+          .map((w) => ({
+            type: "WORKER" as const,
+            id: w.id,
+            name: w.name,
+            code: w.workerId ?? "—",
+            phone: w.phone,
+          }));
+
+  // Client-side search filtering for instant responsive UI
+  const searchLower = trimmedSearch.toLowerCase();
+  const displayedPeople = searchLower
+    ? currentPeople.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.code.toLowerCase().includes(searchLower) ||
+          (p.phone && p.phone.toLowerCase().includes(searchLower))
+      )
+    : currentPeople;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(allPeople.map(p => p.id)));
+      setSelectedIds(new Set(displayedPeople.map((p) => p.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -121,8 +161,10 @@ export function BulkAttendanceDialog({
 
     setSaving(true);
     try {
-      const records = Array.from(selectedIds).map(id => {
-        const person = allPeople.find(p => p.id === id)!;
+      const records = Array.from(selectedIds).map((id) => {
+        const person =
+          displayedPeople.find((p) => p.id === id) ||
+          currentPeople.find((p) => p.id === id)!;
         return {
           date,
           shift,
@@ -130,18 +172,21 @@ export function BulkAttendanceDialog({
           status,
           latitude,
           longitude,
-          ...(person.type === "EMPLOYEE" ? { employeeId: person.id } : { workerId: person.id })
+          ...(person.type === "EMPLOYEE" ? { employeeId: person.id } : { workerId: person.id }),
         };
       });
 
       const response = await bulkCreateAttendance({ records });
-      
-      const fulfilled = response.results.filter(r => r.status === "fulfilled").length;
-      const rejected = response.results.filter(r => r.status === "rejected").length;
-      
+
+      const fulfilled = response.results.filter((r) => r.status === "fulfilled").length;
+      const rejected = response.results.filter((r) => r.status === "rejected").length;
+
       if (rejected > 0) {
         if (fulfilled > 0) {
-          notify("error", `Saved ${fulfilled} records. Failed to save ${rejected} records (likely already recorded).`);
+          notify(
+            "error",
+            `Saved ${fulfilled} records. Failed to save ${rejected} records (likely already recorded).`
+          );
         } else {
           notify("error", "Failed to save records. They might already exist.");
         }
@@ -156,30 +201,56 @@ export function BulkAttendanceDialog({
     }
   };
 
+  const isLoading =
+    (personType === "EMPLOYEE" ? employees.loading : workers.loading) || markedIds.loading;
+
   return (
     <Dialog title="Bulk Attendance" onClose={onClose}>
       <form className="stack" onSubmit={handleSubmit}>
-        
         {locationError && (
-          <div className="alert alert--danger" style={{ marginBottom: '1rem' }}>
+          <div className="alert alert--danger" style={{ marginBottom: "1rem" }}>
             <strong>Location Required:</strong> {locationError}
           </div>
         )}
         {locationLoading && (
-          <p className="field__hint"><Spinner label="Getting location" /> Waiting for GPS location...</p>
+          <p className="field__hint">
+            <Spinner label="Getting location" /> Waiting for GPS location...
+          </p>
         )}
 
         <div className="filters">
           <label className="filters__field">
             Date
-            <input type="date" className="input" value={date} onChange={(e) => { setDate(e.target.value); setSelectedIds(new Set()); }} required />
+            <input
+              type="date"
+              className="input"
+              value={date}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setSelectedIds(new Set());
+              }}
+              required
+            />
           </label>
           {showFarm && !soleFarmId && (
             <label className="filters__field">
               Farm
-              <select className="input select" value={farmId} onChange={(e) => { setChosenFarmId(e.target.value); setShedId(""); setSelectedIds(new Set()); }} required>
+              <select
+                className="input select"
+                value={farmId}
+                onChange={(e) => {
+                  setChosenFarmId(e.target.value);
+                  setShedId("");
+                  setSelectedIds(new Set());
+                }}
+                required
+              >
                 <option value="">Select Farm</option>
-                {farms.data?.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                {farms.data?.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
               </select>
             </label>
           )}
@@ -187,14 +258,21 @@ export function BulkAttendanceDialog({
             Shed
             <select className="input select" value={shedId} onChange={(e) => setShedId(e.target.value)}>
               <option value="">No specific shed</option>
-              {sheds.data?.map(s => <option key={s.id} value={s.id}>Shed {s.number}</option>)}
+              {sheds.data?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  Shed {s.number}
+                </option>
+              ))}
             </select>
           </label>
         </div>
 
-        <ShiftChoice 
-          value={shift} 
-          onChange={(v) => { setShift(v); setSelectedIds(new Set()); }} 
+        <ShiftChoice
+          value={shift}
+          onChange={(v) => {
+            setShift(v);
+            setSelectedIds(new Set());
+          }}
         />
 
         <div className="filters">
@@ -214,48 +292,87 @@ export function BulkAttendanceDialog({
           </label>
           <label className="filters__field">
             Search
-            <input type="text" className="input" placeholder="Search name or code..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input
+              type="text"
+              className="input"
+              placeholder="Search name, code, phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </label>
           <label className="filters__field">
             Status to apply
-            <select className="input select" value={status} onChange={(e) => setStatus(e.target.value as AttendanceStatus)}>
-              {ATTENDANCE_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+            <select
+              className="input select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
+            >
+              {ATTENDANCE_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
             </select>
           </label>
         </div>
 
-        <div className="panel__pad" style={{ maxHeight: "300px", overflowY: "auto", border: "1px solid var(--border-subtle)", marginTop: "1rem" }}>
-          {employees.loading || workers.loading || markedIds.loading ? (
-            <p><Spinner label="Loading" /> Loading...</p>
-          ) : allPeople.length === 0 ? (
-            <p>No available unrecorded people found.</p>
+        <div
+          className="panel__pad"
+          style={{
+            maxHeight: "300px",
+            overflowY: "auto",
+            border: "1px solid var(--border-subtle)",
+            marginTop: "1rem",
+          }}
+        >
+          {isLoading ? (
+            <p>
+              <Spinner label="Loading" /> Loading {personType === "EMPLOYEE" ? "employees" : "workers"}...
+            </p>
+          ) : displayedPeople.length === 0 ? (
+            <p>
+              {trimmedSearch
+                ? `No unrecorded ${personType === "EMPLOYEE" ? "employees" : "workers"} match "${trimmedSearch}".`
+                : `No available unrecorded ${personType === "EMPLOYEE" ? "employees" : "workers"} found for this date & shift.`}
+            </p>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>
-                    <input 
-                      type="checkbox" 
-                      checked={selectedIds.size === allPeople.length && allPeople.length > 0} 
-                      onChange={(e) => handleSelectAll(e.target.checked)} 
+                  <th style={{ width: "40px" }}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        displayedPeople.length > 0 &&
+                        displayedPeople.every((p) => selectedIds.has(p.id))
+                      }
+                      onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </th>
-                  <th>Person</th>
-                  <th>Type</th>
+                  <th>Name</th>
+                  <th>Code</th>
+                  <th>Phone</th>
                 </tr>
               </thead>
               <tbody>
-                {allPeople.map(person => (
+                {displayedPeople.map((person) => (
                   <tr key={person.id}>
                     <td>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.has(person.id)} 
-                        onChange={(e) => handleSelect(person.id, e.target.checked)} 
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(person.id)}
+                        onChange={(e) => handleSelect(person.id, e.target.checked)}
                       />
                     </td>
-                    <td>{person.name} <span className="muted">({person.code})</span></td>
-                    <td>{person.type}</td>
+                    <td>
+                      <strong>{person.name}</strong>
+                    </td>
+                    <td>
+                      <span className="muted">{person.code}</span>
+                    </td>
+                    <td>
+                      <span className="muted">{person.phone || "—"}</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -264,8 +381,20 @@ export function BulkAttendanceDialog({
         </div>
 
         <div className="dialog__actions" style={{ marginTop: "1.5rem" }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={saving || selectedIds.size === 0 || latitude === null || longitude === null || locationLoading}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={
+              saving ||
+              selectedIds.size === 0 ||
+              latitude === null ||
+              longitude === null ||
+              locationLoading
+            }
+          >
             {saving ? "Saving..." : `Mark Selected (${selectedIds.size})`}
           </Button>
         </div>

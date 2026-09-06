@@ -116,13 +116,17 @@ export async function listWorkers(
     ...farmScopedWhere(scope),
     ...(query.farmId !== undefined && { farmId: query.farmId }),
     ...(query.status !== undefined && { status: query.status }),
-    ...(query.search !== undefined && {
-      name: {
-        contains: query.search,
-        mode: "insensitive",
-      },
-    }),
+    ...(query.search && query.search.trim() !== ""
+      ? {
+          OR: [
+            { name: { contains: query.search.trim(), mode: "insensitive" } },
+            { workerId: { contains: query.search.trim(), mode: "insensitive" } },
+            { phone: { contains: query.search.trim() } },
+          ],
+        }
+      : {}),
   };
+
 
   const [workers, total] = await prisma.$transaction([
     prisma.worker.findMany({

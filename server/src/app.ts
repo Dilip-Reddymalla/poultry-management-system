@@ -19,8 +19,12 @@ import {
     referenceRouter,
 } from "./modules/reference/reference.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import { tieredRateLimiter } from "./middlewares/rate-limit.middleware.js";
 
 const app = express();
+
+// Trust reverse proxy headers (e.g. X-Forwarded-For)
+app.set("trust proxy", 1);
 
 // CORS middleware: Echoes requesting origin to satisfy browser CORS & credential requirements
 app.use((req, res, next) => {
@@ -80,6 +84,9 @@ app.get('/api/health',(_req,res)=>{
         message:"Poultry Management API is running"
     });
 });
+
+// Rate limiting: strict before-login limit, generous after-login limit
+app.use("/api", tieredRateLimiter);
 
 app.use("/api/auth",authRouter);
 app.use("/api/companies", companyRouter);

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client.js";
-import { fetchWorker, setWorkerActive } from "../../api/resources.js";
+import { deleteWorker, fetchWorker, setWorkerActive } from "../../api/resources.js";
 import type { Worker } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { ConfirmDialog } from "../../components/Dialog.js";
@@ -21,6 +21,7 @@ import { WorkerFormDialog } from "./WorkerFormDialog.js";
 
 export function WorkerDetailPage(): React.ReactElement {
   const { id = "" } = useParams();
+  const navigate = useNavigate();
   const { can } = useAuth();
   const { notify } = useToast();
 
@@ -29,6 +30,8 @@ export function WorkerDetailPage(): React.ReactElement {
   const [editing, setEditing] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const record = worker.data;
   const active = record?.status === "ACTIVE";
@@ -36,6 +39,27 @@ export function WorkerDetailPage(): React.ReactElement {
   const canToggle = active
     ? can("worker:deactivate")
     : can("worker:reactivate");
+
+  async function handleDelete(): Promise<void> {
+    if (!record) {
+      return;
+    }
+
+    setDeleteBusy(true);
+
+    try {
+      await deleteWorker(record.id);
+      notify("success", `${record.name} deleted.`);
+      navigate("/workers");
+    } catch (caught) {
+      notify(
+        "error",
+        caught instanceof ApiError ? caught.message : "Failed to delete worker.",
+      );
+      setDeleteBusy(false);
+      setConfirmingDelete(false);
+    }
+  }
 
   async function handleToggleStatus(): Promise<void> {
     if (!record) {
@@ -122,12 +146,22 @@ export function WorkerDetailPage(): React.ReactElement {
             ) : null}
             {canToggle ? (
               <Button
-                variant={active ? "danger" : "primary"}
+                variant={active ? "secondary" : "primary"}
                 onClick={() => {
                   setConfirmingStatus(true);
                 }}
               >
                 {active ? "Deactivate" : "Reactivate"}
+              </Button>
+            ) : null}
+            {can("worker:delete") ? (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirmingDelete(true);
+                }}
+              >
+                Delete
               </Button>
             ) : null}
           </>
@@ -212,6 +246,24 @@ export function WorkerDetailPage(): React.ReactElement {
           }}
           onClose={() => {
             setConfirmingStatus(false);
+          }}
+        />
+      ) : null}
+
+      {confirmingDelete && record ? (
+        <ConfirmDialog
+          title={`Delete ${record.name}?`}
+          description="This will permanently delete the worker and direct attendance records. This action cannot be undone."
+          confirmLabel="Delete worker"
+          confirmVariant="danger"
+          busy={deleteBusy}
+          onConfirm={() => {
+            void handleDelete();
+          }}
+          onClose={() => {
+            if (!deleteBusy) {
+              setConfirmingDelete(false);
+            }
           }}
         />
       ) : null}

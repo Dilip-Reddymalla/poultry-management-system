@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client.js";
 import {
+  deleteEmployee,
   fetchDesignations,
   fetchEmployee,
   setEmployeeActive,
@@ -27,7 +28,8 @@ import { ProvisionUserDialog } from "./ProvisionUserDialog.js";
 
 export function EmployeeDetailPage(): React.ReactElement {
   const { id = "" } = useParams();
-  const { can } = useAuth();
+  const navigate = useNavigate();
+  const { can, user } = useAuth();
   const { notify } = useToast();
 
   const employee = useResource<Employee>(`employee:${id}`, () =>
@@ -42,13 +44,59 @@ export function EmployeeDetailPage(): React.ReactElement {
   const [provisioning, setProvisioning] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const record = employee.data;
   const active = record?.status === "ACTIVE";
 
+  const ROLE_HIERARCHY: Record<string, number> = {
+    "System Admin": 100,
+    "Company Admin": 80,
+    "DGM": 60,
+    "Assistant Manager": 50,
+    "Super Incharge": 40,
+    "Incharge": 30,
+    "Accountant": 25,
+    "Supervisor": 20,
+    "Worker": 10,
+  };
+
+  const canDelete = (() => {
+    if (!can("employee:delete")) return false;
+    if (!record) return false;
+    if (user?.employeeId === record.id) return false;
+    if (user?.isSystemAdmin) return true;
+    const userRoles = user?.roles ?? [];
+    const userRank = Math.max(...userRoles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+    const targetRank = ROLE_HIERARCHY[record.designation.name] ?? 0;
+    return userRank >= targetRank;
+  })();
+
   const canToggle = active
     ? can("employee:deactivate")
     : can("employee:reactivate");
+
+  async function handleDelete(): Promise<void> {
+    if (!record) {
+      return;
+    }
+
+    setDeleteBusy(true);
+
+    try {
+      await deleteEmployee(record.id);
+      notify("success", `${record.name} deleted.`);
+      navigate("/employees");
+    } catch (caught) {
+      notify(
+        "error",
+        caught instanceof ApiError ? caught.message : "Failed to delete employee.",
+      );
+      setDeleteBusy(false);
+      setConfirmingDelete(false);
+    }
+  }
 
   async function handleToggleStatus(): Promise<void> {
     if (!record) {
@@ -135,12 +183,22 @@ export function EmployeeDetailPage(): React.ReactElement {
             ) : null}
             {canToggle ? (
               <Button
-                variant={active ? "danger" : "primary"}
+                variant={active ? "secondary" : "primary"}
                 onClick={() => {
                   setConfirmingStatus(true);
                 }}
               >
                 {active ? "Deactivate" : "Reactivate"}
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirmingDelete(true);
+                }}
+              >
+                Delete
               </Button>
             ) : null}
           </>
@@ -270,6 +328,24 @@ export function EmployeeDetailPage(): React.ReactElement {
           }}
           onClose={() => {
             setConfirmingStatus(false);
+          }}
+        />
+      ) : null}
+
+      {confirmingDelete && record ? (
+        <ConfirmDialog
+          title={`Delete ${record.name}?`}
+          description="This will permanently delete the employee, login account, and direct attendance records. This action cannot be undone."
+          confirmLabel="Delete employee"
+          confirmVariant="danger"
+          busy={deleteBusy}
+          onConfirm={() => {
+            void handleDelete();
+          }}
+          onClose={() => {
+            if (!deleteBusy) {
+              setConfirmingDelete(false);
+            }
           }}
         />
       ) : null}

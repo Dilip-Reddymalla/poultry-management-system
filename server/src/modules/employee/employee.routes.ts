@@ -7,6 +7,7 @@ import {
   updateEmployeeController,
   deactivateEmployeeController,
   reactivateEmployeeController,
+  deleteEmployeeController,
   provisionEmployeeUserController,
   importEmployeesExcelController,
   downloadEmployeeExcelTemplateController,
@@ -37,6 +38,11 @@ router.patch(
   "/:id/reactivate",
   requirePermission("employee:reactivate"),
   reactivateEmployeeController,
+);
+router.delete(
+  "/:id",
+  requirePermission("employee:delete"),
+  deleteEmployeeController,
 );
 router.post(
   "/:id/user",

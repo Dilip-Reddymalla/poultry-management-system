@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   createWorkerController,
   deactivateWorkerController,
+  deleteWorkerController,
   getWorkerController,
   listWorkersController,
   reactivateWorkerController,
@@ -37,6 +38,11 @@ router.patch(
   "/:id/reactivate",
   requirePermission("worker:update"),
   reactivateWorkerController,
+);
+router.delete(
+  "/:id",
+  requirePermission("worker:delete"),
+  deleteWorkerController,
 );
 
 export default router;

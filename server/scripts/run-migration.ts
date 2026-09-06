@@ -55,6 +55,44 @@ async function main() {
     console.log("employees.face_embedding note:", err.message);
   }
 
+  // 6. Ensure employee:delete and worker:delete permissions and role assignments
+  try {
+    const deletePermissions = [
+      { name: "employee:delete", description: "Delete employees" },
+      { name: "worker:delete", description: "Delete workers" },
+    ];
+
+    for (const perm of deletePermissions) {
+      await prisma.permission.upsert({
+        where: { name: perm.name },
+        update: { description: perm.description },
+        create: perm,
+      });
+    }
+
+    const rolesToAssign = ["Company Admin", "DGM", "Accountant"];
+    for (const roleName of rolesToAssign) {
+      const role = await prisma.role.findUnique({ where: { name: roleName } });
+      if (role) {
+        for (const perm of deletePermissions) {
+          const p = await prisma.permission.findUnique({ where: { name: perm.name } });
+          if (p) {
+            await prisma.rolePermission.upsert({
+              where: {
+                roleId_permissionId: { roleId: role.id, permissionId: p.id },
+              },
+              update: {},
+              create: { roleId: role.id, permissionId: p.id },
+            });
+          }
+        }
+      }
+    }
+    console.log("✓ Synchronized employee:delete and worker:delete permissions.");
+  } catch (err: any) {
+    console.log("Permission sync note:", err.message);
+  }
+
   console.log("Migration finished successfully!");
   process.exit(0);
 }

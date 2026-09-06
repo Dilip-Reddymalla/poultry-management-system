@@ -173,10 +173,10 @@ describe("employee module", () => {
     expect(reactivated.body.employee.status).toBe("ACTIVE");
   });
 
-  it("denies the Accountant role employee creation", async () => {
+  it("denies the Supervisor role employee creation", async () => {
     const response = await request(app)
       .post("/api/employees")
-      .set("Cookie", accountant.cookie)
+      .set("Cookie", supervisor.cookie)
       .send({
         employeeId: `${TEST_PREFIX}${uniqueSuffix()}`,
         name: "Not allowed",
@@ -315,5 +315,89 @@ describe("employee module", () => {
     });
 
     expect(login.status).toBe(401);
+  });
+
+  it("allows DGM to delete an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .delete(`/api/employees/${employee.id}`)
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const found = await prisma.employee.findUnique({
+      where: { id: employee.id },
+    });
+    expect(found).toBeNull();
+  });
+
+  it("allows Accountant to delete an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .delete(`/api/employees/${employee.id}`)
+      .set("Cookie", accountant.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const found = await prisma.employee.findUnique({
+      where: { id: employee.id },
+    });
+    expect(found).toBeNull();
+  });
+
+  it("denies Supervisor from deleting an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .delete(`/api/employees/${employee.id}`)
+      .set("Cookie", supervisor.cookie);
+
+    expect(response.status).toBe(403);
+
+    const found = await prisma.employee.findUnique({
+      where: { id: employee.id },
+    });
+    expect(found).not.toBeNull();
+  });
+
+  it("returns 404 when deleting a non-existent employee", async () => {
+    const response = await request(app)
+      .delete("/api/employees/00000000-0000-0000-0000-000000000000")
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(404);
+  });
+
+  it("denies an Accountant from deleting a DGM (higher role hierarchy)", async () => {
+    const response = await request(app)
+      .delete(`/api/employees/${dgm.employeeRowId}`)
+      .set("Cookie", accountant.cookie);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toMatch(/higher role/i);
+  });
+
+  it("denies an actor from deleting their own employee account", async () => {
+    const response = await request(app)
+      .delete(`/api/employees/${dgm.employeeRowId}`)
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/own account/i);
+  });
+
+  it("allows DGM to delete an employee with Accountant role", async () => {
+    const targetAccountant = await createActor("Accountant", { farmId });
+
+    const response = await request(app)
+      .delete(`/api/employees/${targetAccountant.employeeRowId}`)
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
   });
 });

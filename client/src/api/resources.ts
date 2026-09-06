@@ -268,6 +268,9 @@ export function updateEmployee(id: string, data: Partial<EmployeeInput>, photo?:
 export function provisionEmployeeUser(id: string, data?: { email: string; roleId: string }): Promise<any> {
   return apiClient.post(`/employees/${id}/user`, data);
 }
+export function deleteEmployee(id: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.delete(`/employees/${id}`);
+}
 
 // -- Farms --
 export function fetchFarms(query?: any, signal?: AbortSignal): Promise<Farm[]> {
@@ -371,6 +374,9 @@ export function updateWorker(id: string, data: Partial<WorkerInput>, photo?: Fil
     });
   }
   return apiClient.patch(`/workers/${id}`, data).then((res: any) => res.worker);
+}
+export function deleteWorker(id: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.delete(`/workers/${id}`);
 }
 
 // -- Attendance --

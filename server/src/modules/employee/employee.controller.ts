@@ -8,6 +8,7 @@ import { AppError } from "../../utils/app-error.js";
 import {
   createEmployee,
   deactivateEmployee,
+  deleteEmployee,
   getEmployeeById,
   listEmployees,
   provisionEmployeeUser,
@@ -182,6 +183,17 @@ export async function reactivateEmployeeController(
     message: "Employee reactivated successfully",
     employee,
   });
+}
+
+export async function deleteEmployeeController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = employeeIdParamSchema.parse(req.params);
+
+  const result = await deleteEmployee(getScope(req), params.id);
+
+  res.status(200).json(result);
 }
 
 export async function provisionEmployeeUserController(

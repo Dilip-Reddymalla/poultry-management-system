@@ -628,3 +628,131 @@ export async function provisionEmployeeUser(
     throw error;
   }
 }
+
+export const ROLE_HIERARCHY: Record<string, number> = {
+  "System Admin": 100,
+  "Company Admin": 80,
+  "DGM": 60,
+  "Assistant Manager": 50,
+  "Super Incharge": 40,
+  "Incharge": 30,
+  "Accountant": 25,
+  "Supervisor": 20,
+  "Worker": 10,
+};
+
+export async function deleteEmployee(
+  scope: AuthScope,
+  id: string,
+): Promise<{ success: boolean; message: string }> {
+  if (scope.employeeId && scope.employeeId === id) {
+    throw new AppError("You cannot delete your own account", 400);
+  }
+
+  const existingEmployee = await prisma.employee.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      farm: { select: { id: true, companyId: true } },
+      designation: { select: { name: true } },
+      user: {
+        select: {
+          id: true,
+          roles: {
+            select: {
+              role: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!existingEmployee) {
+    throw new AppError("Employee not found", 404);
+  }
+
+  assertFarmWritable(scope, {
+    companyId: existingEmployee.farm.companyId,
+    id: existingEmployee.farm.id,
+  });
+
+  if (!scope.isSystemAdmin) {
+    const actorMaxRank = Math.max(
+      ...scope.roles.map((r) => ROLE_HIERARCHY[r] ?? 0),
+      0,
+    );
+
+    const targetRoles = [
+      existingEmployee.designation.name,
+      ...(existingEmployee.user?.roles.map((r) => r.role.name) ?? []),
+    ];
+
+    const targetMaxRank = Math.max(
+      ...targetRoles.map((r) => ROLE_HIERARCHY[r] ?? 0),
+      0,
+    );
+
+    if (targetMaxRank > actorMaxRank) {
+      throw new AppError(
+        "You cannot delete an employee with a higher role than your own",
+        403,
+      );
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Delete attendance records for this employee
+    await tx.attendance.deleteMany({
+      where: { employeeId: id },
+    });
+
+    // 2. If provisioned as a user, nullify recordedBy / approvedBy references in attendances and delete user
+    if (existingEmployee.user) {
+      const userId = existingEmployee.user.id;
+      await tx.attendance.updateMany({
+        where: { recordedById: userId },
+        data: { recordedById: null },
+      });
+      await tx.attendance.updateMany({
+        where: { approvedById: userId },
+        data: { approvedById: null },
+      });
+      await tx.userRole.deleteMany({
+        where: { userId },
+      });
+      await tx.user.delete({
+        where: { id: userId },
+      });
+    }
+
+    // 3. Delete employee record
+    await tx.employee.delete({
+      where: { id },
+    });
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "DELETE",
+    entity: "Employee",
+    entityId: id,
+    summary: `Deleted employee ${existingEmployee.name} (${existingEmployee.employeeId})`,
+    changes: {
+      employeeId: existingEmployee.employeeId,
+      name: existingEmployee.name,
+      farmId: existingEmployee.farm.id,
+    },
+  });
+
+  return {
+    success: true,
+    message: `Employee ${existingEmployee.name} deleted successfully`,
+  };
+}

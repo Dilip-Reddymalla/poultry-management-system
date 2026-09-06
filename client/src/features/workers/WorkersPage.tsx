@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  deleteWorker,
   fetchFarms,
   fetchWorkers,
   type WorkerListResult,
 } from "../../api/resources.js";
-import type { Farm, WorkerStatus } from "../../api/types.js";
+import type { Farm, Worker, WorkerStatus } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
+import { ConfirmDialog } from "../../components/Dialog.js";
 import { PlusIcon, SearchIcon } from "../../components/icons.js";
 import {
   Button,
@@ -40,6 +42,8 @@ export function WorkersPage(): React.ReactElement {
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
+  const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -193,6 +197,7 @@ export function WorkersPage(): React.ReactElement {
                     <th scope="col">Name</th>
                     {showFarm ? <th scope="col">Farm</th> : null}
                     <th scope="col">Status</th>
+                    {can("worker:delete") ? <th scope="col">Actions</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -224,6 +229,17 @@ export function WorkersPage(): React.ReactElement {
                       <td data-label="Status">
                         <StatusTag status={worker.status} />
                       </td>
+                      {can("worker:delete") ? (
+                        <td data-label="Actions">
+                          <Button
+                            variant="danger"
+                            onClick={() => setWorkerToDelete(worker)}
+                            style={{ padding: "4px 8px", fontSize: "0.8125rem" }}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -261,6 +277,34 @@ export function WorkersPage(): React.ReactElement {
           onSuccess={() => {
             workers.reload();
             notify("success", "Worker import completed.");
+          }}
+        />
+      ) : null}
+
+      {workerToDelete ? (
+        <ConfirmDialog
+          title={`Delete ${workerToDelete.name}?`}
+          description="This will permanently delete the worker and direct attendance records. This action cannot be undone."
+          confirmLabel="Delete worker"
+          confirmVariant="danger"
+          busy={deleteBusy}
+          onConfirm={async () => {
+            setDeleteBusy(true);
+            try {
+              await deleteWorker(workerToDelete.id);
+              notify("success", `${workerToDelete.name} deleted.`);
+              setWorkerToDelete(null);
+              workers.reload();
+            } catch (caught: any) {
+              notify("error", caught?.message || "Failed to delete worker.");
+            } finally {
+              setDeleteBusy(false);
+            }
+          }}
+          onClose={() => {
+            if (!deleteBusy) {
+              setWorkerToDelete(null);
+            }
           }}
         />
       ) : null}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  deleteEmployee,
   fetchDesignations,
   fetchEmployees,
   fetchFarms,
@@ -14,6 +15,7 @@ import type {
   Farm,
 } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
+import { ConfirmDialog } from "../../components/Dialog.js";
 import { PlusIcon, SearchIcon } from "../../components/icons.js";
 import {
   Button,
@@ -50,6 +52,8 @@ export function EmployeesPage(): React.ReactElement {
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   // Typing should not fire a request per keystroke.
   useEffect(() => {
@@ -83,6 +87,28 @@ export function EmployeesPage(): React.ReactElement {
   const rows = employees.data?.employees ?? [];
   const filtered =
     search !== "" || status !== "" || designationId !== "" || farmId !== "";
+
+  const ROLE_HIERARCHY: Record<string, number> = {
+    "System Admin": 100,
+    "Company Admin": 80,
+    "DGM": 60,
+    "Assistant Manager": 50,
+    "Super Incharge": 40,
+    "Incharge": 30,
+    "Accountant": 25,
+    "Supervisor": 20,
+    "Worker": 10,
+  };
+
+  function canDeleteEmployee(target: Employee): boolean {
+    if (!can("employee:delete")) return false;
+    if (user?.employeeId === target.id) return false;
+    if (user?.isSystemAdmin) return true;
+    const userRoles = user?.roles ?? [];
+    const userRank = Math.max(...userRoles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+    const targetRank = ROLE_HIERARCHY[target.designation.name] ?? 0;
+    return userRank >= targetRank;
+  }
 
   function handleCreated(employee: Employee): void {
     setCreating(false);
@@ -241,6 +267,7 @@ export function EmployeesPage(): React.ReactElement {
                     <th scope="col">Joined</th>
                     <th scope="col">Login</th>
                     <th scope="col">Status</th>
+                    {can("employee:delete") ? <th scope="col">Actions</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -287,6 +314,19 @@ export function EmployeesPage(): React.ReactElement {
                       <td data-label="Status">
                         <StatusTag status={employee.status} />
                       </td>
+                      {can("employee:delete") ? (
+                        <td data-label="Actions">
+                          {canDeleteEmployee(employee) ? (
+                            <Button
+                              variant="danger"
+                              onClick={() => setEmployeeToDelete(employee)}
+                              style={{ padding: "4px 8px", fontSize: "0.8125rem" }}
+                            >
+                              Delete
+                            </Button>
+                          ) : null}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -322,6 +362,34 @@ export function EmployeesPage(): React.ReactElement {
           onSuccess={() => {
             employees.reload();
             notify("success", "Employee import completed.");
+          }}
+        />
+      ) : null}
+
+      {employeeToDelete ? (
+        <ConfirmDialog
+          title={`Delete ${employeeToDelete.name}?`}
+          description="This will permanently delete the employee, login account, and direct attendance records. This action cannot be undone."
+          confirmLabel="Delete employee"
+          confirmVariant="danger"
+          busy={deleteBusy}
+          onConfirm={async () => {
+            setDeleteBusy(true);
+            try {
+              await deleteEmployee(employeeToDelete.id);
+              notify("success", `${employeeToDelete.name} deleted.`);
+              setEmployeeToDelete(null);
+              employees.reload();
+            } catch (caught: any) {
+              notify("error", caught?.message || "Failed to delete employee.");
+            } finally {
+              setDeleteBusy(false);
+            }
+          }}
+          onClose={() => {
+            if (!deleteBusy) {
+              setEmployeeToDelete(null);
+            }
           }}
         />
       ) : null}

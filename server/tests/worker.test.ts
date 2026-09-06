@@ -21,6 +21,7 @@ describe("worker module", () => {
   // separate company (cross-company). The DGM is FARM-scoped to A1.
   let systemAdminCookie: string;
   let dgm: TestActor;
+  let accountant: TestActor;
   let supervisor: TestActor;
   let farmA1Id: string;
   let farmA2Id: string;
@@ -47,6 +48,7 @@ describe("worker module", () => {
 
     systemAdminCookie = await loginSystemAdmin();
     dgm = await createActor("DGM", { farmId: farmA1.id });
+    accountant = await createActor("Accountant", { farmId: farmA1.id });
     supervisor = await createActor("Supervisor", { farmId: farmA1.id });
   });
 
@@ -80,6 +82,7 @@ describe("worker module", () => {
       "id",
       "name",
       "phone",
+      "photoUrl",
       "status",
       "workerId",
     ]);
@@ -267,5 +270,60 @@ describe("worker module", () => {
 
     expect(ids).toContain(workerA2Id);
     expect(ids).toContain(workerBId);
+  });
+
+  it("allows DGM to delete a worker", async () => {
+    const worker = await createTestWorker(farmA1Id);
+
+    const response = await request(app)
+      .delete(`/api/workers/${worker.id}`)
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const found = await prisma.worker.findUnique({
+      where: { id: worker.id },
+    });
+    expect(found).toBeNull();
+  });
+
+  it("allows Accountant to delete a worker", async () => {
+    const worker = await createTestWorker(farmA1Id);
+
+    const response = await request(app)
+      .delete(`/api/workers/${worker.id}`)
+      .set("Cookie", accountant.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const found = await prisma.worker.findUnique({
+      where: { id: worker.id },
+    });
+    expect(found).toBeNull();
+  });
+
+  it("denies Supervisor from deleting a worker", async () => {
+    const worker = await createTestWorker(farmA1Id);
+
+    const response = await request(app)
+      .delete(`/api/workers/${worker.id}`)
+      .set("Cookie", supervisor.cookie);
+
+    expect(response.status).toBe(403);
+
+    const found = await prisma.worker.findUnique({
+      where: { id: worker.id },
+    });
+    expect(found).not.toBeNull();
+  });
+
+  it("returns 404 when deleting a non-existent worker", async () => {
+    const response = await request(app)
+      .delete("/api/workers/00000000-0000-0000-0000-000000000000")
+      .set("Cookie", dgm.cookie);
+
+    expect(response.status).toBe(404);
   });
 });

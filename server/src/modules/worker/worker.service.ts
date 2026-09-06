@@ -16,7 +16,8 @@ import type {
   UpdateWorkerInput,
 } from "./worker.schema.js";
 
-import {getFarmById} from "../farm/farm.service.js"
+import { getFarmById } from "../farm/farm.service.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 
 import type { SafeWorker, WorkerPagination } from "./worker.types.js";
 
@@ -361,3 +362,59 @@ export async function reactivateWorker(
 ): Promise<SafeWorker> {
   return setWorkerStatus(scope, id, "ACTIVE");
 }
+
+export async function deleteWorker(
+  scope: AuthScope,
+  id: string,
+): Promise<{ success: boolean; message: string }> {
+  const existingWorker = await prisma.worker.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      workerId: true,
+      name: true,
+      farmId: true,
+      farm: { select: { id: true, companyId: true } },
+    },
+  });
+
+  if (!existingWorker) {
+    throw new AppError("Worker not found", 404);
+  }
+
+  assertFarmWritable(scope, {
+    companyId: existingWorker.farm.companyId,
+    id: existingWorker.farmId,
+  });
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Delete attendance records for this worker
+    await tx.attendance.deleteMany({
+      where: { workerId: id },
+    });
+
+    // 2. Delete worker record
+    await tx.worker.delete({
+      where: { id },
+    });
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "DELETE",
+    entity: "Worker",
+    entityId: id,
+    summary: `Deleted worker ${existingWorker.name} (${existingWorker.workerId})`,
+    changes: {
+      workerId: existingWorker.workerId,
+      name: existingWorker.name,
+      farmId: existingWorker.farmId,
+    },
+  });
+
+  return {
+    success: true,
+    message: `Worker ${existingWorker.name} deleted successfully`,
+  };
+}
+

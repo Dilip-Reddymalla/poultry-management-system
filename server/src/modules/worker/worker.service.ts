@@ -128,7 +128,6 @@ export async function listWorkers(
       : {}),
   };
 
-
   const [workers, total] = await prisma.$transaction([
     prisma.worker.findMany({
       where,
@@ -160,10 +159,16 @@ export async function getWorkerById(
   return toSafeWorker(await loadReadableWorker(scope, id));
 }
 
-export async function createWorkerId(scope:AuthScope,input:CreateWorkerInput):Promise<string>{
-  const totalWorkers = await listWorkers(scope,{page:1,limit:1})
-  const farmName = (await getFarmById(scope,input.farmId)).name;
-  return `${farmName}-W${totalWorkers.pagination.total+1}`
+export async function createWorkerId(
+  scope: AuthScope,
+  input: CreateWorkerInput,
+): Promise<string> {
+  const farm = await getFarmById(scope, input.farmId);
+  const totalWorkers = await prisma.worker.count({
+    where: { farmId: input.farmId },
+  });
+
+  return `${farm.name}-W${totalWorkers + 1}`;
 }
 
 /** Optional face-AI data attached during create/update. */
@@ -179,11 +184,7 @@ export async function createWorker(
 ): Promise<SafeWorker> {
   await assertFarmWritableById(scope, input.farmId);
 
-  const newWorkerId:string = await createWorkerId(scope,input);
-
-  const inputId = input.workerId;
-
-  const finalWorkerId = inputId? inputId: newWorkerId;
+  const finalWorkerId = input.workerId ? input.workerId : await createWorkerId(scope, input);
 
   const existingWorker = await prisma.worker.findUnique({
     where: {

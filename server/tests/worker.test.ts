@@ -25,6 +25,7 @@ describe("worker module", () => {
   let supervisor: TestActor;
   let farmA1Id: string;
   let farmA2Id: string;
+  let companyAdmin: TestActor;
   let workerA2Id: string;
   let workerBId: string;
 
@@ -47,6 +48,7 @@ describe("worker module", () => {
     workerBId = workerB.id;
 
     systemAdminCookie = await loginSystemAdmin();
+    companyAdmin = await createActor("Company Admin", { farmId: farmA1.id });
     dgm = await createActor("DGM", { farmId: farmA1.id });
     accountant = await createActor("Accountant", { farmId: farmA1.id });
     supervisor = await createActor("Supervisor", { farmId: farmA1.id });
@@ -87,6 +89,44 @@ describe("worker module", () => {
       "workerId",
     ]);
     expect(containsSensitiveFields(response.body)).toBe(false);
+  });
+
+  it("generates the next worker ID from the target farm only", async () => {
+    const farmAWorkers = 5;
+
+    for (let index = 0; index < farmAWorkers; index += 1) {
+      await createTestWorker(farmA1Id);
+    }
+
+    const seededWorkerId = `${TEST_PREFIX}${uniqueSuffix()}-W1`;
+
+    const seeded = await request(app)
+      .post("/api/workers")
+      .set("Cookie", companyAdmin.cookie)
+      .send({
+        workerId: seededWorkerId,
+        name: "Seeded Farm B Worker",
+        farmId: farmA2Id,
+      });
+
+    expect(seeded.status).toBe(201);
+
+    const workerCount = await prisma.worker.count({
+      where: { farmId: farmA2Id },
+    });
+
+    const response = await request(app)
+      .post("/api/workers")
+      .set("Cookie", companyAdmin.cookie)
+      .send({
+        name: "Farm B Auto Worker",
+        farmId: farmA2Id,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.worker.workerId).toBe(
+      `Test Farm-W${workerCount + 1}`,
+    );
   });
 
   it("rejects a duplicate worker ID", async () => {

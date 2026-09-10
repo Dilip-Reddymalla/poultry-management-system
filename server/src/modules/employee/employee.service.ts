@@ -205,10 +205,16 @@ export async function getEmployeeById(
   return toSafeEmployee(await loadReadableEmployee(scope, id));
 }
 
-export async function createEmployeeId(scope:AuthScope,input:CreateEmployeeInput):Promise<string>{
-  const totalEmpolyees = await listEmployees(scope,{page:1,limit:1})
-  const farmName = (await getFarmById(scope,input.farmId)).name
-  return `${farmName}-E${totalEmpolyees.pagination.total+1}`
+export async function createEmployeeId(
+  scope: AuthScope,
+  input: CreateEmployeeInput,
+): Promise<string> {
+  const farm = await getFarmById(scope, input.farmId);
+  const totalEmployees = await prisma.employee.count({
+    where: { farmId: input.farmId },
+  });
+
+  return `${farm.name}-E${totalEmployees + 1}`;
 }
 
 /** Optional face-AI data attached during create/update. */

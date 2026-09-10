@@ -284,7 +284,7 @@ export async function importEmployeesFromExcel(
           where: { farmId: matchedFarmId! },
         });
         const farmObj = readableFarms.find((f) => f.id === matchedFarmId);
-        finalEmpId = `${farmObj?.name || "FARM"}-E${count + 1 + addedCount}`;
+        finalEmpId = `${farmObj?.name || "FARM"}-E${count + 1}`;
       }
 
       const created = await prisma.employee.create({
@@ -485,7 +485,7 @@ export async function importWorkersFromExcel(
           where: { farmId: matchedFarmId! },
         });
         const farmObj = readableFarms.find((f) => f.id === matchedFarmId);
-        finalWrkId = `${farmObj?.name || "FARM"}-W${count + 1 + addedCount}`;
+        finalWrkId = `${farmObj?.name || "FARM"}-W${count + 1}`;
       }
 
       const created = await prisma.worker.create({

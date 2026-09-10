@@ -146,7 +146,10 @@ export async function loginSystemAdmin(): Promise<string> {
   return extractAuthCookie(response.headers["set-cookie"]);
 }
 
-export async function createTestCompany(): Promise<{ id: string; code: string }> {
+export async function createTestCompany(): Promise<{
+  id: string;
+  code: string;
+}> {
   return prisma.company.create({
     data: {
       code: `${TEST_PREFIX}${uniqueSuffix()}`,
@@ -328,17 +331,39 @@ export async function cleanupTestData(): Promise<void> {
 
   await prisma.worker.deleteMany({
     where: {
-      workerId: {
-        startsWith: TEST_PREFIX,
-      },
+      OR: [
+        {
+          workerId: {
+            startsWith: TEST_PREFIX,
+          },
+        },
+        {
+          farm: {
+            code: {
+              startsWith: TEST_PREFIX,
+            },
+          },
+        },
+      ],
     },
   });
 
   await prisma.employee.deleteMany({
     where: {
-      employeeId: {
-        startsWith: TEST_PREFIX,
-      },
+      OR: [
+        {
+          employeeId: {
+            startsWith: TEST_PREFIX,
+          },
+        },
+        {
+          farm: {
+            code: {
+              startsWith: TEST_PREFIX,
+            },
+          },
+        },
+      ],
     },
   });
 

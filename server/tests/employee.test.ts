@@ -6,6 +6,7 @@ import {
   cleanupTestData,
   containsSensitiveFields,
   createActor,
+  createTestCompany,
   createTestEmployeeRecord,
   createTestFarm,
   getDesignationId,
@@ -64,6 +65,45 @@ describe("employee module", () => {
     expect(response.body.employee.employeeId).toBe(employeeId);
     expect(response.body.employee.hasUser).toBe(false);
     expect(containsSensitiveFields(response.body)).toBe(false);
+  });
+
+  it("generates the next employee ID from the target farm only", async () => {
+    const company = await createTestCompany();
+    const farmA = await createTestFarm("ACTIVE", company.id);
+    const farmB = await createTestFarm("ACTIVE", company.id);
+    const companyAdmin = await createActor("Company Admin", {
+      farmId: farmA.id,
+    });
+
+    for (let index = 0; index < 5; index += 1) {
+      await createTestEmployeeRecord(farmA.id);
+    }
+
+    const seededEmployeeId = `${TEST_PREFIX}${uniqueSuffix()}-E1`;
+
+    const seeded = await request(app)
+      .post("/api/employees")
+      .set("Cookie", companyAdmin.cookie)
+      .send({
+        employeeId: seededEmployeeId,
+        name: "Seeded Farm B Employee",
+        designationId,
+        farmId: farmB.id,
+      });
+
+    expect(seeded.status).toBe(201);
+
+    const response = await request(app)
+      .post("/api/employees")
+      .set("Cookie", companyAdmin.cookie)
+      .send({
+        name: "Farm B Auto ID",
+        designationId,
+        farmId: farmB.id,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.employee.employeeId).toBe("Test Farm-E2");
   });
 
   it("rejects a duplicate employee ID", async () => {

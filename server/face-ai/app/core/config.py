@@ -11,7 +11,7 @@ class Settings(BaseModel):
     app_version: str = "1.0.0"
     debug: bool = False
 
-    # Model Paths
+    # Model Paths - Legacy / Baseline (Non-commercial)
     scrfd_model_path: Path = Field(
         default_factory=lambda: PROJECT_ROOT / "models" / "scrfd" / "scrfd_500m_bnkps.onnx"
     )
@@ -21,9 +21,25 @@ class Settings(BaseModel):
     liveness_model_path: Path = Field(
         default_factory=lambda: PROJECT_ROOT / "models" / "liveness" / "modelrgb.onnx"
     )
+
+    # Model Paths - Commercial-Safe (Permissive MIT/BSD-3/Apache-2.0)
+    yunet_model_path: Path = Field(
+        default_factory=lambda: PROJECT_ROOT / "models" / "yunet" / "face_detection_yunet_2023mar.onnx"
+    )
+    edgeface_model_path: Path = Field(
+        default_factory=lambda: PROJECT_ROOT / "models" / "edgeface" / "edgeface_s_gamma_05.onnx"
+    )
+    minifasnet_model_path: Path = Field(
+        default_factory=lambda: PROJECT_ROOT / "models" / "minifasnet" / "minifasnet_v2.onnx"
+    )
     quality_model_path: Path = Field(
         default_factory=lambda: PROJECT_ROOT / "models" / "quality" / "face_det_lite.onnx"
     )
+
+    # Backend Selectors: "yunet" | "scrfd", "edgeface" | "arcface", "minifasnet" | "legacy"
+    detector_backend: str = "yunet"
+    recognizer_backend: str = "edgeface"
+    liveness_backend: str = "minifasnet"
 
     # Reference Identity Embeddings Directory
     known_faces_dir: Path = Field(
@@ -33,6 +49,8 @@ class Settings(BaseModel):
     # Detection Parameters
     scrfd_confidence_threshold: float = 0.20
     scrfd_nms_threshold: float = 0.40
+    yunet_score_threshold: float = 0.60
+    yunet_nms_threshold: float = 0.30
 
     # Quality Parameters
     quality_threshold: float = 0.35

@@ -10,10 +10,13 @@ import numpy as np
 
 from app.core.config import settings
 from app.detection.scrfd_detector import SCRFDDetector
+from app.detection.yunet_detector import YuNetDetector
 from app.detection.face_alignment import FaceAligner
 from app.quality.face_quality import FaceQualityAnalyzer
 from app.liveness.liveness import LivenessAnalyzer
+from app.liveness.minifasnet import MiniFASNetLiveness
 from app.recognition.arcface import ArcFaceRecognizer
+from app.recognition.edgeface import EdgeFaceRecognizer
 from app.matching.face_matcher import FaceMatcher
 from app.api.schemas.recognition import (
     QualityMetrics,
@@ -34,11 +37,11 @@ class FacePipeline:
     Central orchestrator service for the Face AI pipeline.
 
     Initializes all ONNX models ONCE during startup:
-    1. SCRFD face detection
+    1. Face Detection (YuNet / SCRFD)
     2. Light-FaceQ quality analysis
-    3. MobileNetV3 liveness anti-spoofing
+    3. Anti-spoofing Liveness (MiniFASNetV2 / MobileNetV3)
     4. Face alignment (112x112)
-    5. ArcFace (MobileFaceNet) embedding generation
+    5. Face Recognition embedding generation (EdgeFace / ArcFace)
     6. FaceMatcher cosine similarity comparison against known reference identities
 
     Processes 0, 1, or N faces per image independently.
@@ -47,14 +50,22 @@ class FacePipeline:
     def __init__(self) -> None:
         logger.info("Initializing Face AI Pipeline models...")
 
-        # 1. SCRFD Face Detector
-        self.detector = SCRFDDetector(
-            model_path=str(settings.scrfd_model_path),
-            input_size=(640, 640),
-            confidence_threshold=settings.scrfd_confidence_threshold,
-            nms_threshold=settings.scrfd_nms_threshold,
-        )
-        logger.info("✓ SCRFD Detector loaded.")
+        # 1. Face Detector (YuNet / SCRFD)
+        if settings.detector_backend.lower() == "yunet":
+            self.detector = YuNetDetector(
+                model_path=str(settings.yunet_model_path),
+                score_threshold=settings.yunet_score_threshold,
+                nms_threshold=settings.yunet_nms_threshold,
+            )
+            logger.info("✓ YuNet Detector loaded.")
+        else:
+            self.detector = SCRFDDetector(
+                model_path=str(settings.scrfd_model_path),
+                input_size=(640, 640),
+                confidence_threshold=settings.scrfd_confidence_threshold,
+                nms_threshold=settings.scrfd_nms_threshold,
+            )
+            logger.info("✓ SCRFD Detector loaded.")
 
         # 2. Face Quality Analyzer
         self.quality = FaceQualityAnalyzer(
@@ -69,23 +80,36 @@ class FacePipeline:
         )
         logger.info("✓ Face Quality Analyzer loaded.")
 
-        # 3. Liveness Analyzer
-        self.liveness = LivenessAnalyzer(
-            model_path=settings.liveness_model_path,
-            live_class_index=1,
-            live_threshold=settings.liveness_threshold,
-        )
-        logger.info("✓ Liveness Analyzer loaded.")
+        # 3. Liveness Analyzer (MiniFASNetV2 / Legacy)
+        if settings.liveness_backend.lower() == "minifasnet":
+            self.liveness = MiniFASNetLiveness(
+                model_path=settings.minifasnet_model_path,
+                live_threshold=settings.liveness_threshold,
+            )
+            logger.info("✓ MiniFASNetV2 Liveness Analyzer loaded.")
+        else:
+            self.liveness = LivenessAnalyzer(
+                model_path=settings.liveness_model_path,
+                live_class_index=1,
+                live_threshold=settings.liveness_threshold,
+            )
+            logger.info("✓ Legacy Liveness Analyzer loaded.")
 
         # 4. Face Aligner
         self.aligner = FaceAligner(output_size=(112, 112))
         logger.info("✓ Face Aligner loaded.")
 
-        # 5. ArcFace Recognizer
-        self.recognizer = ArcFaceRecognizer(
-            model_path=str(settings.arcface_model_path)
-        )
-        logger.info("✓ ArcFace Recognizer loaded.")
+        # 5. Face Recognizer (EdgeFace / ArcFace)
+        if settings.recognizer_backend.lower() == "edgeface":
+            self.recognizer = EdgeFaceRecognizer(
+                model_path=str(settings.edgeface_model_path)
+            )
+            logger.info("✓ EdgeFace Recognizer loaded.")
+        else:
+            self.recognizer = ArcFaceRecognizer(
+                model_path=str(settings.arcface_model_path)
+            )
+            logger.info("✓ ArcFace Recognizer loaded.")
 
         # 6. Face Matcher
         self.matcher = FaceMatcher(threshold=settings.match_threshold)

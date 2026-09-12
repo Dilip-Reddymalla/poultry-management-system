@@ -53,15 +53,15 @@ class Settings(BaseModel):
     yunet_nms_threshold: float = 0.30
 
     # Quality Parameters
-    quality_threshold: float = 0.35
-    quality_min_sharpness: float = 15.0
+    quality_threshold: float = 0.20
+    quality_min_sharpness: float = 10.0
     quality_min_face_width: int = 32
     quality_min_face_height: int = 32
     quality_min_face_area_ratio: float = 0.001
-    quality_min_detection_confidence: float = 0.35
+    quality_min_detection_confidence: float = 0.20
     quality_use_sharpness: bool = True
 
-    # Liveness Parameters
+    # Liveness Parameters (Disabled)
     enable_liveness: bool = False
     liveness_threshold: float = 0.50
     liveness_crop_scale: float = 2.7

@@ -636,14 +636,45 @@ export async function provisionEmployeeUser(
 }
 
 export const ROLE_HIERARCHY: Record<string, number> = {
+  // Global / Executive
   "System Admin": 100,
-  "Company Admin": 80,
-  "DGM": 60,
-  "Assistant Manager": 50,
-  "Super Incharge": 40,
-  "Incharge": 30,
-  "Accountant": 25,
-  "Supervisor": 20,
+  "Company Admin": 90,
+  "DGM": 80,
+  "Assistant Manager": 70,
+
+  // Incharge Level
+  "Super Incharge": 65,
+  "Incharge": 60,
+  "Asst Incharge": 55,
+
+  // Finance & Administration
+  "Accountant": 50,
+  "Accounts Assistant": 45,
+  "Stores Executive": 45,
+
+  // Supervisory Level
+  "Senior Supervisor": 40,
+  "Supervisor": 35,
+  "AC Supervisor": 35,
+  "Maintenance Supervisor": 35,
+  "Grading Supervisor": 35,
+  "Supervisor - Litter Maintenance": 35,
+  "Security Supervisor": 35,
+
+  // Assistant Supervisors
+  "Asst Supervisor": 30,
+  "AC Asst Supervisor": 30,
+  "Asst Supervisor General": 30,
+  "Asst Supervisor - Technical": 30,
+  "Asst Supervisor - Electrical": 30,
+
+  // Security & Logistics Staff
+  "Security Head Guard": 20,
+  "Senior Driver": 18,
+  "Security Guard": 15,
+  "Driver": 15,
+
+  // Workers
   "Worker": 10,
 };
 

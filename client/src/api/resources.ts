@@ -401,6 +401,48 @@ export function approveAttendance(id: string): Promise<Attendance> {
 export function fetchMarkedPersonIds(query: MarkedPersonIdsQuery, signal?: AbortSignal): Promise<MarkedPersonIdsResponse> {
   return apiClient.get("/attendance/marked-ids", { query, signal });
 }
+
+export interface UnmarkedSummaryQuery {
+  date: string;
+  shift: Shift;
+  farmId: string;
+  shedId?: string;
+}
+
+export interface UnmarkedSummaryResponse {
+  success: boolean;
+  unmarkedEmployees: { id: string; name: string; employeeId: string }[];
+  unmarkedWorkers: { id: string; name: string; workerId: string }[];
+  totalUnmarked: number;
+}
+
+export interface MarkUnmarkedAbsentInput {
+  date: string;
+  shift: Shift;
+  farmId: string;
+  shedId?: string;
+  target?: "ALL" | "EMPLOYEES" | "WORKERS";
+  latitude: number;
+  longitude: number;
+  notes?: string;
+}
+
+export interface MarkUnmarkedAbsentResponse {
+  success: boolean;
+  markedCount: number;
+  employeeCount: number;
+  workerCount: number;
+  message: string;
+}
+
+export function fetchUnmarkedSummary(query: UnmarkedSummaryQuery, signal?: AbortSignal): Promise<UnmarkedSummaryResponse> {
+  return apiClient.get("/attendance/unmarked-summary", { query, signal });
+}
+
+export function markUnmarkedAbsent(data: MarkUnmarkedAbsentInput): Promise<MarkUnmarkedAbsentResponse> {
+  return apiClient.post("/attendance/mark-unmarked-absent", data);
+}
+
 export function exportAttendanceUrl(query: ExportAttendanceQuery): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {

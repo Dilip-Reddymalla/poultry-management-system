@@ -12,6 +12,8 @@ import type {
   UpdateAttendanceInput,
   BulkCreateAttendanceInput,
   MarkedPersonIdsQueryInput,
+  UnmarkedSummaryQueryInput,
+  MarkUnmarkedAbsentInput,
 } from "./attendance.schema.js";
 import type {
   AttendancePagination,
@@ -546,4 +548,224 @@ export async function getMarkedPersonIds(
   }
 
   return { employeeIds, workerIds };
+}
+
+// Previews unmarked employees and workers for a given farm, date, and shift.
+export async function getUnmarkedSummary(
+  scope: AuthScope,
+  query: UnmarkedSummaryQueryInput,
+): Promise<{
+  unmarkedEmployees: { id: string; name: string; employeeId: string }[];
+  unmarkedWorkers: { id: string; name: string; workerId: string }[];
+  totalUnmarked: number;
+}> {
+  const farm = await prisma.farm.findUnique({
+    where: { id: query.farmId },
+    select: { id: true, companyId: true },
+  });
+
+  if (!farm || !isFarmInScope(scope, farm)) {
+    throw new AppError("Farm not found", 404);
+  }
+
+  // 1. Get already marked person IDs
+  const markedRecords = await prisma.attendance.findMany({
+    where: {
+      farmId: query.farmId,
+      date: query.date,
+      shift: query.shift,
+    },
+    select: {
+      employeeId: true,
+      workerId: true,
+    },
+  });
+
+  const markedEmpIds = new Set(markedRecords.map((r) => r.employeeId).filter(Boolean));
+  const markedWkrIds = new Set(markedRecords.map((r) => r.workerId).filter(Boolean));
+
+  // 2. Fetch all active employees and workers on this farm
+  const [allEmployees, allWorkers] = await Promise.all([
+    prisma.employee.findMany({
+      where: {
+        farmId: query.farmId,
+        status: "ACTIVE",
+      },
+      select: {
+        id: true,
+        name: true,
+        employeeId: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.worker.findMany({
+      where: {
+        farmId: query.farmId,
+        status: "ACTIVE",
+      },
+      select: {
+        id: true,
+        name: true,
+        workerId: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const unmarkedEmployees = allEmployees.filter((e) => !markedEmpIds.has(e.id));
+  const unmarkedWorkers = allWorkers.filter((w) => !markedWkrIds.has(w.id));
+
+  return {
+    unmarkedEmployees,
+    unmarkedWorkers,
+    totalUnmarked: unmarkedEmployees.length + unmarkedWorkers.length,
+  };
+}
+
+// Marks all currently unmarked active employees and/or workers as ABSENT for a specific shift and date.
+export async function markUnmarkedAbsent(
+  scope: AuthScope,
+  input: MarkUnmarkedAbsentInput,
+): Promise<{
+  markedCount: number;
+  employeeCount: number;
+  workerCount: number;
+  message: string;
+}> {
+  const farm = await prisma.farm.findUnique({
+    where: { id: input.farmId },
+    select: { id: true, name: true, companyId: true },
+  });
+
+  if (!farm) {
+    throw new AppError("Farm not found", 404);
+  }
+
+  assertFarmWritable(scope, farm);
+
+  if (input.shedId) {
+    const shed = await prisma.shed.findUnique({
+      where: { id: input.shedId },
+      select: { farmId: true },
+    });
+    if (!shed) {
+      throw new AppError("Shed not found", 404);
+    }
+    if (shed.farmId !== farm.id) {
+      throw new AppError("Shed does not belong to the selected farm", 400);
+    }
+  }
+
+  // 1. Fetch already marked attendance
+  const markedRecords = await prisma.attendance.findMany({
+    where: {
+      farmId: input.farmId,
+      date: input.date,
+      shift: input.shift,
+    },
+    select: {
+      employeeId: true,
+      workerId: true,
+    },
+  });
+
+  const markedEmpIds = new Set(markedRecords.map((r) => r.employeeId).filter(Boolean));
+  const markedWkrIds = new Set(markedRecords.map((r) => r.workerId).filter(Boolean));
+
+  // 2. Fetch active workforce targeted
+  const shouldMarkEmployees = input.target === "ALL" || input.target === "EMPLOYEES";
+  const shouldMarkWorkers = input.target === "ALL" || input.target === "WORKERS";
+
+  const [activeEmployees, activeWorkers] = await Promise.all([
+    shouldMarkEmployees
+      ? prisma.employee.findMany({
+          where: { farmId: input.farmId, status: "ACTIVE" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    shouldMarkWorkers
+      ? prisma.worker.findMany({
+          where: { farmId: input.farmId, status: "ACTIVE" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const unmarkedEmployees = activeEmployees.filter((e) => !markedEmpIds.has(e.id));
+  const unmarkedWorkers = activeWorkers.filter((w) => !markedWkrIds.has(w.id));
+
+  const totalToMark = unmarkedEmployees.length + unmarkedWorkers.length;
+
+  if (totalToMark === 0) {
+    return {
+      markedCount: 0,
+      employeeCount: 0,
+      workerCount: 0,
+      message: "No unmarked personnel found for this date and shift.",
+    };
+  }
+
+  const defaultNote = input.notes?.trim() || "Marked absent (Unmarked roster cutoff)";
+  const now = new Date();
+
+  // 3. Batch insert ABSENT records
+  const attendanceDataToInsert = [
+    ...unmarkedEmployees.map((e) => ({
+      date: input.date,
+      farmId: input.farmId,
+      employeeId: e.id,
+      workerId: null,
+      shedId: input.shedId ?? null,
+      shift: input.shift,
+      status: "ABSENT" as const,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      notes: defaultNote,
+      recordedById: scope.userId,
+      approvedById: scope.userId,
+      approvedAt: now,
+    })),
+    ...unmarkedWorkers.map((w) => ({
+      date: input.date,
+      farmId: input.farmId,
+      employeeId: null,
+      workerId: w.id,
+      shedId: input.shedId ?? null,
+      shift: input.shift,
+      status: "ABSENT" as const,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      notes: defaultNote,
+      recordedById: scope.userId,
+      approvedById: scope.userId,
+      approvedAt: now,
+    })),
+  ];
+
+  await prisma.attendance.createMany({
+    data: attendanceDataToInsert,
+    skipDuplicates: true,
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "CREATE",
+    entity: "Attendance",
+    summary: `Marked ${totalToMark} unmarked personnel as ABSENT (${unmarkedEmployees.length} employees, ${unmarkedWorkers.length} workers) on ${farm.name} for ${input.date.toISOString().slice(0, 10)} [${input.shift}]`,
+    changes: {
+      target: input.target,
+      markedCount: totalToMark,
+      employeeCount: unmarkedEmployees.length,
+      workerCount: unmarkedWorkers.length,
+      shift: input.shift,
+      date: input.date,
+    },
+  });
+
+  return {
+    markedCount: totalToMark,
+    employeeCount: unmarkedEmployees.length,
+    workerCount: unmarkedWorkers.length,
+    message: `Successfully marked ${totalToMark} unmarked personnel as Absent.`,
+  };
 }

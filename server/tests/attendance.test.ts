@@ -200,8 +200,18 @@ describe("attendance module", () => {
     expect(response.status).toBe(403);
   });
 
-  it("denies attendance creation to the Accountant role", async () => {
+  it("allows attendance creation to the Accountant role", async () => {
     const response = await record(accountant.cookie, {
+      employeeId: employeeA1Id,
+      date: testDate(),
+    });
+
+    expect(response.status).toBe(201);
+  });
+
+  it("denies attendance creation to non-supervisory roles (e.g. Driver)", async () => {
+    const driver = await createActor("Driver", { farmId: farmA1Id });
+    const response = await record(driver.cookie, {
       employeeId: employeeA1Id,
       date: testDate(),
     });
@@ -437,5 +447,59 @@ describe("attendance module", () => {
     // The System Admin has no user row, so the approver audit link is null.
     expect(approved.body.attendance.approvedBy).toBeNull();
     expect(approved.body.attendance.approvedAt).not.toBeNull();
+  });
+
+  it("fetches unmarked summary preview for a date and shift", async () => {
+    const date = testDate();
+
+    const response = await request(app)
+      .get("/api/attendance/unmarked-summary")
+      .set("Cookie", supervisor.cookie)
+      .query({
+        date,
+        shift: "MORNING_SHIFT",
+        farmId: farmA1Id,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.unmarkedEmployees).toBeInstanceOf(Array);
+    expect(response.body.unmarkedWorkers).toBeInstanceOf(Array);
+    expect(typeof response.body.totalUnmarked).toBe("number");
+    expect(response.body.totalUnmarked).toBeGreaterThan(0);
+  });
+
+  it("marks all unmarked workforce as ABSENT in bulk", async () => {
+    const date = testDate();
+
+    const response = await request(app)
+      .post("/api/attendance/mark-unmarked-absent")
+      .set("Cookie", supervisor.cookie)
+      .send({
+        date,
+        shift: "MORNING_SHIFT",
+        farmId: farmA1Id,
+        target: "ALL",
+        latitude: 12.0,
+        longitude: 77.0,
+        notes: "Shift ended - auto absent",
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.markedCount).toBeGreaterThan(0);
+
+    // Re-query unmarked summary to verify they are now marked
+    const afterSummary = await request(app)
+      .get("/api/attendance/unmarked-summary")
+      .set("Cookie", supervisor.cookie)
+      .query({
+        date,
+        shift: "MORNING_SHIFT",
+        farmId: farmA1Id,
+      });
+
+    expect(afterSummary.status).toBe(200);
+    expect(afterSummary.body.totalUnmarked).toBe(0);
   });
 });

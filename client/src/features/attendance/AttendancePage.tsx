@@ -30,6 +30,7 @@ import { formatDate, statusLabel, todayInputValue } from "../../lib/display.js";
 import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
+import { MarkUnmarkedAbsentDialog } from "./MarkUnmarkedAbsentDialog.js";
 
 const PAGE_SIZE = 50;
 
@@ -62,6 +63,7 @@ export function AttendancePage({
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const [bulkCreating, setBulkCreating] = useState(false);
+  const [markingUnmarkedAbsent, setMarkingUnmarkedAbsent] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   // Opening a different person's history resets paging. Adjusting state during
@@ -155,6 +157,16 @@ export function AttendancePage({
                   }}
                 >
                   Bulk mark
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setMarkingUnmarkedAbsent(true);
+                  }}
+                  style={{ color: "var(--rust, #b91c1c)" }}
+                  title="Mark all unmarked personnel as absent for a shift"
+                >
+                  ⚠️ Mark Unmarked Absent
                 </Button>
                 <Button
                   variant="primary"
@@ -415,6 +427,21 @@ export function AttendancePage({
             setBulkCreating(false);
           }}
           onSaved={handleSaved}
+        />
+      ) : null}
+
+      {markingUnmarkedAbsent ? (
+        <MarkUnmarkedAbsentDialog
+          defaultDate={personMode ? todayInputValue() : date}
+          defaultFarmId={farmId || null}
+          defaultShift={shift || "MORNING_SHIFT"}
+          onClose={() => {
+            setMarkingUnmarkedAbsent(false);
+          }}
+          onSaved={() => {
+            setMarkingUnmarkedAbsent(false);
+            attendance.reload();
+          }}
         />
       ) : null}
 

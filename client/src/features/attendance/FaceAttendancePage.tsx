@@ -12,69 +12,10 @@ import {
 } from "../../api/face-attendance.api.js";
 
 /* ------------------------------------------------------------------ */
-/*  Shift Timing Helpers                                               */
-/* ------------------------------------------------------------------ */
-
-/**
- * Standard shift timings:
- * - MORNING_SHIFT:   05:00 - 15:00 (5 AM to 3 PM, includes 1hr buffer)
- * - AFTERNOON_SHIFT: 13:00 - 23:00 (1 PM to 11 PM, includes 1hr buffer)
- * - NIGHT_SHIFT:     21:00 - 07:00 (9 PM to 7 AM, includes 1hr buffer)
- * - OVERTIME:        Allowed anytime
- */
-function validateShiftTiming(shift: Shift): { allowed: boolean; message?: string } {
-  if (shift === "OVERTIME") return { allowed: true };
-
-  const now = new Date();
-  const currentHour = now.getHours();
-
-  switch (shift) {
-    case "MORNING_SHIFT": {
-      // 05:00 to 15:00
-      if (currentHour < 5 || currentHour >= 15) {
-        return {
-          allowed: false,
-          message: `Morning Shift attendance is only allowed between 05:00 AM and 03:00 PM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-    case "AFTERNOON_SHIFT": {
-      // 13:00 to 23:00
-      if (currentHour < 13 || currentHour >= 23) {
-        return {
-          allowed: false,
-          message: `Afternoon Shift attendance is only allowed between 01:00 PM and 11:00 PM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-    case "NIGHT_SHIFT": {
-      // 21:00 to 07:00 (crosses midnight)
-      if (currentHour >= 7 && currentHour < 21) {
-        return {
-          allowed: false,
-          message: `Night Shift attendance is only allowed between 09:00 PM and 07:00 AM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-  }
-
-  return { allowed: true };
-}
+import { validateShiftTiming, SHIFT_TIMINGS } from "../../lib/shift-timing.js";
 
 function shiftLabel(shift: Shift): string {
-  switch (shift) {
-    case "MORNING_SHIFT":
-      return "Morning Shift (05:00 - 15:00)";
-    case "AFTERNOON_SHIFT":
-      return "Afternoon Shift (13:00 - 23:00)";
-    case "NIGHT_SHIFT":
-      return "Night Shift (21:00 - 07:00)";
-    case "OVERTIME":
-      return "Overtime (Anytime)";
-  }
+  return SHIFT_TIMINGS[shift]?.label ?? shift;
 }
 
 /* ------------------------------------------------------------------ */

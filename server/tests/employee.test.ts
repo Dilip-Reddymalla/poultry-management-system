@@ -421,6 +421,28 @@ describe("employee module", () => {
     expect(response.body.message).toMatch(/higher role/i);
   });
 
+  it("denies an Accountant from deleting an Assistant Manager (higher role hierarchy)", async () => {
+    const asstManager = await createActor("Assistant Manager", { farmId });
+
+    const response = await request(app)
+      .delete(`/api/employees/${asstManager.employeeRowId}`)
+      .set("Cookie", accountant.cookie);
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toMatch(/higher role/i);
+  });
+
+  it("allows an Accountant to delete a Supervisor (lower role hierarchy)", async () => {
+    const targetSupervisor = await createActor("Supervisor", { farmId });
+
+    const response = await request(app)
+      .delete(`/api/employees/${targetSupervisor.employeeRowId}`)
+      .set("Cookie", accountant.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+  });
+
   it("denies an actor from deleting their own employee account", async () => {
     const response = await request(app)
       .delete(`/api/employees/${dgm.employeeRowId}`)

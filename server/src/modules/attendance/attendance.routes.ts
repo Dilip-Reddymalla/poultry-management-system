@@ -9,6 +9,8 @@ import {
   exportAttendanceController,
   getAttendanceByIdController,
   getMarkedPersonIdsController,
+  getUnmarkedSummaryController,
+  markUnmarkedAbsentController,
   listAttendanceController,
   updateAttendanceController,
 } from "./attendance.controller.js";
@@ -38,6 +40,20 @@ router.get(
   "/marked-ids",
   requirePermission("attendance:create"), // same scope as creating attendance
   getMarkedPersonIdsController,
+);
+
+// Get unmarked summary for previewing unrecorded workforce
+router.get(
+  "/unmarked-summary",
+  requirePermission("attendance:create"),
+  getUnmarkedSummaryController,
+);
+
+// Bulk-mark all unmarked personnel as absent
+router.post(
+  "/mark-unmarked-absent",
+  requirePermission("attendance:create"),
+  markUnmarkedAbsentController,
 );
 
 router.get(

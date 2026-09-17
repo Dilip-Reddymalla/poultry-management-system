@@ -84,6 +84,8 @@ export interface EmployeeListQuery {
   status?: EmployeeStatus | "";
   designationId?: string;
   farmId?: string;
+  sortBy?: "employeeId" | "name" | "status";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface EmployeeListResponse {
@@ -110,6 +112,8 @@ export interface WorkerListQuery {
   search?: string;
   status?: WorkerStatus | "";
   farmId?: string;
+  sortBy?: "workerId" | "name" | "status";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface WorkerListResponse {

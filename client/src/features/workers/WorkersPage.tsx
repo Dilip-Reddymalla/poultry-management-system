@@ -44,6 +44,18 @@ export function WorkersPage(): React.ReactElement {
   const [importingExcel, setImportingExcel] = useState(false);
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [sortBy, setSortBy] = useState<"workerId" | "name" | "status">("workerId");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  function handleSort(field: "workerId" | "name" | "status") {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,10 +72,10 @@ export function WorkersPage(): React.ReactElement {
     enabled: showFarm,
   });
 
-  const key = JSON.stringify({ page, search, status, farmId });
+  const key = JSON.stringify({ page, search, status, farmId, sortBy, sortOrder });
 
   const workers = useResource<WorkerListResult>(`workers:${key}`, (signal) =>
-    fetchWorkers({ page, limit: PAGE_SIZE, search, status, farmId }, signal),
+    fetchWorkers({ page, limit: PAGE_SIZE, search, status, farmId, sortBy, sortOrder }, signal),
   );
 
   const rows = workers.data?.workers ?? [];
@@ -193,10 +205,46 @@ export function WorkersPage(): React.ReactElement {
               <table className="table">
                 <thead>
                   <tr>
-                    <th scope="col">Worker ID</th>
-                    <th scope="col">Name</th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "workerId" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("workerId")}
+                        title="Sort by Worker ID"
+                      >
+                        Worker ID
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "workerId" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "name" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("name")}
+                        title="Sort by Name"
+                      >
+                        Name
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "name" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     {showFarm ? <th scope="col">Farm</th> : null}
-                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "status" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("status")}
+                        title="Sort by Status"
+                      >
+                        Status
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     {can("worker:delete") ? <th scope="col">Actions</th> : null}
                   </tr>
                 </thead>

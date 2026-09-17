@@ -26,6 +26,8 @@ export const listWorkersQuerySchema = z.object({
   // Narrows within the caller's scope; a farmId outside scope yields no rows.
   farmId: farmIdSchema.optional(),
   search: z.string().trim().min(1, "Search must not be empty").optional(),
+  sortBy: z.enum(["workerId", "name", "status"]).default("workerId"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const createWorkerSchema = z.object({

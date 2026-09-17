@@ -54,6 +54,18 @@ export function EmployeesPage(): React.ReactElement {
   const [importingExcel, setImportingExcel] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [sortBy, setSortBy] = useState<"employeeId" | "name" | "status">("employeeId");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  function handleSort(field: "employeeId" | "name" | "status") {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  }
 
   // Typing should not fire a request per keystroke.
   useEffect(() => {
@@ -75,11 +87,11 @@ export function EmployeesPage(): React.ReactElement {
     enabled: showFarm,
   });
 
-  const key = JSON.stringify({ page, search, status, designationId, farmId });
+  const key = JSON.stringify({ page, search, status, designationId, farmId, sortBy, sortOrder });
 
   const employees = useResource<EmployeeListResult>(`employees:${key}`, (signal) =>
     fetchEmployees(
-      { page, limit: PAGE_SIZE, search, status, designationId, farmId },
+      { page, limit: PAGE_SIZE, search, status, designationId, farmId, sortBy, sortOrder },
       signal,
     ),
   );
@@ -90,13 +102,31 @@ export function EmployeesPage(): React.ReactElement {
 
   const ROLE_HIERARCHY: Record<string, number> = {
     "System Admin": 100,
-    "Company Admin": 80,
-    "DGM": 60,
-    "Assistant Manager": 50,
-    "Super Incharge": 40,
-    "Incharge": 30,
-    "Accountant": 25,
-    "Supervisor": 20,
+    "Company Admin": 90,
+    "DGM": 80,
+    "Assistant Manager": 70,
+    "Super Incharge": 65,
+    "Incharge": 60,
+    "Asst Incharge": 55,
+    "Accountant": 50,
+    "Accounts Assistant": 45,
+    "Stores Executive": 45,
+    "Senior Supervisor": 40,
+    "Supervisor": 35,
+    "AC Supervisor": 35,
+    "Maintenance Supervisor": 35,
+    "Grading Supervisor": 35,
+    "Supervisor - Litter Maintenance": 35,
+    "Security Supervisor": 35,
+    "Asst Supervisor": 30,
+    "AC Asst Supervisor": 30,
+    "Asst Supervisor General": 30,
+    "Asst Supervisor - Technical": 30,
+    "Asst Supervisor - Electrical": 30,
+    "Security Head Guard": 20,
+    "Senior Driver": 18,
+    "Security Guard": 15,
+    "Driver": 15,
     "Worker": 10,
   };
 
@@ -260,13 +290,49 @@ export function EmployeesPage(): React.ReactElement {
               <table className="table">
                 <thead>
                   <tr>
-                    <th scope="col">Employee ID</th>
-                    <th scope="col">Name</th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "employeeId" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("employeeId")}
+                        title="Sort by Employee ID"
+                      >
+                        Employee ID
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "employeeId" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "name" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("name")}
+                        title="Sort by Name"
+                      >
+                        Name
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "name" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     <th scope="col">Designation</th>
                     {showFarm ? <th scope="col">Farm</th> : null}
                     <th scope="col">Joined</th>
                     <th scope="col">Login</th>
-                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "status" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("status")}
+                        title="Sort by Status"
+                      >
+                        Status
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     {can("employee:delete") ? <th scope="col">Actions</th> : null}
                   </tr>
                 </thead>

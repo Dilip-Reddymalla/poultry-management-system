@@ -23,6 +23,8 @@ describe("employee module", () => {
   // may only write within its own farm.
   let dgm: TestActor;
   let accountant: TestActor;
+  let accountsAssistant: TestActor;
+  let incharge: TestActor;
   let supervisor: TestActor;
   let farmId: string;
   let designationId: string;
@@ -36,6 +38,8 @@ describe("employee module", () => {
 
     dgm = await createActor("DGM", { farmId });
     accountant = await createActor("Accountant", { farmId });
+    accountsAssistant = await createActor("Accounts Assistant", { farmId });
+    incharge = await createActor("Incharge", { farmId });
     supervisor = await createActor("Supervisor", { farmId });
 
     designationId = await getDesignationId();
@@ -175,6 +179,41 @@ describe("employee module", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.employee.name).toBe("Renamed Employee");
+  });
+
+  it("allows the Incharge role to update an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .patch(`/api/employees/${employee.id}`)
+      .set("Cookie", incharge.cookie)
+      .send({ name: "Renamed by Incharge" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.employee.name).toBe("Renamed by Incharge");
+  });
+
+  it("allows the Accounts Assistant role to update an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .patch(`/api/employees/${employee.id}`)
+      .set("Cookie", accountsAssistant.cookie)
+      .send({ name: "Renamed by Accounts Assistant" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.employee.name).toBe("Renamed by Accounts Assistant");
+  });
+
+  it("denies the Supervisor role from updating an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+
+    const response = await request(app)
+      .patch(`/api/employees/${employee.id}`)
+      .set("Cookie", supervisor.cookie)
+      .send({ name: "Renamed by Supervisor" });
+
+    expect(response.status).toBe(403);
   });
 
   it("does not change status through the generic update endpoint", async () => {

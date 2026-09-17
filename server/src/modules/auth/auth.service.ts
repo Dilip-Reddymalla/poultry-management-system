@@ -58,6 +58,9 @@ const sessionUserSelect = {
       name: true,
       status: true,
       farmId: true,
+      photoUrl: true,
+      joiningDate: true,
+      phone: true,
       farm: {
         select: {
           companyId: true,
@@ -126,6 +129,9 @@ function toSafeUser(user: SessionUserRecord): SafeUser {
     employee: {
       id: user.employee.id,
       name: user.employee.name,
+      photoUrl: (user.employee.photoUrl ?? null) as string | null,
+      joiningDate: (user.employee.joiningDate != null ? user.employee.joiningDate.toISOString().split("T")[0] : null) as string | null,
+      phone: (user.employee.phone ?? null) as string | null,
       designation: {
         id: user.employee.designation.id,
         name: user.employee.designation.name,

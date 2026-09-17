@@ -53,7 +53,11 @@ export interface SessionUser {
       id: string;
       name: string;
     };
+    photoUrl?: string | null;
+    joiningDate?: string | null;
+    phone?: string | null;
   };
+
 }
 
 export interface AuthResponse {

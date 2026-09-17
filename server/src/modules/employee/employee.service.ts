@@ -472,6 +472,8 @@ const provisionEmployeeSelect = {
   name: true,
   status: true,
   phone: true,
+  photoUrl: true,
+  joiningDate: true,
   farmId: true,
   farm: {
     select: {
@@ -491,6 +493,7 @@ const provisionEmployeeSelect = {
     },
   },
 };
+
 
 // Passwordless provisioning: the account is created with no password and a
 // mustSetPassword flag. The employee signs in first by phone OTP, then sets a
@@ -602,11 +605,15 @@ export async function provisionEmployeeUser(
       employee: {
         id: employee.id,
         name: employee.name,
+        photoUrl: (employee.photoUrl ?? null) as string | null,
+        joiningDate: (employee.joiningDate != null ? employee.joiningDate.toISOString().split("T")[0] : null) as string | null,
+        phone: (employee.phone ?? null) as string | null,
         designation: {
           id: employee.designation.id,
           name: employee.designation.name,
         },
       },
+
       roles: [role.name],
       permissions: role.permissions
         .map((rolePermission) => rolePermission.permission.name)

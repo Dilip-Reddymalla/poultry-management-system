@@ -402,6 +402,18 @@ export function fetchMarkedPersonIds(query: MarkedPersonIdsQuery, signal?: Abort
   return apiClient.get("/attendance/marked-ids", { query, signal });
 }
 
+/** Fetch up to 1 000 attendance records for a single employee over the last N days. */
+export function fetchEmployeeAttendanceRange(
+  employeeId: string,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<AttendanceListResponse> {
+  return apiClient.get("/attendance", { query: { employeeId, from, to, limit: 1000 }, signal });
+}
+
+
+
 export interface UnmarkedSummaryQuery {
   date: string;
   shift: Shift;

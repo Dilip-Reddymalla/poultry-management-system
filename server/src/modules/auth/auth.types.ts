@@ -27,7 +27,11 @@ export interface SafeUser {
     id: string;
     name: string;
     designation: SafeDesignation;
+    photoUrl?: string | null;
+    joiningDate?: string | null;
+    phone?: string | null;
   };
+
   // Role names are informational only (labels, greetings). Authorization
   // decisions — client-side UI gating included — read `permissions`, which the
   // API resolves from the database on every request.

@@ -84,7 +84,7 @@ export interface EmployeeListQuery {
   status?: EmployeeStatus | "";
   designationId?: string;
   farmId?: string;
-  sortBy?: "employeeId" | "name" | "status";
+  sortBy?: "employeeId" | "name" | "status" | "login";
   sortOrder?: "asc" | "desc";
 }
 

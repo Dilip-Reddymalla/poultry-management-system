@@ -34,7 +34,7 @@ export const listEmployeesQuerySchema = z.object({
   // rows (the scope filter still applies) rather than leaking another farm.
   farmId: farmIdSchema.optional(),
   search: z.string().trim().min(1, "Search must not be empty").optional(),
-  sortBy: z.enum(["employeeId", "name", "status"]).default("employeeId"),
+  sortBy: z.enum(["employeeId", "name", "status", "login"]).default("employeeId"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 

@@ -54,10 +54,10 @@ export function EmployeesPage(): React.ReactElement {
   const [importingExcel, setImportingExcel] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-  const [sortBy, setSortBy] = useState<"employeeId" | "name" | "status">("employeeId");
+  const [sortBy, setSortBy] = useState<"employeeId" | "name" | "status" | "login">("employeeId");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  function handleSort(field: "employeeId" | "name" | "status") {
+  function handleSort(field: "employeeId" | "name" | "status" | "login") {
     if (sortBy === field) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
@@ -319,7 +319,19 @@ export function EmployeesPage(): React.ReactElement {
                     <th scope="col">Designation</th>
                     {showFarm ? <th scope="col">Farm</th> : null}
                     <th scope="col">Joined</th>
-                    <th scope="col">Login</th>
+                    <th scope="col">
+                      <button
+                        type="button"
+                        className={`table__sort-btn ${sortBy === "login" ? "table__sort-btn--active" : ""}`}
+                        onClick={() => handleSort("login")}
+                        title="Sort by Login Access"
+                      >
+                        Login
+                        <span className="table__sort-icon" aria-hidden="true">
+                          {sortBy === "login" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     <th scope="col">
                       <button
                         type="button"

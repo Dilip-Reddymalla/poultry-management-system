@@ -177,12 +177,15 @@ export async function listEmployees(
   const sortField = query.sortBy ?? "employeeId";
   const sortOrder = query.sortOrder ?? "asc";
 
+  const orderBy: Prisma.EmployeeOrderByWithRelationInput =
+    sortField === "login"
+      ? { user: { id: sortOrder } }
+      : { [sortField]: sortOrder };
+
   const [employees, total] = await prisma.$transaction([
     prisma.employee.findMany({
       where,
-      orderBy: {
-        [sortField]: sortOrder,
-      },
+      orderBy,
       skip: (query.page - 1) * query.limit,
       take: query.limit,
       select: employeeSelect,

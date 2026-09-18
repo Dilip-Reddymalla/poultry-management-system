@@ -35,12 +35,15 @@ server/
    ├─ scripts/             # operational one-off scripts (OTP retention cleanup)
    ├─ utils/               # jwt, auth-cookie, password, otp, phone, httpsms, app-error
    └─ modules/
+      ├─ analytics/        # public zero-PII telemetry service & operational metrics
       ├─ attendance/       # attendance CRUD + shifts + GPS + deduplication + Excel export
       ├─ auth/             # login, /me, logout, OTP phone login, OTP cleanup service
       ├─ employee/         # employee CRUD + lifecycle + user provisioning
+      ├─ face-ai/          # Face-AI proxy routes, demo session TTL store, rate limiting
       ├─ farm/             # farm reads + writes + lifecycle
       ├─ reference/        # read-only designation, role and company lookups
-      └─ shed/             # shed reads + writes + status transitions
+      ├─ shed/             # shed reads + writes + status transitions
+      └─ worker/           # farm worker registry, shed assignment, biometric linking
 ```
 
 ## Scripts
@@ -770,39 +773,18 @@ Current coverage:
 | [`tests/contract.test.ts`](tests/contract.test.ts) | health envelope, unknown route → JSON `404`, validation error exposes both `errors` and `formErrors`, `/auth/me` returns resolved `permissions` + `designation` object with no leaked secrets or `desigination*` field names, login and `/auth/me` return an identical user, provisioning returns the same user shape |
 | [`tests/reference.test.ts`](tests/reference.test.ts) | all three lists → `401` without a cookie, designations/roles/companies return only their safe fields sorted, no `pagination` object, Supervisor denied designations (`employee:view`) and roles (`user:create`) but allowed companies (`farm:view`) |
 
-## Implemented vs planned
+## Implemented Features
 
-**Implemented:** email/password login, phone+OTP login with multi-account
-selection, cookie sessions with live revocation, RBAC, employee CRUD + lifecycle,
-user provisioning, farm reads/writes/lifecycle, shed reads/writes/status
-transitions, read-only designation/role/company reference lists, OTP retention
-cleanup, idempotent seed, automated integration tests.
+- **Authentication & RBAC**: Email/password login, phone+OTP login with multi-account selection, cookie sessions with live revocation, granular permission scopes (DGM, Assistant Manager, Super Incharge, Incharge, Supervisor, Accountant).
+- **Core Operations**: Employee CRUD + lifecycle, user provisioning, farm reads/writes/lifecycle, shed reads/writes/status transitions, worker registry.
+- **Attendance & Shift Management**: Shift-based scheduling (`MORNING_SHIFT`, `AFTERNOON_SHIFT`, `NIGHT_SHIFT`, `OVERTIME`), mandatory GPS logging, duplicate check prevention, and Accountant Excel exports.
+- **Biometric Face AI Integration**: On-premise 512-D vector face embeddings, YuNet detection, EdgeFace-S ArcFace recognition, and MiniFASNet anti-spoofing liveness verification.
+- **Public Zero-PII Telemetry (`/api/analytics/summary`)**: Aggregated operational health metrics, workforce presence counts, and capacity utilization, completely isolated from personal identifying employee information.
+- **Ephemeral Face AI Sandbox (`/api/face-ai/demo-session`)**: In-memory 10-minute self-destructing vector database for guest & recruiter testing with multi-tier rate limiting (60 req/min auth, 20 req/min public).
+- **Automated Integration Testing**: Vitest + Supertest suite validating auth, employees, farms, sheds, attendance, analytics, and face AI proxies.
 
-**Planned (not yet implemented):** attendance, batch, production, approval, and
-report features. Some of their permissions are already seeded
-(`attendance:view|create|update`, `batch:view|create|update`,
-`production:view|create|update`, `approval:*`, `report:*`) so roles are ready,
-but **no endpoints exist** for them. These modules are blocked on schema work:
-`schema.prisma` currently has no `Attendance`, `Batch`, or `Production` model, so
-there is nothing to persist. Standalone user CRUD (beyond provisioning) is also
-not implemented.
+## Planned Features
 
-**Known limitations:**
-
-- Attendance, batch, and production APIs do not exist (schema gap above).
-- Shed occupancy (`OCCUPIED`) cannot be set through the API; it is reserved for
-  the future batch lifecycle.
-- OTP cleanup has no in-process scheduler — it must be triggered externally (see
-  *OTP challenge retention*).
-- Farm and shed list endpoints are unpaginated (small reference tables).
-- CORS allows exactly one origin (`CLIENT_ORIGIN`); multiple frontend origins
-  would need an allow-list.
-- There is no CSRF token. State-changing requests are protected by
-  `sameSite=lax` plus the CORS allow-list, which is adequate for a single
-  same-site SPA; introducing a genuinely cross-site frontend would require both
-  `sameSite=none` and a CSRF strategy.
-- Data scope is not enforced per farm/shed: the schema has no assignment link
-  between an employee and a farm or shed, so permissions are global rather than
-  scoped.
-- The test suite runs against the local development database rather than a
-  dedicated throwaway test database.
+- Batch management & flock lifecycle transitions.
+- Feed consumption & veterinary mortality logs.
+- Automated scheduled daily report dispatchers.

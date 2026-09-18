@@ -1,19 +1,45 @@
-# Python virtual environment
+# Python virtual environment & caches
 .venv/
+.venv*/
 .venv-export/
 venv/
+venv*/
+ENV/
+env/
 __pycache__/
-*.pyc
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Cache directories
+.cache/
+**/.cache/
 
 # Test data & generated debug images
 test_data/
+**/test_data/
 *.jpg
 *.jpeg
 *.png
 *.webp
 *.bmp
-.pytest_cache/
 
 # Local env files
 .env
-.env.local
+.env.*
+!.env.example
+*.local
+
+# AI Models (explicitly leave and track models onnx files)
+!*.onnx
+!*.pth
+!*.data
+!models/**/*.onnx
+!models/**/*.data
+!models/**/*.json
+!models/**/*.pth

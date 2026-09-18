@@ -3,9 +3,9 @@
  * things this app actually names — sheds, farms, people, tallies.
  */
 
-type IconProps = { className?: string };
+export type IconProps = { className?: string; style?: React.CSSProperties };
 
-function svgProps(className?: string): React.SVGProps<SVGSVGElement> {
+function svgProps(className?: string, style?: React.CSSProperties): React.SVGProps<SVGSVGElement> {
   return {
     viewBox: "0 0 24 24",
     fill: "none",
@@ -16,6 +16,7 @@ function svgProps(className?: string): React.SVGProps<SVGSVGElement> {
     "aria-hidden": true,
     focusable: false,
     className: className ?? "icon",
+    style,
   };
 }
 
@@ -137,9 +138,9 @@ export function MenuIcon({ className }: IconProps): React.ReactElement {
   );
 }
 
-export function EggIcon({ className }: IconProps): React.ReactElement {
+export function EggIcon({ className, style }: IconProps): React.ReactElement {
   return (
-    <svg {...svgProps(className)}>
+    <svg {...svgProps(className, style)}>
       <path d="M12 3c3.3 0 6 4.6 6 9a6 6 0 0 1-12 0c0-4.4 2.7-9 6-9Z" />
     </svg>
   );
@@ -164,3 +165,24 @@ export function OfflineIcon({ className }: IconProps): React.ReactElement {
     </svg>
   );
 }
+
+export function AnalyticsIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M3 3v18h18" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </svg>
+  );
+}
+
+export function SparklesIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+      <path d="M5 3v4M3 5h4M19 17v4M17 19h4" />
+    </svg>
+  );
+}
+

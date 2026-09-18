@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 
 import { useAuth } from "../auth/use-auth.js";
 import {
+  AnalyticsIcon,
   CalendarIcon,
   CompanyIcon,
   DashboardIcon,
@@ -10,6 +11,7 @@ import {
   PeopleIcon,
   ProfileIcon,
   ShedIcon,
+  SparklesIcon,
   WorkerIcon,
 } from "../components/icons.js";
 
@@ -68,6 +70,8 @@ const NAV_ITEMS: NavItem[] = [
     systemAdminOnly: true,
     icon: CalendarIcon,
   },
+  { to: "/analytics", label: "Analytics", icon: AnalyticsIcon },
+  { to: "/face-ai-demo", label: "Face AI Demo", icon: SparklesIcon },
   { to: "/profile", label: "My profile", icon: ProfileIcon },
 ];
 

@@ -71,10 +71,42 @@ export function LoginPage(): React.ReactElement {
           Farms, sheds and the people who run them — in one register.
         </p>
         <ShedRowMotif />
-        <p className="signin__foot eyebrow">Internal use only</p>
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingTop: "1.5rem" }}>
+          <Link to="/about" style={{ color: "#92d8a4", fontSize: "0.85rem", textDecoration: "none" }}>
+            ℹ️ <strong>About PoultryOps</strong>
+          </Link>
+          <Link to="/analytics" style={{ color: "var(--paper)", fontSize: "0.85rem", textDecoration: "none", opacity: 0.9 }}>
+            📊 <strong>View Public Analytics</strong>
+          </Link>
+          <Link to="/face-ai-demo" style={{ color: "#38bdf8", fontSize: "0.85rem", textDecoration: "none" }}>
+            ✨ <strong>Test Face AI Sandbox</strong>
+          </Link>
+        </div>
+        <p className="signin__foot eyebrow" style={{ marginTop: "1rem" }}>Internal use only</p>
       </aside>
 
       <main className="signin__main">
+        <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", maxWidth: "360px", marginBottom: "0.75rem" }}>
+          <Link
+            to="/about"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              color: "var(--moss)",
+              textDecoration: "none",
+              padding: "5px 12px",
+              borderRadius: "4px",
+              backgroundColor: "var(--moss-soft)",
+              border: "1px solid var(--line)",
+            }}
+          >
+            <span>About PoultryOps</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
         <form className="signin__form" onSubmit={handleSubmit} noValidate>
           <h1 className="signin__title">Sign in</h1>
           <p className="signin__subtitle">

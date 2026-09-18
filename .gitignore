@@ -4,7 +4,9 @@ node_modules/
 
 # Python Virtual Environments & Caches
 .venv/
+.venv*/
 venv/
+venv*/
 ENV/
 env/
 **/__pycache__/
@@ -13,12 +15,19 @@ env/
 *.pyd
 .pytest_cache/
 .coverage
+.cache/
+**/.cache/
 
-# AI Models (explicitly tracked)
+# AI Models (explicitly leave and track models onnx files)
 !*.onnx
 !*.pth
+!*.data
+!server/face-ai/models/**/*.onnx
+!server/face-ai/models/**/*.data
+!server/face-ai/models/**/*.json
+!server/face-ai/models/**/*.pth
 
-# Test Images & Generated Debug Test Outputs (Excluded per user request)
+# Test Images & Generated Debug Test Outputs
 test_data/
 **/test_data/
 *.jpg

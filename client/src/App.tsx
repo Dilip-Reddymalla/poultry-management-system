@@ -4,6 +4,9 @@ import { AttendanceDashboardPage } from "./features/attendance/AttendanceDashboa
 import { AttendanceDetailPage } from "./features/attendance/AttendanceDetailPage.js";
 import { AttendancePage } from "./features/attendance/AttendancePage.js";
 import { FaceAttendancePage } from "./features/attendance/FaceAttendancePage.js";
+import { AnalyticsPage } from "./features/analytics/AnalyticsPage.js";
+import { FaceAiDemoPage } from "./features/face-ai/FaceAiDemoPage.js";
+import { AboutPage } from "./features/about/AboutPage.js";
 import { AuditLogsPage } from "./features/audit/AuditLogsPage.js";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { OtpLoginPage } from "./features/auth/OtpLoginPage.js";
@@ -44,6 +47,11 @@ export default function App(): React.ReactElement {
         <Route path="/otp-login" element={<OtpLoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
+
+      {/* Publicly accessible analytics, Face AI interactive demo, and project about page */}
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/face-ai-demo" element={<FaceAiDemoPage />} />
 
       <Route element={<ProtectedRoute />}>
         {/* Set-password stands alone, full screen: a provisioned account owes a

@@ -2,6 +2,31 @@
 node_modules/
 **/node_modules/
 
+# Python Virtual Environments & Caches
+.venv/
+.venv*/
+venv/
+venv*/
+ENV/
+env/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+.cache/
+**/.cache/
+
+# AI Models (explicitly leave models onnx files)
+!*.onnx
+!*.pth
+!*.data
+!face-ai/models/**/*.onnx
+!face-ai/models/**/*.data
+!face-ai/models/**/*.json
+!face-ai/models/**/*.pth
+
 # Environment variables
 .env
 .env.*

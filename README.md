@@ -1,136 +1,162 @@
-# Poultry Management System
+# PoultryOps — Enterprise Poultry Management & Biometric Suite
 
-A full-stack poultry farm management application with a React frontend and an
-Express + Prisma + PostgreSQL backend.
+A full-stack industrial poultry farm management and workforce intelligence platform. Engineered with a high-performance **React 19** frontend, an **Express 5 + Prisma + PostgreSQL** core backend, and a dedicated **FastAPI Face AI** microservice running on-premise ONNX neural networks for 512-D biometric attendance and real-time operations telemetry.
 
-## Project structure
+---
 
-- `client/` — Vite + React + TypeScript frontend
-- `server/` — Express + TypeScript API with Prisma and PostgreSQL
-- `docker-compose.yml` — PostgreSQL 17 for local development
+## 🌟 Key Capabilities & Showcase Hubs
 
-## Implemented features
+1. **Interactive Showcase & System Blueprint** ([`/about`](http://localhost:5173/about)):
+   - Physics-based interactive showcase powered by **Framer Motion**.
+   - Real-time interactive architecture pipeline exploring Client PWA, Security Gateway, PostgreSQL Persistence, and Biometric Neural Inference.
+   - Dynamic capability explorer and technical stack specifications.
 
-- **Authentication** — email/password login and phone + OTP login (with
-  multi-account selection), backed by an HTTP-only JWT cookie with server-side
-  session revocation.
-- **Authorization (RBAC)** — permission-based access control resolved from the
-  database per request, with seeded roles (DGM, Assistant Manager, Super
-  Incharge, Incharge, Supervisor, Accountant). `GET /api/auth/me` returns the
-  user's resolved roles and permissions so the frontend can gate its UI.
-- **Employee management** — create, read, update, deactivate/reactivate, plus
-  paginated listing with filtering and search.
-- **User provisioning** — issue a login account (with a role) for an employee.
-- **Farm management** — list/get farms plus create, update, and
-  deactivate/reactivate lifecycle endpoints.
-- **Shed management** — list/get sheds plus create, update, and controlled status
-  transitions (`AVAILABLE` / `MAINTENANCE` / `INACTIVE`).
-- **Reference data** — read-only `GET /api/designations`, `GET /api/roles` and
-  `GET /api/companies` lists so forms never hardcode options.
-- **Frontend application** — cookie-session bootstrap through `GET /api/auth/me`,
-  protected routing, permission-aware navigation, and working dashboard,
-  employee, farm, shed and profile screens (see [`client/README.md`](client/README.md)).
-- **Installable PWA** — the frontend is a production-quality Progressive Web App:
-  installable and launchable standalone, with a manifest, branded icons and a
-  service worker that precaches only static app assets (never authenticated API
-  data) and shows a clear offline notice when the network drops
-  (see [`client/README.md`](client/README.md#progressive-web-app)).
-- **Attendance & Shift Management** — shift-wise attendance recording (`MORNING_SHIFT`, `AFTERNOON_SHIFT`, `NIGHT_SHIFT`, `OVERTIME`), mandatory GPS geolocation recording, deduplication of already marked individuals, shift-wise Attendance Dashboard grouped by shed, user profile attendance history with filters, and Accountant Excel spreadsheet exports.
-- **OTP retention cleanup** — a reusable service plus `npm run otp:cleanup`
-  script that prunes consumed/expired OTP challenges without touching active ones.
-- **Automated tests** — Vitest + Supertest integration suite covering auth/RBAC,
-  reference data, employee, farm, shed, and attendance behaviour against the real database.
+2. **Real-Time Operational Analytics** ([`/analytics`](http://localhost:5173/analytics)):
+   - Public operational telemetry displaying live workforce presence ratios, shift distributions, and 7-day attendance velocity.
+   - Strict **Zero-PII Privacy Protection**: aggregated metric summaries hide employee and worker identifying names.
+   - Interactive data visualizations with Recharts.
 
-Planned for future expansion: batch management, flock production tracking, and automated report generation. Some of their permissions are already seeded so roles are ready.
+3. **Ephemeral Biometric Face AI Sandbox** ([`/face-ai-demo`](http://localhost:5173/face-ai-demo)):
+   - Browser-based neural network sandbox allowing visitors and recruiters to test facial registration and sub-15ms recognition.
+   - **Zero Cloud Storage / Zero DB Persistence**: Face embeddings exist in an in-memory TTL store that automatically self-destructs after 10 minutes.
+   - Camera video stream and image file upload support.
 
-## Getting started
+4. **Farm & Shed Hierarchy Operations**:
+   - Multi-tier relational tree linking Companies → Farms → Sheds → Workers.
+   - Shed flock capacity tracking, status state-machine (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`), and automated assignment verification.
 
-1. **Install dependencies** for both apps:
-   ```bash
-   cd client && npm install
-   cd ../server && npm install
-   ```
-2. **Start PostgreSQL** (from the repository root). Copy the root `.env.example`
-   to `.env` first if you want to override the default credentials:
-   ```bash
-   docker compose up -d
-   ```
-3. **Configure the server.** In `server/`, copy the example env and fill in real
-   values (see `server/README.md` for the full variable reference, including
-   `CLIENT_ORIGIN` for CORS):
-   ```bash
-   cd server && cp .env.example .env
-   ```
-4. **Apply migrations and seed** the database:
-   ```bash
-   npx prisma migrate dev
-   npm run seed
-   ```
-5. **Configure the client** (optional — the default API base URL already points
-   at the dev server):
-   ```bash
-   cd client && cp .env.example .env
-   ```
-6. **Run the dev servers** (in separate terminals):
-   ```bash
-   cd server && npm run dev
-   cd client && npm run dev
-   ```
+5. **Workforce Attendance & Shift Management**:
+   - Shift-based scheduling (`MORNING_SHIFT`, `AFTERNOON_SHIFT`, `NIGHT_SHIFT`, `OVERTIME`).
+   - Contactless Face AI attendance with anti-spoofing liveness checks.
+   - Fallback GPS geolocation logging, duplicate prevention, and Excel spreadsheet exports for accountants.
 
-The API listens on `http://localhost:5000` and the client dev server on
-`http://localhost:5173`.
+6. **Enterprise Security & Compliance**:
+   - Granular Role-Based Access Control (RBAC) resolved per request (DGM, Assistant Manager, Super Incharge, Incharge, Supervisor, Accountant).
+   - HTTP-only JWT cookies with server-side session revocation.
+   - Tamper-resistant immutable audit logs recording all state mutations.
+   - Multi-tier rate limiting protecting public demo endpoints and internal gateways.
 
-## Running the tests
+---
 
-The backend test suite runs against the local development database and requires
-the seed to have been applied:
+## 🧠 Biometric Face AI Suite
 
-```bash
-cd server && npm run test
+The biometric subsystem runs optimized ONNX models with 512-dimensional ArcFace vector extraction:
+
+| Component | Model | Architecture / Provenance | Dimension / Latency |
+|---|---|---|---|
+| **Face Detection** | **YuNet** | OpenCV Zoo (`face_detection_yunet_2023mar.onnx`) | Multi-face, 6.78 ms |
+| **Quality Filter** | **Light-FaceQ** | Qualcomm AI Hub (`face_det_lite.onnx`) | Illumination & Blur gate |
+| **Liveness Anti-Spoofing** | **MiniFASNetV2** | MiniVision (`minifasnet_v2.onnx`) | Photo & Screen defense |
+| **Face Alignment** | **5-Point Affine** | Similarity Transform | 112×112 standardized crop |
+| **Face Recognition** | **EdgeFace-S (γ=0.5)** | Idiap Research (`edgeface_s_gamma_05.onnx`) | **512-D** ArcFace, 14.07 ms |
+| **Vector Matching** | **Cosine & Euclidean** | In-Memory & pgvector ready | **< 15 ms** comparison |
+
+*All ONNX model weights are preserved and tracked in git under `server/face-ai/models/`.*
+
+---
+
+## 🏗️ Project Structure
+
+```text
+poultry-management-system/
+├── client/                     # Vite + React 19 + TypeScript frontend
+│   ├── src/
+│   │   ├── features/about/     # Interactive About page (Framer Motion)
+│   │   ├── features/analytics/ # Public operations telemetry dashboard
+│   │   ├── features/face-ai/   # Ephemeral Face AI demo sandbox
+│   │   ├── features/attendance/# Shift attendance & facial recognition UI
+│   │   ├── layout/             # Responsive shell & navigation
+│   │   └── pwa/                # Installable Progressive Web App
+├── server/                     # Express 5 + TypeScript + Prisma API
+│   ├── src/
+│   │   ├── modules/analytics/  # Public Zero-PII telemetry service
+│   │   ├── modules/face-ai/    # Ephemeral 10m TTL store & Face-AI proxy
+│   │   ├── modules/attendance/ # Attendance CRUD, shifts, GPS, Excel export
+│   │   └── middlewares/        # Scoped RBAC, CORS headers, rate limits
+│   └── prisma/                 # PostgreSQL schema, migrations, and seeds
+├── server/face-ai/             # FastAPI + ONNX Runtime Python microservice
+│   ├── app/                    # Multi-face detection, liveness & recognition
+│   └── models/                 # Shipped ONNX model weights (YuNet, EdgeFace)
+├── docs/                       # Architecture diagrams & technical specifications
+└── docker-compose.yml          # PostgreSQL 17 development service
 ```
 
-It creates only prefixed temporary fixtures and cleans them up, never sends SMS,
-and leaves seeded data untouched. See [`server/README.md`](server/README.md#testing)
-for details.
+---
 
-## Other backend commands
+## 🚀 Getting Started
 
-Run from `server/`:
+### 1. Prerequisites
+- **Node.js**: v20+
+- **Python**: v3.10+ (for Face AI microservice)
+- **Docker**: For local PostgreSQL database
 
+### 2. Database Setup
+Start the local PostgreSQL 17 container:
 ```bash
-npm run typecheck    # type-check src and tests
-npm run otp:cleanup  # prune expired/consumed OTP challenges
-npm run build        # compile to dist/
-npm run start        # run the compiled server
+docker compose up -d
 ```
 
-## Frontend commands
-
-Run from `client/`:
-
+### 3. Server Configuration & Migration
 ```bash
-npm run typecheck    # tsc -b
-npm run lint         # ESLint
-npm run build        # type-check then build to dist/
-npm run preview      # serve the built bundle
+cd server
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run seed
 ```
 
-## Documentation
+### 4. Client Setup
+```bash
+cd ../client
+cp .env.example .env
+npm install
+```
 
-- Backend setup, environment variables, API reference, authentication,
-  authorization, the data model, OTP cleanup, and testing:
-  [`server/README.md`](server/README.md)
-- Building the frontend against this API (base URL, cookies, `/auth/me`,
-  401 vs 403, error and pagination shapes, permission-based UI):
-  [Frontend Integration Contract](server/README.md#frontend-integration-contract)
-- Frontend notes: [`client/README.md`](client/README.md)
+### 5. Running the Application
+In separate terminal tabs:
 
-## Notes
+**Backend API & Face AI Proxy**:
+```bash
+cd server
+npm run dev
+```
+*(Runs Express on `http://localhost:5000` and launches Face AI service on `http://localhost:8000`)*
 
-- Keep environment values in local `.env` files; never commit real secrets. The
-  `.env.example` files contain placeholders only.
-- The root `.env.example` supplies the Docker Compose Postgres credentials and a
-  matching `DATABASE_URL`; the server reads its own `server/.env`, and the client
-  reads `client/.env` (only `VITE_API_BASE_URL`, which is not a secret).
-- The client never stores a token. The session is an httpOnly cookie issued by
-  the API, so every frontend request is sent with `credentials: "include"`.
+**Frontend Application**:
+```bash
+cd client
+npm run dev
+```
+*(Runs Vite client on `http://localhost:5173`)*
+
+---
+
+## 🧪 Testing & Verification
+
+Run the integration and unit test suites:
+
+```bash
+# Test Express API, Scoped RBAC, Analytics, and Face AI Proxy
+cd server
+npm run test
+
+# Typecheck TypeScript across client and server
+cd client && npm run typecheck
+cd ../server && npm run typecheck
+```
+
+---
+
+## 🔒 Security & Privacy Guarantees
+
+- **No Raw Biometric Storage**: Images uploaded to the Face AI engine are converted to mathematical embeddings in volatile memory; raw images are never written to disk or third-party cloud storage.
+- **Ephemeral Sandbox Sessions**: Demo visitors receive a self-cleaning session where face embeddings are held exclusively in RAM and deleted after 10 minutes.
+- **HttpOnly Cookie Authentication**: JWT access tokens are inaccessible to browser JavaScript, mitigating XSS token theft.
+- **Rate-Limited Gateways**: Public demo endpoints enforce strict request limits per minute (60 req/min authenticated, 20 req/min public).
+
+---
+
+## 📜 License & Acknowledgments
+
+Engineered as an enterprise poultry infrastructure and biometric showcase project.
+Models: **YuNet** (MIT - OpenCV Zoo), **EdgeFace** (BSD-3-Clause - Idiap), **MiniFASNet** (Apache-2.0 - MiniVision).

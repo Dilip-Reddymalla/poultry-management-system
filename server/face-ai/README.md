@@ -214,3 +214,19 @@ curl.exe -X POST "http://127.0.0.1:8000/api/v1/recognition/analyze" `
 .venv\Scripts\python.exe tests/test_face_quality.py
 .venv\Scripts\python.exe tests/test_real_face_matching.py
 ```
+
+---
+
+## Express Gateway & Ephemeral Demo Integration
+
+The core Express server mounts a secure proxy layer (`server/src/modules/face-ai/face-ai-proxy.routes.ts`) interfacing with this microservice:
+
+1. **Production Attendance**: When attendance is marked via facial biometrics, the gateway checks permission `attendance:create`, streams the frame to `/api/v1/recognition/multi`, resolves the matched identity against `VectorSearchService`, and logs the attendance record.
+2. **Ephemeral Showcase Sandbox (`/api/face-ai/demo-session`)**:
+   - Allows public users and recruiters to test multi-face enrollment and recognition.
+   - Embeddings are stored in-memory inside `demo-embedding-store.ts` with a **10-minute auto-expiry TTL**.
+   - Session tokens are resolved across `X-Demo-Session` HTTP headers, query parameters, or request bodies.
+   - Strictly rate-limited (60 requests/minute authenticated, 20 requests/minute guest).
+3. **ONNX Model Retention**:
+   - All ONNX model weights under `models/` are tracked and versioned in the repository. Virtual environment artifacts (`.venv*/`) and Hugging Face caches (`.cache/`) are explicitly ignored.
+

@@ -35,3 +35,10 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript & local tooling
+*.tsbuildinfo
+.agents/
+.claude/
+.windsurf/
+.gemini/

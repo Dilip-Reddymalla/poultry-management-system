@@ -1,165 +1,87 @@
-# Client App
+# PoultryOps Client App
 
-The frontend for the poultry management system: React 19, TypeScript and Vite,
-with plain CSS. It talks to the Express API in `server/` and holds no auth token
-of its own — the session lives in an httpOnly cookie set by the backend.
+The modern web frontend for the PoultryOps Poultry Management & Biometric Suite. Engineered with **React 19**, **TypeScript**, **Vite**, **Framer Motion**, and **Recharts**.
 
-## Setup
+---
+
+## 🚀 Key Features & Pages
+
+- **Interactive System Blueprint & About Page** (`/about`):
+  - Fluid scroll-linked reading progress indicator.
+  - Interactive multi-stage pipeline architecture with real-time specification card switcher.
+  - Physics-based spring animations (`whileHover`, `whileTap`) and ambient floating radial glow orbs.
+  - Capability category filtering and full-stack technology specifications.
+
+- **Public Operations Telemetry & Analytics** (`/analytics`):
+  - Live workforce presence ratios, shift breakdowns, and 7-day attendance velocity.
+  - Interactive charts powered by **Recharts**.
+  - **Zero-PII Privacy Protection**: Sanitized public API consumption preventing employee name exposure.
+
+- **Ephemeral Biometric Face AI Sandbox** (`/face-ai-demo`):
+  - Interactive testbed for registering profiles and executing <15ms vector matches.
+  - Live webcam streaming and image file drag-and-drop.
+  - Session-scoped 10-minute auto-expiring in-memory storage.
+
+- **Core Operational Dashboard & Management** (Authenticated):
+  - Farm & shed flock capacity monitoring with visual status indicators (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`).
+  - Shift-based attendance tracking (`MORNING_SHIFT`, `AFTERNOON_SHIFT`, `NIGHT_SHIFT`, `OVERTIME`) with GPS logging.
+  - User provisioning, role assignments, and Excel export reports.
+
+- **Installable Progressive Web App (PWA)**:
+  - Built with `vite-plugin-pwa` for desktop and mobile installation.
+  - Offline status detection and app shell caching.
+
+---
+
+## 🛠️ Setup & Development
 
 ```bash
+# Install dependencies (React 19, Framer Motion, Lucide, Recharts)
 npm install
-cp .env.example .env   # optional, the default base URL is the same
+
+# Start Vite dev server on http://localhost:5173
 npm run dev
 ```
 
-The dev server runs on `http://localhost:5173`. The API must be running on
-`http://localhost:5000` with `CLIENT_ORIGIN=http://localhost:5173` so CORS
-allows credentialed requests.
+### Scripts
 
-## Scripts
+- `npm run dev`: Start Vite development server with hot module replacement (HMR).
+- `npm run build`: Type-check (`tsc -b`) and build optimized production bundle in `dist/`.
+- `npm run typecheck`: Run strict TypeScript checks across all features and routes.
+- `npm run lint`: Run ESLint checks.
+- `npm run preview`: Serve the production build locally.
+- `npm run icons:generate`: Generate branded PWA icons.
 
-- `npm run dev` — start the Vite development server
-- `npm run build` — type-check and build the production bundle
-- `npm run preview` — preview the production build
-- `npm run typecheck` — type-check without emitting
-- `npm run lint` — run ESLint
-- `npm run icons:generate` — regenerate the PWA icons in `public/icons/`
+---
 
-## Environment
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://localhost:5000/api` | API base URL, including the `/api` prefix |
-
-## Architecture
+## 🌐 Route Architecture
 
 ```text
-src/
-  api/         apiRequest (base URL, cookies, JSON, error normalization) + typed endpoints
-  auth/        session context, provider, useAuth
-  components/  UI kit, dialogs, toasts, icons, shed strip
-  features/    one folder per screen area: attendance, auth, dashboard, employees, farms, sheds, profile
-  hooks/       useResource, useGeolocation
-  layout/      app shell: sidebar, topbar, page header
-  lib/         status/date/number display helpers
-  pwa/         service-worker registration, install prompt, online/offline UI
-  routes/      route guards and the not-found page
-  index.css    design tokens and element defaults
-  App.css      component and screen styles
+Public Showcase Routes:
+├── /about            # Interactive system architecture & tech showcase
+├── /analytics        # Live operational metrics & workforce telemetry
+├── /face-ai-demo     # Biometric 512-D vector testbed (10m TTL)
+├── /login            # Enterprise credentials sign-in
+├── /otp-login        # SMS OTP phone authentication
+└── /forgot-password  # Password recovery
+
+Protected Operational Routes (Behind RBAC):
+├── /dashboard        # Farm and shed health summary
+├── /companies        # Multi-company enterprise hierarchy
+├── /farms            # Distributed farm locations
+├── /sheds            # Individual flock shed capacities
+├── /employees        # Internal staff directory & provisioning
+├── /workers          # Farm field workers & squad assignments
+├── /attendance       # Daily attendance records & Face AI logs
+├── /audit-logs       # Tamper-resistant compliance ledger
+└── /profile          # Personal user profile & attendance stats
 ```
 
-### Session handling
+---
 
-- `GET /api/auth/me` runs once on start. 200 renders the app, 401 renders
-  `/login`.
-- Every request goes through `apiRequest`, which sends `credentials: "include"`.
-  Tokens are never read or stored by the client; there is nothing in
-  `localStorage` or `sessionStorage`.
-- A 401 from any request (except the sign-in calls, which use 401 for bad
-  credentials) clears the session and drops back to `/login`.
-- A 403 keeps the session and shows a "not available to your role" state.
+## 🎨 Design System & Animation Engine
 
-### Authorization in the UI
-
-`useAuth().can("employee:create")` checks the permission list returned by
-`/auth/me`. Role names are never compared. Hiding a control is a convenience —
-the backend remains the authority on every request.
-
-### Screens
-
-`/login`, `/otp-login`, `/dashboard`, `/employees`, `/employees/:id`, `/farms`,
-`/farms/:id`, `/sheds`, `/sheds/:id`, `/attendance`, `/attendance/dashboard`, `/attendance/:id`, `/profile`.
-
-## Design notes
-
-Colour carries state and nothing else: moss for running, clay for holding birds,
-rust for needs-a-person, grey for parked. The shed occupancy strip on the
-dashboard and farm pages is the one signature element; everything else stays
-plain so the data reads first. Tokens live in `src/index.css`.
-
-## Progressive Web App
-
-The app installs and launches like a native application. PWA support is built
-with [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) (Workbox under the
-hood) and only ships in production builds — the dev server stays a plain Vite
-server (`devOptions.enabled: false`).
-
-The manifest identifies the app as **Poultry Management System** (short name
-**Poultry Manager**), standalone display, `start_url` and `scope` of `/`, theme
-`#16211c`, background `#f2f0e9`. Icons live in `public/icons/` (192, 512, a
-maskable 512 for Android, and a 180 Apple touch icon) and are generated by
-`npm run icons:generate` from the brand mark — no external image tooling
-required. Re-run that script if the mark or palette changes.
-
-### Caching strategy
-
-The service worker precaches **static application assets only** — the app shell
-(`index.html`), JS, CSS, SVG/PNG icons and the web manifest — plus a runtime
-rule for Google Fonts. There is deliberately **no runtime caching rule for the
-API**: every `/api/*` request goes to the network. Authenticated business data
-(employees, farms, sheds, the session, permissions, OTP responses, mutations) is
-never written to a cache, so one user's data can never be served from a shared
-device cache to another user. The backend stays authoritative.
-
-`navigateFallback` serves `index.html` for client-side routes, with `/api/*` on
-the denylist so API requests are never answered by the shell.
-
-### Offline behaviour
-
-When the network drops, the app shell still loads from the precache, but the app
-does **not** pretend stale business data is current: an application-level notice
-("No connection…") appears and reads/mutations fail rather than returning cached
-records. Offline-first sync, offline mutations and background sync are
-intentionally out of scope.
-
-### Auth in installed mode
-
-Unchanged from the browser: on launch the app calls `GET /api/auth/me`
-(200 → app, 401 → `/login`). The session lives only in the backend's httpOnly
-cookie — nothing is stored in `localStorage`, `sessionStorage` or `IndexedDB`,
-and the service worker does not touch the cookie. Sign-out still clears the
-cookie through the backend.
-
-### Install action
-
-A small "Install app" control appears in the topbar (and on the sign-in screens)
-**only** when the browser fires `beforeinstallprompt` and the app is not already
-running standalone. It renders nothing otherwise — no popups, no nagging.
-
-## Production hosting (SPA fallback)
-
-Because routing is client-side, the host must serve `index.html` for any
-unmatched path so deep links and refresh work on `/employees/:id` and friends.
-Do **not** rewrite `/api/*` — those go to the backend.
-
-**Nginx**
-
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
-```
-
-**Apache** (`.htaccess`, with `mod_rewrite`)
-
-```apache
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ /index.html [L]
-```
-
-**Netlify** (`public/_redirects`)
-
-```text
-/*  /index.html  200
-```
-
-**Vercel** (`vercel.json`)
-
-```json
-{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-```
-
-Serve `sw.js` with no long-lived cache so clients pick up new service workers;
-the hashed assets under `dist/assets/` are safe to cache immutably.
+- **Palette**: Agricultural slate and nature tokens (`--moss`, `--clay`, `--rust`, `--ink`, `--paper`) defined in `src/index.css`.
+- **Animations**: Driven by **Framer Motion** for spring physics, layout transitions, and scroll progress tracking.
+- **Icons**: Clean iconography provided by **Lucide React** alongside branded SVG marks.
+- **Privacy First**: Public showcase pages consume specialized zero-PII and session-isolated endpoints.

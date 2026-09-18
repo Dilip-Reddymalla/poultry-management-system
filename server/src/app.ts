@@ -20,6 +20,8 @@ import {
 } from "./modules/reference/reference.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { tieredRateLimiter } from "./middlewares/rate-limit.middleware.js";
+import { analyticsRouter } from "./modules/analytics/analytics.routes.js";
+import { faceAiProxyRouter } from "./modules/face-ai/face-ai-proxy.routes.js";
 
 const app = express();
 
@@ -39,7 +41,7 @@ app.use((req, res, next) => {
     );
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With, Accept, Cookie",
+      "Content-Type, Authorization, X-Requested-With, Accept, Cookie, X-Demo-Session, x-demo-session",
     );
   }
 
@@ -84,6 +86,10 @@ app.get('/api/health',(_req,res)=>{
         message:"Poultry Management API is running"
     });
 });
+
+// Public / Demo routers mounted before general rate limiter
+app.use("/api/analytics", analyticsRouter);
+app.use("/api/face-ai", faceAiProxyRouter);
 
 // Rate limiting: strict before-login limit, generous after-login limit
 app.use("/api", tieredRateLimiter);

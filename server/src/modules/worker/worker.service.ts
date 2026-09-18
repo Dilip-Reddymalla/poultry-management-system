@@ -128,11 +128,14 @@ export async function listWorkers(
       : {}),
   };
 
+  const sortField = query.sortBy ?? "workerId";
+  const sortOrder = query.sortOrder ?? "asc";
+
   const [workers, total] = await prisma.$transaction([
     prisma.worker.findMany({
       where,
       orderBy: {
-        workerId: "asc",
+        [sortField]: sortOrder,
       },
       skip: (query.page - 1) * query.limit,
       take: query.limit,

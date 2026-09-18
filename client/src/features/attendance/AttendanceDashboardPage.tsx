@@ -22,6 +22,7 @@ import { EmptyState, Panel, StatusTag, Button } from "../../components/ui.js";
 import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
+import { MarkUnmarkedAbsentDialog } from "./MarkUnmarkedAbsentDialog.js";
 
 interface ShiftSummaryData {
   shift: Shift;
@@ -62,6 +63,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
   // Dialog triggers
   const [showEntryDialog, setShowEntryDialog] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [showUnmarkedAbsentDialog, setShowUnmarkedAbsentDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
 
   const showFarmFilter = user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
@@ -358,6 +360,14 @@ export function AttendanceDashboardPage(): React.ReactElement {
               <>
                 <Button variant="secondary" onClick={() => setShowBulkDialog(true)}>
                   📋 Bulk Mark
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowUnmarkedAbsentDialog(true)}
+                  style={{ color: "var(--rust, #b91c1c)" }}
+                  title="Mark all unmarked personnel as absent for this shift"
+                >
+                  ⚠️ Mark Unmarked Absent
                 </Button>
                 <Button variant="secondary" onClick={() => setShowEntryDialog(true)}>
                   ➕ Mark Single
@@ -1223,6 +1233,19 @@ export function AttendanceDashboardPage(): React.ReactElement {
           onSaved={() => {
             setShowBulkDialog(false);
             notify("success", "Bulk attendance recorded.");
+            attendanceResource.reload();
+          }}
+        />
+      )}
+
+      {showUnmarkedAbsentDialog && (
+        <MarkUnmarkedAbsentDialog
+          defaultDate={date}
+          defaultFarmId={selectedFarmId || null}
+          defaultShift={selectedShift || "MORNING_SHIFT"}
+          onClose={() => setShowUnmarkedAbsentDialog(false)}
+          onSaved={() => {
+            setShowUnmarkedAbsentDialog(false);
             attendanceResource.reload();
           }}
         />

@@ -8,26 +8,22 @@ import type { SafeDesignation, SafeRole } from "./reference.types.js";
 
 export async function listDesignations(): Promise<SafeDesignation[]> {
   const designations = await prisma.designation.findMany({
-    orderBy: {
-      name: "asc",
-    },
     select: {
       id: true,
       name: true,
     },
   });
 
-  return designations.map((designation) => ({
-    id: designation.id,
-    name: designation.name,
-  }));
+  return designations
+    .map((designation) => ({
+      id: designation.id,
+      name: designation.name,
+    }))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
 export async function listRoles(): Promise<SafeRole[]> {
   const roles = await prisma.role.findMany({
-    orderBy: {
-      name: "asc",
-    },
     select: {
       id: true,
       name: true,
@@ -35,9 +31,11 @@ export async function listRoles(): Promise<SafeRole[]> {
     },
   });
 
-  return roles.map((role) => ({
-    id: role.id,
-    name: role.name,
-    description: role.description,
-  }));
+  return roles
+    .map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+    }))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }

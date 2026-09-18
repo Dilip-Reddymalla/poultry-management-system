@@ -111,6 +111,12 @@ export function LoginPage(): React.ReactElement {
             }}
           />
 
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.5rem" }}>
+            <Link to="/forgot-password" style={{ fontSize: "0.85rem" }}>
+              Forgot password?
+            </Link>
+          </div>
+
           <Button type="submit" variant="primary" busy={busy}>
             Sign in
           </Button>

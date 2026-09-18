@@ -103,6 +103,26 @@ export const markedPersonIdsQuerySchema = z.object({
   farmId: z.uuid("Invalid farm ID"),
 });
 
+// Query for the unmarked summary preview endpoint.
+export const unmarkedSummaryQuerySchema = z.object({
+  date: dateOnlySchema,
+  shift: shiftSchema,
+  farmId: z.uuid("Invalid farm ID"),
+  shedId: shedIdSchema.optional(),
+});
+
+// Payload for bulk marking all unmarked personnel as absent.
+export const markUnmarkedAbsentSchema = z.object({
+  date: dateOnlySchema,
+  shift: shiftSchema,
+  farmId: z.uuid("Invalid farm ID"),
+  shedId: shedIdSchema.optional(),
+  target: z.enum(["ALL", "EMPLOYEES", "WORKERS"]).default("ALL"),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  notes: notesSchema.optional(),
+});
+
 // Query for the export endpoint.
 export const exportAttendanceQuerySchema = z.object({
   date: dateOnlySchema.optional(),
@@ -126,5 +146,9 @@ export type UpdateAttendanceInput = z.infer<typeof updateAttendanceSchema>;
 export type BulkCreateAttendanceInput = z.infer<typeof bulkCreateAttendanceSchema>;
 
 export type MarkedPersonIdsQueryInput = z.infer<typeof markedPersonIdsQuerySchema>;
+
+export type UnmarkedSummaryQueryInput = z.infer<typeof unmarkedSummaryQuerySchema>;
+
+export type MarkUnmarkedAbsentInput = z.infer<typeof markUnmarkedAbsentSchema>;
 
 export type ExportAttendanceQueryInput = z.infer<typeof exportAttendanceQuerySchema>;

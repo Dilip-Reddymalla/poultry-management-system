@@ -1,0 +1,29 @@
+{
+  "backend": "baseline",
+  "model_label": "SCRFD-500M + ArcFace/MobileFaceNet (w600k_mbf)",
+  "detection_rate": 0.99971,
+  "images_total": 3443,
+  "images_missing_file": 0,
+  "pairs_skipped_no_detection": 1,
+  "metrics": {
+    "pairs_evaluated": 2199,
+    "genuine_pairs": 1100,
+    "impostor_pairs": 1099,
+    "accuracy": 0.9909,
+    "accuracy_threshold": 0.23295,
+    "roc_auc": 0.99495,
+    "tar_at_far_1e-2": 0.98364,
+    "tar_at_far_1e-3": 0.97727,
+    "mean_genuine_sim": 0.56169,
+    "mean_impostor_sim": 0.00899,
+    "separation_gap": 0.5527
+  },
+  "speed_ms": {
+    "detect_ms": 58.131,
+    "align_ms": 0.508,
+    "embed_ms": 17.45,
+    "end_to_end_ms": 76.089,
+    "images_timed": 3442
+  },
+  "notes": "CPU, default ORT threading, OMP_NUM_THREADS=1, warm-up excluded."
+}

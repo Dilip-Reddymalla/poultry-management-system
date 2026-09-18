@@ -25,6 +25,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { formatDate } from "../../lib/display.js";
 import { EmployeeFormDialog } from "./EmployeeFormDialog.js";
 import { ProvisionUserDialog } from "./ProvisionUserDialog.js";
+import { ChangeRoleDialog } from "./ChangeRoleDialog.js";
 
 export function EmployeeDetailPage(): React.ReactElement {
   const { id = "" } = useParams();
@@ -42,6 +43,7 @@ export function EmployeeDetailPage(): React.ReactElement {
 
   const [editing, setEditing] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -52,13 +54,31 @@ export function EmployeeDetailPage(): React.ReactElement {
 
   const ROLE_HIERARCHY: Record<string, number> = {
     "System Admin": 100,
-    "Company Admin": 80,
-    "DGM": 60,
-    "Assistant Manager": 50,
-    "Super Incharge": 40,
-    "Incharge": 30,
-    "Accountant": 25,
-    "Supervisor": 20,
+    "Company Admin": 90,
+    "DGM": 80,
+    "Assistant Manager": 70,
+    "Super Incharge": 65,
+    "Incharge": 60,
+    "Asst Incharge": 55,
+    "Accountant": 50,
+    "Accounts Assistant": 45,
+    "Stores Executive": 45,
+    "Senior Supervisor": 40,
+    "Supervisor": 35,
+    "AC Supervisor": 35,
+    "Maintenance Supervisor": 35,
+    "Grading Supervisor": 35,
+    "Supervisor - Litter Maintenance": 35,
+    "Security Supervisor": 35,
+    "Asst Supervisor": 30,
+    "AC Asst Supervisor": 30,
+    "Asst Supervisor General": 30,
+    "Asst Supervisor - Technical": 30,
+    "Asst Supervisor - Electrical": 30,
+    "Security Head Guard": 20,
+    "Senior Driver": 18,
+    "Security Guard": 15,
+    "Driver": 15,
     "Worker": 10,
   };
 
@@ -266,14 +286,38 @@ export function EmployeeDetailPage(): React.ReactElement {
               >
                 Create login
               </Button>
+            ) : record.hasUser && can("user:update-role") ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setChangingRole(true);
+                }}
+              >
+                Change role
+              </Button>
             ) : null
           }
         >
           {record.hasUser ? (
-            <p className="panel__text">
-              This employee has a login and can sign in with their email or the
-              phone number on the record.
-            </p>
+            <div className="stack" style={{ gap: "0.5rem" }}>
+              <p className="panel__text">
+                This employee has a login and can sign in with their email or the phone number on the record.
+              </p>
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", fontSize: "0.9rem", marginTop: "0.25rem" }}>
+                {record.user?.email ? (
+                  <div>
+                    <span style={{ color: "var(--color-muted, #64748b)" }}>Email: </span>
+                    <strong className="numeric">{record.user.email}</strong>
+                  </div>
+                ) : null}
+                <div>
+                  <span style={{ color: "var(--color-muted, #64748b)" }}>Assigned Role: </span>
+                  <strong style={{ color: "var(--color-primary-700, #1d4ed8)" }}>
+                    {record.user?.roles?.[0]?.name ?? "Configured"}
+                  </strong>
+                </div>
+              </div>
+            </div>
           ) : (
             <p className="panel__text">
               No login yet. Without one they cannot sign in to the app.
@@ -308,6 +352,20 @@ export function EmployeeDetailPage(): React.ReactElement {
             setProvisioning(false);
             notify("success", "Login created.");
             employee.reload();
+          }}
+        />
+      ) : null}
+
+      {changingRole ? (
+        <ChangeRoleDialog
+          employee={record}
+          onClose={() => {
+            setChangingRole(false);
+          }}
+          onSaved={(updated) => {
+            employee.replace(updated);
+            setChangingRole(false);
+            notify("success", "Login role updated successfully.");
           }}
         />
       ) : null}

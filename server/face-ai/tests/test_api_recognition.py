@@ -7,6 +7,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -14,11 +15,16 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.main import app
 
-client = TestClient(app)
 IMAGE_PATH = PROJECT_ROOT / "test_data" / "recognition" / "person1" / "person1_1.jpg"
 
 
-def test_analyze_valid_image():
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+def test_analyze_valid_image(client: TestClient):
     assert IMAGE_PATH.exists(), f"Test image missing: {IMAGE_PATH}"
 
     with open(IMAGE_PATH, "rb") as f:
@@ -50,7 +56,7 @@ def test_analyze_valid_image():
     )
 
 
-def test_analyze_invalid_bytes():
+def test_analyze_invalid_bytes(client: TestClient):
     files = {"file": ("corrupt.jpg", b"invalid corrupt image bytes", "image/jpeg")}
     response = client.post("/api/v1/recognition/analyze", files=files)
 
@@ -59,7 +65,7 @@ def test_analyze_invalid_bytes():
     assert "detail" in data
 
 
-def test_analyze_empty_file():
+def test_analyze_empty_file(client: TestClient):
     files = {"file": ("empty.jpg", b"", "image/jpeg")}
     response = client.post("/api/v1/recognition/analyze", files=files)
 

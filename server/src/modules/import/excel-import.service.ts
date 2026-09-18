@@ -213,10 +213,12 @@ export async function importEmployeesFromExcel(
     if (!rawDesig) {
       rowErrors.push("Designation is required");
     } else {
+      const norm = (s: string) => s.toLowerCase().replace(/[\s\-_]+/g, " ").trim();
       const found = designations.find(
         (d) =>
           d.id === rawDesig ||
-          d.name.toLowerCase() === rawDesig.toLowerCase(),
+          d.name.toLowerCase() === rawDesig.toLowerCase() ||
+          norm(d.name) === norm(rawDesig),
       );
       if (!found) {
         rowErrors.push(`Designation '${rawDesig}' not found`);

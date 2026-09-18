@@ -53,7 +53,11 @@ export interface SessionUser {
       id: string;
       name: string;
     };
+    photoUrl?: string | null;
+    joiningDate?: string | null;
+    phone?: string | null;
   };
+
 }
 
 export interface AuthResponse {
@@ -113,6 +117,11 @@ export interface Employee {
   };
   status: EmployeeStatus;
   hasUser?: boolean;
+  user?: {
+    id: string;
+    email: string;
+    roles: Array<{ id: string; name: string }>;
+  } | null;
   photoUrl?: string;
   joiningDate?: string;
   createdAt: string;

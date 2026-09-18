@@ -22,6 +22,8 @@ describe("worker module", () => {
   let systemAdminCookie: string;
   let dgm: TestActor;
   let accountant: TestActor;
+  let accountsAssistant: TestActor;
+  let incharge: TestActor;
   let supervisor: TestActor;
   let farmA1Id: string;
   let farmA2Id: string;
@@ -51,6 +53,8 @@ describe("worker module", () => {
     companyAdmin = await createActor("Company Admin", { farmId: farmA1.id });
     dgm = await createActor("DGM", { farmId: farmA1.id });
     accountant = await createActor("Accountant", { farmId: farmA1.id });
+    accountsAssistant = await createActor("Accounts Assistant", { farmId: farmA1.id });
+    incharge = await createActor("Incharge", { farmId: farmA1.id });
     supervisor = await createActor("Supervisor", { farmId: farmA1.id });
   });
 
@@ -210,6 +214,30 @@ describe("worker module", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.worker.name).toBe("Renamed Worker");
+  });
+
+  it("allows the Incharge role to update a worker", async () => {
+    const worker = await createTestWorker(farmA1Id);
+
+    const response = await request(app)
+      .patch(`/api/workers/${worker.id}`)
+      .set("Cookie", incharge.cookie)
+      .send({ name: "Renamed by Incharge" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.worker.name).toBe("Renamed by Incharge");
+  });
+
+  it("allows the Accounts Assistant role to update a worker", async () => {
+    const worker = await createTestWorker(farmA1Id);
+
+    const response = await request(app)
+      .patch(`/api/workers/${worker.id}`)
+      .set("Cookie", accountsAssistant.cookie)
+      .send({ name: "Renamed by Accounts Assistant" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.worker.name).toBe("Renamed by Accounts Assistant");
   });
 
   it("runs the worker activation lifecycle", async () => {

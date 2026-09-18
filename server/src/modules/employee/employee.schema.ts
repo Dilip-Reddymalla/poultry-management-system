@@ -34,6 +34,8 @@ export const listEmployeesQuerySchema = z.object({
   // rows (the scope filter still applies) rather than leaking another farm.
   farmId: farmIdSchema.optional(),
   search: z.string().trim().min(1, "Search must not be empty").optional(),
+  sortBy: z.enum(["employeeId", "name", "status", "login"]).default("employeeId"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const createEmployeeSchema = z.object({
@@ -60,12 +62,19 @@ export const updateEmployeeSchema = z
   })
   .partial();
 
-// A single role is assigned at provisioning time, matching how the seed
-// provisions the DGM user. Additional roles can be layered on later. No password
-// is accepted: provisioning is passwordless (phone-OTP first login, then the
-// employee sets their own password), so a password never travels through here.
+// A role is assigned at provisioning time. An optional initial password can be provided
+// by the creator so the employee does not need to set one on first login.
 export const provisionUserSchema = z.object({
   email: emailSchema,
+  roleId: z.uuid("Invalid role ID"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must not exceed 128 characters")
+    .optional(),
+});
+
+export const updateUserRoleSchema = z.object({
   roleId: z.uuid("Invalid role ID"),
 });
 
@@ -78,3 +87,6 @@ export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
 
 export type ProvisionUserInput = z.infer<typeof provisionUserSchema>;
+
+export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>;
+

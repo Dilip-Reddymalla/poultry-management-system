@@ -9,6 +9,8 @@ import {
   listAttendance,
   updateAttendance,
   getMarkedPersonIds,
+  getUnmarkedSummary,
+  markUnmarkedAbsent,
 } from "./attendance.service.js";
 import { exportAttendance } from "./attendance.export.js";
 import {
@@ -18,6 +20,8 @@ import {
   listAttendanceQuerySchema,
   updateAttendanceSchema,
   markedPersonIdsQuerySchema,
+  unmarkedSummaryQuerySchema,
+  markUnmarkedAbsentSchema,
   exportAttendanceQuerySchema,
 } from "./attendance.schema.js";
 
@@ -115,6 +119,32 @@ export async function getMarkedPersonIdsController(
   res.status(200).json({
     success: true,
     ...markedIds,
+  });
+}
+
+export async function getUnmarkedSummaryController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const query = unmarkedSummaryQuerySchema.parse(req.query);
+  const summary = await getUnmarkedSummary(getScope(req), query);
+
+  res.status(200).json({
+    success: true,
+    ...summary,
+  });
+}
+
+export async function markUnmarkedAbsentController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = markUnmarkedAbsentSchema.parse(req.body);
+  const result = await markUnmarkedAbsent(getScope(req), input);
+
+  res.status(201).json({
+    success: true,
+    ...result,
   });
 }
 

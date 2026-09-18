@@ -84,6 +84,8 @@ export interface EmployeeListQuery {
   status?: EmployeeStatus | "";
   designationId?: string;
   farmId?: string;
+  sortBy?: "employeeId" | "name" | "status" | "login";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface EmployeeListResponse {
@@ -110,6 +112,8 @@ export interface WorkerListQuery {
   search?: string;
   status?: WorkerStatus | "";
   farmId?: string;
+  sortBy?: "workerId" | "name" | "status";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface WorkerListResponse {
@@ -265,8 +269,17 @@ export function updateEmployee(id: string, data: Partial<EmployeeInput>, photo?:
   }
   return apiClient.patch(`/employees/${id}`, data).then((res: any) => res.employee);
 }
-export function provisionEmployeeUser(id: string, data?: { email: string; roleId: string }): Promise<any> {
+export function provisionEmployeeUser(
+  id: string,
+  data?: { email: string; roleId: string; password?: string | undefined },
+): Promise<any> {
   return apiClient.post(`/employees/${id}/user`, data);
+}
+export function updateEmployeeUserRole(
+  id: string,
+  roleId: string,
+): Promise<{ success: boolean; message: string; employee: Employee }> {
+  return apiClient.patch(`/employees/${id}/user/role`, { roleId });
 }
 export function deleteEmployee(id: string): Promise<{ success: boolean; message: string }> {
   return apiClient.delete(`/employees/${id}`);
@@ -401,6 +414,60 @@ export function approveAttendance(id: string): Promise<Attendance> {
 export function fetchMarkedPersonIds(query: MarkedPersonIdsQuery, signal?: AbortSignal): Promise<MarkedPersonIdsResponse> {
   return apiClient.get("/attendance/marked-ids", { query, signal });
 }
+
+/** Fetch up to 1 000 attendance records for a single employee over the last N days. */
+export function fetchEmployeeAttendanceRange(
+  employeeId: string,
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<AttendanceListResponse> {
+  return apiClient.get("/attendance", { query: { employeeId, from, to, limit: 1000 }, signal });
+}
+
+
+
+export interface UnmarkedSummaryQuery {
+  date: string;
+  shift: Shift;
+  farmId: string;
+  shedId?: string;
+}
+
+export interface UnmarkedSummaryResponse {
+  success: boolean;
+  unmarkedEmployees: { id: string; name: string; employeeId: string }[];
+  unmarkedWorkers: { id: string; name: string; workerId: string }[];
+  totalUnmarked: number;
+}
+
+export interface MarkUnmarkedAbsentInput {
+  date: string;
+  shift: Shift;
+  farmId: string;
+  shedId?: string;
+  target?: "ALL" | "EMPLOYEES" | "WORKERS";
+  latitude: number;
+  longitude: number;
+  notes?: string;
+}
+
+export interface MarkUnmarkedAbsentResponse {
+  success: boolean;
+  markedCount: number;
+  employeeCount: number;
+  workerCount: number;
+  message: string;
+}
+
+export function fetchUnmarkedSummary(query: UnmarkedSummaryQuery, signal?: AbortSignal): Promise<UnmarkedSummaryResponse> {
+  return apiClient.get("/attendance/unmarked-summary", { query, signal });
+}
+
+export function markUnmarkedAbsent(data: MarkUnmarkedAbsentInput): Promise<MarkUnmarkedAbsentResponse> {
+  return apiClient.post("/attendance/mark-unmarked-absent", data);
+}
+
 export function exportAttendanceUrl(query: ExportAttendanceQuery): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {

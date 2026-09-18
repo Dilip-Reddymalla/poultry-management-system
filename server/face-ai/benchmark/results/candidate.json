@@ -1,0 +1,29 @@
+{
+  "backend": "candidate",
+  "model_label": "YuNet + EdgeFace-S (gamma=0.5)",
+  "detection_rate": 1.0,
+  "images_total": 3443,
+  "images_missing_file": 0,
+  "pairs_skipped_no_detection": 0,
+  "metrics": {
+    "pairs_evaluated": 2200,
+    "genuine_pairs": 1100,
+    "impostor_pairs": 1100,
+    "accuracy": 0.995,
+    "accuracy_threshold": 0.37614,
+    "roc_auc": 0.99641,
+    "tar_at_far_1e-2": 0.99091,
+    "tar_at_far_1e-3": 0.99,
+    "mean_genuine_sim": 0.71596,
+    "mean_impostor_sim": 0.00944,
+    "separation_gap": 0.70652
+  },
+  "speed_ms": {
+    "detect_ms": 6.78,
+    "align_ms": 0.466,
+    "embed_ms": 14.066,
+    "end_to_end_ms": 21.312,
+    "images_timed": 3443
+  },
+  "notes": "CPU, default ORT threading, OMP_NUM_THREADS=1, warm-up excluded."
+}

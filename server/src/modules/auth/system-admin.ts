@@ -75,11 +75,15 @@ export async function buildSystemAdminSafeUser(): Promise<SafeUser> {
     employee: {
       id: SYSTEM_ADMIN_USER_ID,
       name: "System Administrator",
+      photoUrl: null,
+      joiningDate: null,
+      phone: null,
       designation: {
         id: SYSTEM_ADMIN_USER_ID,
         name: SYSTEM_ADMIN_ROLE,
       },
     },
+
     roles: [SYSTEM_ADMIN_ROLE],
     permissions: permissions.map((permission) => permission.name),
   };

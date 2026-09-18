@@ -9,6 +9,7 @@ import {
   reactivateEmployeeController,
   deleteEmployeeController,
   provisionEmployeeUserController,
+  updateEmployeeUserRoleController,
   importEmployeesExcelController,
   downloadEmployeeExcelTemplateController,
 } from "./employee.controller.js";
@@ -48,6 +49,11 @@ router.post(
   "/:id/user",
   requirePermission("user:create"),
   provisionEmployeeUserController,
+);
+router.patch(
+  "/:id/user/role",
+  requirePermission("user:update-role"),
+  updateEmployeeUserRoleController,
 );
 
 export default router;

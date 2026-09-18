@@ -178,6 +178,12 @@ export function OtpLoginPage(): React.ReactElement {
                 }}
               />
 
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.25rem" }}>
+                <Link to="/forgot-password" style={{ fontSize: "0.85rem" }}>
+                  Forgot password?
+                </Link>
+              </div>
+
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <Button type="submit" variant="primary" busy={busy}>
                   {password.trim() ? "Sign in with password" : "Send OTP code"}

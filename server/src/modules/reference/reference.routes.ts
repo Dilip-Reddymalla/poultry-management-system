@@ -21,10 +21,14 @@ designationRouter.get(
   listDesignationsController,
 );
 
-// Roles are only ever chosen while provisioning a login account.
+// Roles are chosen while provisioning a login account or changing an employee's role.
 export const roleRouter = Router();
 
-roleRouter.get("/", requirePermission("user:create"), listRolesController);
+roleRouter.get(
+  "/",
+  requirePermission("user:create", "user:update-role"),
+  listRolesController,
+);
 
 // Unified reference router for /api/reference/designations and /api/reference/roles
 export const referenceRouter = Router();
@@ -37,6 +41,6 @@ referenceRouter.get(
 
 referenceRouter.get(
   "/roles",
-  requirePermission("user:create"),
+  requirePermission("user:create", "user:update-role"),
   listRolesController,
 );

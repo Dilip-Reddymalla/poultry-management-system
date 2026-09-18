@@ -23,15 +23,35 @@ async function main() {
 
   // DESIGNATIONS ------------------------------------------------------------
 
+  // DESIGNATIONS ------------------------------------------------------------
+
   const designations = [
     "Company Admin",
     "DGM",
     "Assistant Manager",
     "Super Incharge",
     "Incharge",
-    "Supervisor",
-    "Worker",
+    "Asst Incharge",
     "Accountant",
+    "Accounts Assistant",
+    "Stores Executive",
+    "Senior Supervisor",
+    "Supervisor",
+    "AC Supervisor",
+    "AC Asst Supervisor",
+    "Maintenance Supervisor",
+    "Grading Supervisor",
+    "Supervisor - Litter Maintenance",
+    "Security Supervisor",
+    "Asst Supervisor",
+    "Asst Supervisor General",
+    "Asst Supervisor - Technical",
+    "Asst Supervisor - Electrical",
+    "Security Head Guard",
+    "Security Guard",
+    "Senior Driver",
+    "Driver",
+    "Worker",
   ];
 
   for (const name of designations) {
@@ -51,11 +71,12 @@ async function main() {
   // ROLES -------------------------------------------------------------------
   //
   // scopeLevel is WHERE the role's permissions apply, relative to the user's own
-  // company/farm. Company Admin is COMPANY-wide; every operational role is
+  // company/farm. Company Admin is COMPANY-wide; operational roles are
   // FARM-scoped. The System Admin is env-based and global, so no role is GLOBAL.
 
   const roles: { name: string; description: string; scopeLevel: ScopeLevel }[] =
     [
+      // Executive / Farm Management
       {
         name: "Company Admin",
         description: "Manages their company and all of its farms",
@@ -68,27 +89,127 @@ async function main() {
       },
       {
         name: "Assistant Manager",
-        description: "Broad operational management within their farm",
+        description: "Broad operational management, workforce oversight & approvals within farm",
+        scopeLevel: "FARM",
+      },
+
+      // Finance & Administration
+      {
+        name: "Accountant",
+        description: "Administrative, workforce management and accounting access",
         scopeLevel: "FARM",
       },
       {
+        name: "Accounts Assistant",
+        description: "Assists with accounting, record keeping and reporting",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Stores Executive",
+        description: "Farm inventory, stores and supplies oversight",
+        scopeLevel: "FARM",
+      },
+
+      // Incharge Level
+      {
         name: "Super Incharge",
-        description: "Broad farm operational access",
+        description: "Broad farm operational access and department oversight",
         scopeLevel: "FARM",
       },
       {
         name: "Incharge",
-        description: "Operational supervision access",
+        description: "Operational department incharge with workforce supervision",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Asst Incharge",
+        description: "Assistant incharge for operational workflows",
+        scopeLevel: "FARM",
+      },
+
+      // Supervisory Level
+      {
+        name: "Senior Supervisor",
+        description: "Senior operational supervisor overseeing sheds and farm staff",
         scopeLevel: "FARM",
       },
       {
         name: "Supervisor",
-        description: "Assigned shed and operational access",
+        description: "Assigned shed and workforce operational supervision",
         scopeLevel: "FARM",
       },
       {
-        name: "Accountant",
-        description: "Administrative and accounting access",
+        name: "AC Supervisor",
+        description: "Supervises climate control, AC and shed ventilation systems",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "AC Asst Supervisor",
+        description: "Assists with climate control and AC systems maintenance",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Maintenance Supervisor",
+        description: "Supervises mechanical, electrical and structural maintenance",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Grading Supervisor",
+        description: "Supervises poultry and egg grading operations",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Supervisor - Litter Maintenance",
+        description: "Supervises shed sanitation and litter maintenance",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Security Supervisor",
+        description: "Supervises farm perimeter and facility security operations",
+        scopeLevel: "FARM",
+      },
+
+      // Assistant Supervisors
+      {
+        name: "Asst Supervisor",
+        description: "General assistant supervisor for farm operations",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Asst Supervisor General",
+        description: "Assists with general shed and farm operations",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Asst Supervisor - Technical",
+        description: "Assists with technical machinery and automation systems",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Asst Supervisor - Electrical",
+        description: "Assists with electrical equipment and power infrastructure",
+        scopeLevel: "FARM",
+      },
+
+      // Security & Transport Staff Roles
+      {
+        name: "Security Head Guard",
+        description: "Lead security guard for farm gates and premises",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Security Guard",
+        description: "Security personnel for farm access control",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Senior Driver",
+        description: "Senior logistics and transport driver",
+        scopeLevel: "FARM",
+      },
+      {
+        name: "Driver",
+        description: "Logistics and transport driver",
         scopeLevel: "FARM",
       },
     ];
@@ -142,6 +263,7 @@ async function main() {
     { name: "attendance:approve", description: "Approve/finalize attendance" },
 
     { name: "user:create", description: "Provision login accounts for employees" },
+    { name: "user:update-role", description: "Change login role for employee accounts" },
 
     { name: "report:view", description: "View reports" },
     { name: "report:export", description: "Export reports" },
@@ -173,6 +295,10 @@ async function main() {
       throw new Error(`${roleName} role not found`);
     }
 
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: role.id },
+    });
+
     for (const name of permissionNames) {
       const permissionId = permissionByName.get(name);
 
@@ -180,23 +306,13 @@ async function main() {
         throw new Error(`${name} permission not found`);
       }
 
-      // Additive only: never deletes an existing role permission.
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: role.id, permissionId },
-        },
-        update: {},
-        create: { roleId: role.id, permissionId },
+      await prisma.rolePermission.create({
+        data: { roleId: role.id, permissionId },
       });
     }
   }
 
   // ROLE → PERMISSION MATRIX ------------------------------------------------
-  //
-  // Company Admin manages its whole company; the DGM is full authority inside a
-  // single farm (everything except company management). Company creation is never
-  // granted to any seeded role — it is a global action reserved for the env-based
-  // System Admin.
 
   const companyAdminPermissions = [
     "company:view",
@@ -221,6 +337,7 @@ async function main() {
     "worker:update",
     "worker:delete",
     "user:create",
+    "user:update-role",
     "attendance:view",
     "attendance:create",
     "attendance:update",
@@ -265,12 +382,60 @@ async function main() {
       ],
     },
     {
+      role: "Accountant",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "employee:create",
+        "employee:update",
+        "employee:deactivate",
+        "employee:reactivate",
+        "employee:delete",
+        "worker:view",
+        "worker:create",
+        "worker:update",
+        "worker:delete",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+        "report:export",
+      ],
+    },
+    {
+      role: "Accounts Assistant",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "employee:update",
+        "worker:view",
+        "worker:update",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Stores Executive",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
       role: "Super Incharge",
       permissions: [
         "farm:view",
         "shed:view",
         "shed:update-status",
         "employee:view",
+        "employee:update",
         "worker:view",
         "worker:create",
         "worker:update",
@@ -282,6 +447,39 @@ async function main() {
     },
     {
       role: "Incharge",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "shed:update-status",
+        "employee:view",
+        "employee:update",
+        "worker:view",
+        "worker:create",
+        "worker:update",
+        "attendance:view",
+        "attendance:create",
+        "attendance:update",
+        "report:view",
+      ],
+    },
+    {
+      role: "Asst Incharge",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "employee:update",
+        "worker:view",
+        "worker:create",
+        "worker:update",
+        "attendance:view",
+        "attendance:create",
+        "attendance:update",
+        "report:view",
+      ],
+    },
+    {
+      role: "Senior Supervisor",
       permissions: [
         "farm:view",
         "shed:view",
@@ -309,25 +507,159 @@ async function main() {
       ],
     },
     {
-      role: "Accountant",
+      role: "AC Supervisor",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "shed:update-status",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "AC Asst Supervisor",
       permissions: [
         "farm:view",
         "shed:view",
         "employee:view",
-        "employee:create",
-        "employee:update",
-        "employee:deactivate",
-        "employee:reactivate",
-        "employee:delete",
         "worker:view",
-        "worker:create",
-        "worker:update",
-        "worker:delete",
-        "attendance:create",
         "attendance:view",
-        "attendance:update",
+        "attendance:create",
         "report:view",
-        "report:export",
+      ],
+    },
+    {
+      role: "Maintenance Supervisor",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "shed:update-status",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Grading Supervisor",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Supervisor - Litter Maintenance",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "shed:update-status",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Security Supervisor",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Asst Supervisor",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Asst Supervisor General",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Asst Supervisor - Technical",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Asst Supervisor - Electrical",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+        "attendance:view",
+        "attendance:create",
+        "report:view",
+      ],
+    },
+    {
+      role: "Security Head Guard",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "employee:view",
+        "worker:view",
+      ],
+    },
+    {
+      role: "Security Guard",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "worker:view",
+      ],
+    },
+    {
+      role: "Senior Driver",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "worker:view",
+      ],
+    },
+    {
+      role: "Driver",
+      permissions: [
+        "farm:view",
+        "shed:view",
+        "worker:view",
       ],
     },
   ];

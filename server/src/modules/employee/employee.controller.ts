@@ -14,6 +14,7 @@ import {
   provisionEmployeeUser,
   reactivateEmployee,
   updateEmployee,
+  updateEmployeeUserRole,
 } from "./employee.service.js";
 import {
   createEmployeeSchema,
@@ -21,6 +22,7 @@ import {
   listEmployeesQuerySchema,
   provisionUserSchema,
   updateEmployeeSchema,
+  updateUserRoleSchema,
 } from "./employee.schema.js";
 
 /**
@@ -210,6 +212,26 @@ export async function provisionEmployeeUserController(
     success: true,
     message: "User account created successfully",
     user,
+  });
+}
+
+export async function updateEmployeeUserRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = employeeIdParamSchema.parse(req.params);
+  const input = updateUserRoleSchema.parse(req.body);
+
+  const employee = await updateEmployeeUserRole(
+    getScope(req),
+    params.id,
+    input.roleId,
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "User role updated successfully",
+    employee,
   });
 }
 

@@ -36,9 +36,7 @@ export function WorkerDetailPage(): React.ReactElement {
   const record = worker.data;
   const active = record?.status === "ACTIVE";
 
-  const canToggle = active
-    ? can("worker:deactivate")
-    : can("worker:reactivate");
+  const canToggle = can("worker:update");
 
   async function handleDelete(): Promise<void> {
     if (!record) {

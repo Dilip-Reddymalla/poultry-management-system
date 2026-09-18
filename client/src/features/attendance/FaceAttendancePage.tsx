@@ -3,6 +3,7 @@ import type { Farm, Shed, Shift } from "../../api/types.js";
 import { SHIFTS } from "../../api/types.js";
 import { apiClient } from "../../api/client.js";
 import { fetchSheds } from "../../api/resources.js";
+import { useAuth } from "../../auth/use-auth.js";
 import {
   processFrame,
   bulkMarkFaceAttendance,
@@ -12,69 +13,10 @@ import {
 } from "../../api/face-attendance.api.js";
 
 /* ------------------------------------------------------------------ */
-/*  Shift Timing Helpers                                               */
-/* ------------------------------------------------------------------ */
-
-/**
- * Standard shift timings:
- * - MORNING_SHIFT:   05:00 - 15:00 (5 AM to 3 PM, includes 1hr buffer)
- * - AFTERNOON_SHIFT: 13:00 - 23:00 (1 PM to 11 PM, includes 1hr buffer)
- * - NIGHT_SHIFT:     21:00 - 07:00 (9 PM to 7 AM, includes 1hr buffer)
- * - OVERTIME:        Allowed anytime
- */
-function validateShiftTiming(shift: Shift): { allowed: boolean; message?: string } {
-  if (shift === "OVERTIME") return { allowed: true };
-
-  const now = new Date();
-  const currentHour = now.getHours();
-
-  switch (shift) {
-    case "MORNING_SHIFT": {
-      // 05:00 to 15:00
-      if (currentHour < 5 || currentHour >= 15) {
-        return {
-          allowed: false,
-          message: `Morning Shift attendance is only allowed between 05:00 AM and 03:00 PM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-    case "AFTERNOON_SHIFT": {
-      // 13:00 to 23:00
-      if (currentHour < 13 || currentHour >= 23) {
-        return {
-          allowed: false,
-          message: `Afternoon Shift attendance is only allowed between 01:00 PM and 11:00 PM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-    case "NIGHT_SHIFT": {
-      // 21:00 to 07:00 (crosses midnight)
-      if (currentHour >= 7 && currentHour < 21) {
-        return {
-          allowed: false,
-          message: `Night Shift attendance is only allowed between 09:00 PM and 07:00 AM. Current time is ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
-        };
-      }
-      break;
-    }
-  }
-
-  return { allowed: true };
-}
+import { validateShiftTiming, SHIFT_TIMINGS } from "../../lib/shift-timing.js";
 
 function shiftLabel(shift: Shift): string {
-  switch (shift) {
-    case "MORNING_SHIFT":
-      return "Morning Shift (05:00 - 15:00)";
-    case "AFTERNOON_SHIFT":
-      return "Afternoon Shift (13:00 - 23:00)";
-    case "NIGHT_SHIFT":
-      return "Night Shift (21:00 - 07:00)";
-    case "OVERTIME":
-      return "Overtime (Anytime)";
-  }
+  return SHIFT_TIMINGS[shift]?.label ?? shift;
 }
 
 /* ------------------------------------------------------------------ */
@@ -265,6 +207,8 @@ interface FaceSelection {
 }
 
 export function FaceAttendancePage(): React.ReactElement {
+  const { user } = useAuth();
+
   // Farm & Shed selection
   const [farms, setFarms] = useState<Farm[]>([]);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
@@ -340,7 +284,9 @@ export function FaceAttendancePage(): React.ReactElement {
       .then((data) => {
         const list = data?.farms || [];
         setFarms(list);
-        if (list.length === 1 && list[0]) {
+        if (user?.scope?.farmId && list.some((f) => f.id === user.scope.farmId)) {
+          setSelectedFarmId(user.scope.farmId);
+        } else if (list.length > 0 && list[0]) {
           setSelectedFarmId(list[0].id);
         }
       })
@@ -463,6 +409,7 @@ export function FaceAttendancePage(): React.ReactElement {
             type: "image/jpeg",
           });
           setImagePreviewUrl(URL.createObjectURL(blob));
+          stopCamera();
         }
       }
     }
@@ -483,7 +430,7 @@ export function FaceAttendancePage(): React.ReactElement {
 
       const sels: FaceSelection[] = res.faces.map((face) => {
         const topCandidate = face.candidates[0];
-        if (topCandidate && topCandidate.similarity >= 0.6) {
+        if (topCandidate && topCandidate.similarity >= 0.4) {
           return {
             faceIndex: face.faceIndex,
             personId: topCandidate.id,
@@ -518,7 +465,7 @@ export function FaceAttendancePage(): React.ReactElement {
 
       const sels: FaceSelection[] = res.faces.map((face) => {
         const topCandidate = face.candidates[0];
-        if (topCandidate && topCandidate.similarity >= 0.6) {
+        if (topCandidate && topCandidate.similarity >= 0.4) {
           return {
             faceIndex: face.faceIndex,
             personId: topCandidate.id,
@@ -754,8 +701,29 @@ export function FaceAttendancePage(): React.ReactElement {
                   {result.faces.map((face) => {
                     const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = face.bbox;
                     const color = statusColor(face.status);
+                    const selectedId = selections.find((s) => s.faceIndex === face.faceIndex)?.personId;
+                    const matched =
+                      face.candidates.find((c) => c.id === selectedId) ||
+                      (face.candidates[0] && face.candidates[0].similarity >= 0.4 ? face.candidates[0] : null);
+
+                    const scale = Math.max(0.65, result.imageWidth / 900);
+                    const strokeWidth = Math.max(3, result.imageWidth * 0.0035);
+                    const badgeHeight = 48 * scale;
+                    const avatarSize = 36 * scale;
+                    const fontSizeName = 15 * scale;
+                    const fontSizeSub = 11 * scale;
+                    const padding = 6 * scale;
+                    const badgeWidth = Math.max(x2 - x1, 220 * scale);
+                    const badgeX = Math.max(4, Math.min(x1, result.imageWidth - badgeWidth - 4));
+                    // Place above bounding box if fits, else below bbox, clamped inside image
+                    const badgeY =
+                      y1 - badgeHeight - 8 < 0
+                        ? Math.min(result.imageHeight - badgeHeight - 4, y2 + 8)
+                        : y1 - badgeHeight - 8;
+
                     return (
                       <g key={face.faceIndex}>
+                        {/* Face Bounding Box */}
                         <rect
                           x={x1}
                           y={y1}
@@ -763,17 +731,101 @@ export function FaceAttendancePage(): React.ReactElement {
                           height={y2 - y1}
                           fill="none"
                           stroke={color}
-                          strokeWidth={Math.max(3, result.imageWidth * 0.003)}
+                          strokeWidth={strokeWidth}
+                          rx={8 * scale}
                         />
-                        <text
-                          x={x1}
-                          y={y1 - 8}
-                          fill={color}
-                          fontSize={Math.max(18, result.imageWidth * 0.018)}
-                          fontWeight="bold"
-                        >
-                          #{face.faceIndex} {face.status}
-                        </text>
+
+                        {/* Floating Identity Badge */}
+                        <g>
+                          <defs>
+                            <clipPath id={`avatar-clip-${face.faceIndex}`}>
+                              <circle
+                                cx={badgeX + padding + avatarSize / 2}
+                                cy={badgeY + badgeHeight / 2}
+                                r={avatarSize / 2}
+                              />
+                            </clipPath>
+                          </defs>
+
+                          <rect
+                            x={badgeX}
+                            y={badgeY}
+                            width={badgeWidth}
+                            height={badgeHeight}
+                            rx={8 * scale}
+                            fill="rgba(15, 23, 42, 0.92)"
+                            stroke={color}
+                            strokeWidth={Math.max(1.5, strokeWidth * 0.6)}
+                          />
+
+                          {matched ? (
+                            <>
+                              {/* Avatar in badge */}
+                              {matched.photoUrl ? (
+                                <image
+                                  href={matched.photoUrl}
+                                  x={badgeX + padding}
+                                  y={badgeY + (badgeHeight - avatarSize) / 2}
+                                  width={avatarSize}
+                                  height={avatarSize}
+                                  clipPath={`url(#avatar-clip-${face.faceIndex})`}
+                                  preserveAspectRatio="xMidYMid slice"
+                                />
+                              ) : (
+                                <circle
+                                  cx={badgeX + padding + avatarSize / 2}
+                                  cy={badgeY + badgeHeight / 2}
+                                  r={avatarSize / 2}
+                                  fill="#6366f1"
+                                />
+                              )}
+                              {!matched.photoUrl && (
+                                <text
+                                  x={badgeX + padding + avatarSize / 2}
+                                  y={badgeY + badgeHeight / 2 + 5 * scale}
+                                  textAnchor="middle"
+                                  fill="#ffffff"
+                                  fontSize={fontSizeName * 0.9}
+                                  fontWeight="bold"
+                                >
+                                  {matched.name.charAt(0).toUpperCase()}
+                                </text>
+                              )}
+
+                              {/* Recognized Name */}
+                              <text
+                                x={badgeX + padding + avatarSize + 8 * scale}
+                                y={badgeY + padding + fontSizeName}
+                                fill="#ffffff"
+                                fontSize={fontSizeName}
+                                fontWeight="bold"
+                              >
+                                {matched.name}
+                              </text>
+
+                              {/* Match percentage & role */}
+                              <text
+                                x={badgeX + padding + avatarSize + 8 * scale}
+                                y={badgeY + padding + fontSizeName + fontSizeSub + 4 * scale}
+                                fill={matched.similarity >= 0.6 ? "#34d399" : "#fbbf24"}
+                                fontSize={fontSizeSub}
+                                fontWeight="600"
+                              >
+                                {Math.round(matched.similarity * 100)}% Match • {matched.personType}
+                              </text>
+                            </>
+                          ) : (
+                            <text
+                              x={badgeX + 12 * scale}
+                              y={badgeY + badgeHeight / 2 + 5 * scale}
+                              fill={color}
+                              fontSize={fontSizeName}
+                              fontWeight="bold"
+                            >
+                              Face #{face.faceIndex} — {face.status === "LIVE" ? "Unrecognized" : face.status}
+                            </text>
+                          )}
+                        </g>
                       </g>
                     );
                   })}
@@ -822,7 +874,7 @@ export function FaceAttendancePage(): React.ReactElement {
               style={{ ...styles.btn, ...styles.btnPrimary, padding: "12px 24px", fontSize: 15 }}
               onClick={() => startCamera()}
             >
-              🎥 Start Live Camera
+              {imagePreviewUrl ? "📸 Retake / Open Live Camera" : "🎥 Start Live Camera"}
             </button>
           ) : (
             <>
@@ -961,6 +1013,72 @@ export function FaceAttendancePage(): React.ReactElement {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Person Avatar with Fallback                                        */
+/* ------------------------------------------------------------------ */
+
+function PersonAvatar({
+  src,
+  name,
+  size = 40,
+}: {
+  src?: string | null;
+  name: string;
+  size?: number;
+}): React.ReactElement {
+  const [imgError, setImgError] = useState(false);
+  const initials = name
+    ? name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : "?";
+
+  if (src && !imgError) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setImgError(true)}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          border: "2px solid #e0e7ff",
+          flexShrink: 0,
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+        color: "#ffffff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        fontSize: Math.max(11, Math.round(size * 0.38)),
+        border: "2px solid #e0e7ff",
+        flexShrink: 0,
+        textTransform: "uppercase",
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Face Card                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -978,6 +1096,9 @@ function FaceCard({
   ) => void;
 }): React.ReactElement {
   const isLive = face.status === "LIVE";
+  const activeCandidate =
+    face.candidates.find((c) => c.id === selection?.personId) ||
+    (face.candidates[0] && face.candidates[0].similarity >= 0.4 ? face.candidates[0] : null);
 
   return (
     <div style={styles.faceCard}>
@@ -997,6 +1118,89 @@ function FaceCard({
           {face.status}
         </span>
       </div>
+
+      {/* Prominent Recognized Person Hero Identity Badge */}
+      {isLive && activeCandidate && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            padding: 12,
+            borderRadius: 10,
+            background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+            border: "1px solid #a7f3d0",
+            marginBottom: 14,
+            boxShadow: "0 1px 3px rgba(16, 185, 129, 0.1)",
+          }}
+        >
+          <PersonAvatar src={activeCandidate.photoUrl} name={activeCandidate.name} size={54} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#065f46" }}>
+                {activeCandidate.name}
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: 99,
+                  background: activeCandidate.similarity >= 0.6 ? "#10b981" : "#f59e0b",
+                  color: "#fff",
+                }}
+              >
+                {Math.round(activeCandidate.similarity * 100)}% Match
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: "#047857", marginTop: 2 }}>
+              {activeCandidate.personCode} • {activeCandidate.personType}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unrecognized Face Banner */}
+      {isLive && !activeCandidate && face.candidates.length === 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: 12,
+            borderRadius: 10,
+            background: "#fef3c7",
+            border: "1px solid #fde68a",
+            marginBottom: 14,
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: "#f59e0b",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            ?
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e" }}>
+              Unrecognized Face
+            </div>
+            <div style={{ fontSize: 12, color: "#b45309" }}>
+              No matching person found in enrolled facial database
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Metrics */}
       <div
@@ -1078,28 +1282,8 @@ function FaceCard({
                   )}
                 </div>
 
-                {/* Avatar */}
-                {c.photoUrl ? (
-                  <img
-                    src={c.photoUrl}
-                    alt={c.name}
-                    style={styles.candidateAvatar}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      ...styles.candidateAvatar,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#9ca3af",
-                    }}
-                  >
-                    {c.name.charAt(0)}
-                  </div>
-                )}
+                {/* Avatar with fallback */}
+                <PersonAvatar src={c.photoUrl} name={c.name} size={38} />
 
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1134,20 +1318,6 @@ function FaceCard({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {isLive && face.candidates.length === 0 && (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 8,
-            background: "#fef3c7",
-            fontSize: 13,
-            color: "#92400e",
-          }}
-        >
-          ⚠️ No matching person found in database
         </div>
       )}
 

@@ -117,6 +117,11 @@ export interface Employee {
   };
   status: EmployeeStatus;
   hasUser?: boolean;
+  user?: {
+    id: string;
+    email: string;
+    roles: Array<{ id: string; name: string }>;
+  } | null;
   photoUrl?: string;
   joiningDate?: string;
   createdAt: string;

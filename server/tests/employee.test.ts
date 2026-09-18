@@ -372,10 +372,7 @@ describe("employee module", () => {
     expect(response.status).toBe(403);
   });
 
-  it("ignores a password supplied in the provisioning body", async () => {
-    // Provisioning is passwordless: the schema strips unknown keys, so a password
-    // in the body must never produce a usable password (login stays blocked until
-    // the first-login set-password step).
+  it("allows setting an optional initial password during provisioning", async () => {
     const employee = await createTestEmployeeRecord(farmId);
 
     const email = `tmp-test-${uniqueSuffix()}${TEST_EMAIL_DOMAIN}`;
@@ -383,17 +380,55 @@ describe("employee module", () => {
     const provision = await request(app)
       .post(`/api/employees/${employee.id}/user`)
       .set("Cookie", dgm.cookie)
-      .send({ email, roleId: supervisorRoleId, password: "smuggled-password-1" });
+      .send({ email, roleId: supervisorRoleId, password: "validPassword123" });
 
     expect(provision.status).toBe(201);
-    expect(provision.body.user.mustSetPassword).toBe(true);
+    expect(provision.body.user.mustSetPassword).toBe(false);
 
     const login = await request(app).post("/api/auth/login").send({
       email,
-      password: "smuggled-password-1",
+      password: "validPassword123",
     });
 
-    expect(login.status).toBe(401);
+    expect(login.status).toBe(200);
+    expect(login.body.user.mustSetPassword).toBe(false);
+  });
+
+  it("allows DGM to change the login role of an employee", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+    const email = `tmp-test-${uniqueSuffix()}${TEST_EMAIL_DOMAIN}`;
+
+    await request(app)
+      .post(`/api/employees/${employee.id}/user`)
+      .set("Cookie", dgm.cookie)
+      .send({ email, roleId: supervisorRoleId });
+
+    const accountantRole = await prisma.role.findUniqueOrThrow({ where: { name: "Accountant" } });
+    const patch = await request(app)
+      .patch(`/api/employees/${employee.id}/user/role`)
+      .set("Cookie", dgm.cookie)
+      .send({ roleId: accountantRole.id });
+
+    expect(patch.status).toBe(200);
+    expect(patch.body.employee.user.roles[0].name).toBe("Accountant");
+  });
+
+  it("denies DGM from escalating employee to Company Admin", async () => {
+    const employee = await createTestEmployeeRecord(farmId);
+    const email = `tmp-test-${uniqueSuffix()}${TEST_EMAIL_DOMAIN}`;
+
+    await request(app)
+      .post(`/api/employees/${employee.id}/user`)
+      .set("Cookie", dgm.cookie)
+      .send({ email, roleId: supervisorRoleId });
+
+    const companyAdminRole = await prisma.role.findUniqueOrThrow({ where: { name: "Company Admin" } });
+    const patch = await request(app)
+      .patch(`/api/employees/${employee.id}/user/role`)
+      .set("Cookie", dgm.cookie)
+      .send({ roleId: companyAdminRole.id });
+
+    expect(patch.status).toBe(403);
   });
 
   it("allows DGM to delete an employee", async () => {

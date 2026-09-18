@@ -6,8 +6,8 @@ import {
   clearAuthCookieOptions,
 } from "../../utils/auth-cookie.js";
 
-import { getCurrentUser, login, loginWithPhone, requestOtp, verifyPhoneOtp, selectPhoneUser, setPassword } from "./auth.service.js";
-import { loginSchema, phoneLoginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema } from "./auth.schema.js";
+import { getCurrentUser, login, loginWithPhone, requestOtp, verifyPhoneOtp, selectPhoneUser, setPassword, changePassword, resetPasswordWithOtp } from "./auth.service.js";
+import { loginSchema, phoneLoginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema, changePasswordSchema, resetPasswordSchema } from "./auth.schema.js";
 
 
 export async function loginController(
@@ -168,5 +168,37 @@ export async function setPasswordController(
     success: true,
     message: "Password set successfully",
     user: result.user,
+  });
+}
+
+export async function changePasswordController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const input = changePasswordSchema.parse(req.body);
+
+  const result = await changePassword(authReq.userId, input);
+
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+
+  res.status(200).json({
+    success: true,
+    message: "Password changed successfully",
+    user: result.user,
+  });
+}
+
+export async function resetPasswordController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = resetPasswordSchema.parse(req.body);
+
+  const result = await resetPasswordWithOtp(input);
+
+  res.status(200).json({
+    success: true,
+    message: result.message,
   });
 }

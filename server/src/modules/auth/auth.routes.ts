@@ -9,6 +9,8 @@ import {
   verifyOtpController,
   selectPhoneUserController,
   setPasswordController,
+  changePasswordController,
+  resetPasswordController,
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
@@ -27,6 +29,8 @@ router.post("/phone/select-user", authEndpointRateLimiter, selectPhoneUserContro
 // from every business endpoint but must be able to reach this one to leave that
 // state. setPassword itself rejects any account not in the mustSetPassword state.
 router.post("/set-password", requireAuth, setPasswordController);
+router.post("/change-password", requireAuth, changePasswordController);
+router.post("/reset-password", authEndpointRateLimiter, resetPasswordController);
 
 export default router;
 

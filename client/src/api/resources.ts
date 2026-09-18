@@ -269,8 +269,17 @@ export function updateEmployee(id: string, data: Partial<EmployeeInput>, photo?:
   }
   return apiClient.patch(`/employees/${id}`, data).then((res: any) => res.employee);
 }
-export function provisionEmployeeUser(id: string, data?: { email: string; roleId: string }): Promise<any> {
+export function provisionEmployeeUser(
+  id: string,
+  data?: { email: string; roleId: string; password?: string | undefined },
+): Promise<any> {
   return apiClient.post(`/employees/${id}/user`, data);
+}
+export function updateEmployeeUserRole(
+  id: string,
+  roleId: string,
+): Promise<{ success: boolean; message: string; employee: Employee }> {
+  return apiClient.patch(`/employees/${id}/user/role`, { roleId });
 }
 export function deleteEmployee(id: string): Promise<{ success: boolean; message: string }> {
   return apiClient.delete(`/employees/${id}`);

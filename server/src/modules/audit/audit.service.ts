@@ -11,7 +11,7 @@ import type {
 import type { SafeAuditLog, AuditLogListResponse } from "./audit.types.ts";
 
 export interface RecordAuditParams {
-  scope: AuthScope;
+  scope?: AuthScope | null;
   action: AuditAction;
   entity: string;
   entityId?: string | null;
@@ -30,12 +30,12 @@ export async function recordAuditLog({
   req,
 }: RecordAuditParams): Promise<void> {
   try {
-    let actorName = "System Administrator";
+    let actorName = scope?.isSystemAdmin ? "System Administrator" : "Self Service";
     let actorEmail: string | null = null;
     let companyName: string | null = null;
     let farmName: string | null = null;
 
-    if (!scope.isSystemAdmin && scope.userId) {
+    if (scope && !scope.isSystemAdmin && scope.userId) {
       const user = await prisma.user.findUnique({
         where: { id: scope.userId },
         select: {
@@ -75,10 +75,10 @@ export async function recordAuditLog({
         entityId: entityId ?? null,
         summary,
         changes: changes ? (changes as Prisma.InputJsonValue) : Prisma.JsonNull,
-        actorId: scope.userId,
+        actorId: scope?.userId ?? null,
         actorName,
         actorEmail,
-        actorRoles: scope.roles as Prisma.InputJsonValue,
+        actorRoles: scope?.roles ? (scope.roles as Prisma.InputJsonValue) : Prisma.JsonNull,
         companyName,
         farmName,
         ipAddress,

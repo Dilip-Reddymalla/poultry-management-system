@@ -26,10 +26,10 @@ import type {
 import {getFarmById} from "../farm/farm.service.js"
 
 import type { SafeUser } from "../auth/auth.types.js";
+import { hashPassword } from "../../utils/password.js";
 
-// User is selected by id only, so no sensitive user field can ever be returned.
-// The farm is included so the frontend can show scope and the backend can
-// authorize by the employee's farm/company.
+// User is selected by safe fields only (id, email, roles), so no sensitive field
+// like passwordHash can ever be returned.
 const employeeSelect = {
   id: true,
   employeeId: true,
@@ -55,6 +55,17 @@ const employeeSelect = {
   user: {
     select: {
       id: true,
+      email: true,
+      roles: {
+        select: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   },
 };
@@ -82,6 +93,16 @@ function toSafeEmployee(employee: EmployeeRecord): SafeEmployee {
       name: employee.designation.name,
     },
     hasUser: employee.user !== null,
+    user: employee.user
+      ? {
+          id: employee.user.id,
+          email: employee.user.email,
+          roles: employee.user.roles.map((ur) => ({
+            id: ur.role.id,
+            name: ur.role.name,
+          })),
+        }
+      : null,
   };
 }
 
@@ -569,14 +590,20 @@ export async function provisionEmployeeUser(
   }
 
   try {
+    const hasInitialPassword = Boolean(input.password && input.password.trim().length > 0);
+    const passwordHash = hasInitialPassword
+      ? await hashPassword(input.password!.trim())
+      : null;
+    const mustSetPassword = !hasInitialPassword;
+
     // User and its role assignment must both succeed or neither should persist.
     const createdUser = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           employeeId: employee.id,
           email: input.email,
-          passwordHash: null,
-          mustSetPassword: true,
+          passwordHash,
+          mustSetPassword,
         },
         select: {
           id: true,
@@ -595,14 +622,13 @@ export async function provisionEmployeeUser(
     });
 
     // Same SafeUser shape the auth endpoints return, so a freshly provisioned
-    // account can be rendered by the frontend without a second lookup. It is
-    // flagged mustSetPassword: the login is not usable until setup completes.
+    // account can be rendered by the frontend without a second lookup.
     const safeUser: SafeUser = {
       id: createdUser.id,
       employeeId: employee.employeeId,
       email: createdUser.email,
       isSystemAdmin: false,
-      mustSetPassword: true,
+      mustSetPassword,
       scope: {
         level: broadestScopeLevel([role.scopeLevel]),
         companyId: employee.farm.companyId,
@@ -690,6 +716,119 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   // Workers
   "Worker": 10,
 };
+
+export async function updateEmployeeUserRole(
+  scope: AuthScope,
+  id: string,
+  roleId: string,
+): Promise<SafeEmployee> {
+  const employee = await prisma.employee.findUnique({
+    where: { id },
+    select: {
+      ...employeeSelect,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          roles: {
+            select: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!employee) {
+    throw new AppError("Employee not found", 404);
+  }
+
+  assertFarmWritable(scope, {
+    companyId: employee.farm.companyId,
+    id: employee.farm.id,
+  });
+
+  if (employee.status !== "ACTIVE") {
+    throw new AppError("Cannot change role for an inactive employee", 409);
+  }
+
+  if (!employee.user) {
+    throw new AppError("Employee does not have a user account", 404);
+  }
+
+  // Caller must be DGM or above
+  const actorMaxRank = scope.isSystemAdmin
+    ? 100
+    : Math.max(...scope.roles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+
+  const dgmRank = ROLE_HIERARCHY["DGM"] ?? 80;
+
+  if (actorMaxRank < dgmRank) {
+    throw new AppError("Only DGM and above levels can change login role", 403);
+  }
+
+  const role = await prisma.role.findUnique({
+    where: { id: roleId },
+    select: {
+      id: true,
+      name: true,
+      scopeLevel: true,
+    },
+  });
+
+  if (!role) {
+    throw new AppError("Role not found", 404);
+  }
+
+  const targetRoleRank = ROLE_HIERARCHY[role.name] ?? 0;
+
+  // Caller cannot assign a role higher than their own rank
+  if (targetRoleRank > actorMaxRank) {
+    throw new AppError("You cannot assign a role higher than your own level", 403);
+  }
+
+  // DGM cannot assign company-level or global roles
+  if (!scope.isSystemAdmin && !scope.roles.includes("Company Admin")) {
+    if (role.scopeLevel === "COMPANY" || role.scopeLevel === "GLOBAL") {
+      throw new AppError("DGM cannot assign company-level or global roles", 403);
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.userRole.deleteMany({
+      where: { userId: employee.user!.id },
+    });
+
+    await tx.userRole.create({
+      data: {
+        userId: employee.user!.id,
+        roleId: role.id,
+      },
+    });
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "User",
+    entityId: employee.user.id,
+    summary: `Changed role of user ${employee.user.email} (${employee.name}) to ${role.name}`,
+    changes: { roleId: role.id, roleName: role.name },
+  });
+
+  const updatedEmployee = await prisma.employee.findUniqueOrThrow({
+    where: { id },
+    select: employeeSelect,
+  });
+
+  return toSafeEmployee(updatedEmployee);
+}
 
 export async function deleteEmployee(
   scope: AuthScope,

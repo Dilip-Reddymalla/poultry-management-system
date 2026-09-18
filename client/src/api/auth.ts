@@ -87,3 +87,26 @@ export function selectPhoneAccount(
     keepSessionOnUnauthorized: true,
   });
 }
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; message: string; user: SessionUser }> {
+  return apiRequest("/auth/change-password", {
+    method: "POST",
+    body: { currentPassword, newPassword },
+  });
+}
+
+export function resetPassword(
+  phone: string,
+  otp: string,
+  newPassword: string,
+  email?: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest("/auth/reset-password", {
+    method: "POST",
+    body: { phone, otp, newPassword, email: email || undefined },
+    keepSessionOnUnauthorized: true,
+  });
+}

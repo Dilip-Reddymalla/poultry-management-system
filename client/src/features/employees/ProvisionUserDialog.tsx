@@ -29,6 +29,8 @@ export function ProvisionUserDialog({
 
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +40,11 @@ export function ProvisionUserDialog({
     setError(null);
 
     try {
-      await provisionEmployeeUser(employee.id, { email, roleId });
+      await provisionEmployeeUser(employee.id, {
+        email,
+        roleId,
+        password: password.trim() ? password.trim() : undefined,
+      });
       onProvisioned();
     } catch (caught) {
       setError(
@@ -54,7 +60,7 @@ export function ProvisionUserDialog({
   return (
     <Dialog
       title="Create a login"
-      description={`${employee.name} signs in the first time with a one-time code sent to the phone on their record, then sets their own password. No password is set here.`}
+      description={`${employee.name} can sign in with this email or phone number. You can optionally set a password now so they won't need to configure one, or leave it blank to require first-login phone OTP verification.`}
       onClose={onClose}
     >
       <form className="dialog__form" onSubmit={handleSubmit} noValidate>
@@ -100,6 +106,39 @@ export function ProvisionUserDialog({
             ))}
           </SelectField>
         )}
+
+        <div style={{ position: "relative" }}>
+          <TextField
+            id="user-password"
+            label="Password (optional)"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            value={password}
+            hint="Set a password to skip setup on first login, or leave blank to require phone OTP setup."
+            errors={error?.fieldErrors.password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+            }}
+          />
+          {password ? (
+            <button
+              type="button"
+              style={{
+                position: "absolute",
+                right: "0.75rem",
+                top: "2.1rem",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                color: "var(--color-primary-600, #2563eb)",
+              }}
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          ) : null}
+        </div>
 
         <div className="dialog__footer">
           <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>

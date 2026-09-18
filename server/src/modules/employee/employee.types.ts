@@ -18,6 +18,11 @@ export interface SafeEmployee {
     name: string;
   };
   hasUser: boolean;
+  user?: {
+    id: string;
+    email: string;
+    roles: Array<{ id: string; name: string }>;
+  } | null;
 }
 
 export interface EmployeePagination {

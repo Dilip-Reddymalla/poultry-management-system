@@ -54,3 +54,22 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
 
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(128),
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  phone: z.string().trim().min(1, "Phone number is required"),
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "OTP must be a 6-digit number"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(128),
+  email: emailSchema.optional(),
+});
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

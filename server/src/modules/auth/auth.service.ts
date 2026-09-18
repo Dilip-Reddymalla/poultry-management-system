@@ -5,8 +5,9 @@ import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { generateAccessToken } from "../../utils/jwt.js";
 import { AppError } from "../../utils/app-error.js";
 
-import type { LoginInput, PhoneLoginInput } from "./auth.schema.js";
+import type { ChangePasswordInput, LoginInput, PhoneLoginInput, ResetPasswordInput } from "./auth.schema.js";
 import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 import { broadestScopeLevel } from "./scope.js";
 import {
   SYSTEM_ADMIN_USER_ID,
@@ -263,6 +264,188 @@ export async function setPassword(
   return {
     token: generateAccessToken(updated.id),
     user: toSafeUser(updated),
+  };
+}
+
+export async function changePassword(
+  userId: string,
+  input: ChangePasswordInput,
+): Promise<{ token: string; user: SafeUser }> {
+  if (isSystemAdminId(userId)) {
+    throw new AppError("System Admin password lives in the environment and cannot be changed here", 403);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      isActive: true,
+      employee: { select: { name: true, status: true } },
+    },
+  });
+
+  if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
+    throw new AppError("Authentication required", 401);
+  }
+
+  if (user.passwordHash) {
+    const valid = await verifyPassword(user.passwordHash, input.currentPassword);
+    if (!valid) {
+      throw new AppError("Incorrect current password", 400);
+    }
+  }
+
+  const newHash = await hashPassword(input.newPassword);
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: newHash,
+      mustSetPassword: false,
+    },
+    select: sessionUserSelect,
+  });
+
+  void recordAuditLog({
+    action: "UPDATE",
+    entity: "User",
+    entityId: user.id,
+    summary: `User ${user.email} changed their password`,
+  });
+
+  return {
+    token: generateAccessToken(updated.id),
+    user: toSafeUser(updated),
+  };
+}
+
+export async function resetPasswordWithOtp(
+  input: ResetPasswordInput,
+): Promise<{ message: string }> {
+  const normalizedPhone = normalizePhone(input.phone);
+
+  const challenge = await prisma.otpChallenge.findFirst({
+    where: {
+      phone: normalizedPhone,
+      consumedAt: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!challenge) {
+    throw new AppError("Invalid or expired OTP", 400);
+  }
+
+  if (challenge.expiresAt.getTime() <= Date.now()) {
+    throw new AppError("Invalid or expired OTP", 400);
+  }
+
+  if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
+    throw new AppError("OTP attempt limit exceeded", 429);
+  }
+
+  const validOtp = await verifyOtp(input.otp, challenge.otpHash);
+
+  if (!validOtp) {
+    await prisma.otpChallenge.update({
+      where: { id: challenge.id },
+      data: {
+        attempts: { increment: 1 },
+      },
+    });
+
+    throw new AppError("Invalid or expired OTP", 400);
+  }
+
+  // Consume challenge
+  await prisma.otpChallenge.update({
+    where: { id: challenge.id },
+    data: { consumedAt: new Date() },
+  });
+
+  // Find user accounts associated with this phone
+  const employees = await prisma.employee.findMany({
+    where: {
+      phone: normalizedPhone,
+      status: "ACTIVE",
+      user: {
+        is: {
+          isActive: true,
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (employees.length === 0) {
+    throw new AppError("No active account found for this phone number", 404);
+  }
+
+  let targetUser: { id: string; email: string; name: string } | null = null;
+
+  if (employees.length === 1) {
+    const emp = employees[0]!;
+    targetUser = {
+      id: emp.user!.id,
+      email: emp.user!.email,
+      name: emp.name,
+    };
+  } else {
+    // Multiple employees share this phone number: require email to identify which account to reset
+    if (!input.email) {
+      throw new AppError(
+        "Multiple accounts found for this phone. Please provide your work email address as well.",
+        400,
+      );
+    }
+
+    const matched = employees.find(
+      (e) => e.user?.email.toLowerCase() === input.email?.trim().toLowerCase(),
+    );
+
+    if (!matched || !matched.user) {
+      throw new AppError("No matching account found for this phone and email combination", 404);
+    }
+
+    targetUser = {
+      id: matched.user.id,
+      email: matched.user.email,
+      name: matched.name,
+    };
+  }
+
+  const newHash = await hashPassword(input.newPassword);
+
+  await prisma.user.update({
+    where: { id: targetUser.id },
+    data: {
+      passwordHash: newHash,
+      mustSetPassword: false,
+    },
+  });
+
+  void recordAuditLog({
+    action: "UPDATE",
+    entity: "User",
+    entityId: targetUser.id,
+    summary: `Password reset via OTP for user ${targetUser.email} (${targetUser.name})`,
+  });
+
+  return {
+    message: "Password reset successfully. You can now sign in with your new password.",
   };
 }
 

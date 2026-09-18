@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "../../auth/use-auth.js";
 import { EmptyState, Panel } from "../../components/ui.js";
 import { AttendancePage } from "../attendance/AttendancePage.js";
@@ -5,9 +6,11 @@ import { ProfileHeroCard } from "./ProfileHeroCard.js";
 import { ProfileAttendanceStats } from "./ProfileAttendanceStats.js";
 import { ProfilePermissionsPanel } from "./ProfilePermissionsPanel.js";
 import { ProfileDocumentsPanel } from "./ProfileDocumentsPanel.js";
+import { ChangePasswordDialog } from "./ChangePasswordDialog.js";
 
 export function ProfilePage(): React.ReactElement {
   const { user, can } = useAuth();
+  const [changingPassword, setChangingPassword] = useState(false);
 
   if (!user) {
     return (
@@ -27,7 +30,10 @@ export function ProfilePage(): React.ReactElement {
   return (
     <div className="ph-page">
       {/* ── Hero card ─────────────────────────────────────────── */}
-      <ProfileHeroCard user={user} />
+      <ProfileHeroCard
+        user={user}
+        onChangePassword={() => setChangingPassword(true)}
+      />
 
       {/* ── Attendance analytics (gated on permission) ─────── */}
       {canViewAttendance && user.employee?.id ? (
@@ -62,6 +68,12 @@ export function ProfilePage(): React.ReactElement {
           </div>
           <AttendancePage employeeId={user.employee.id} />
         </section>
+      ) : null}
+
+      {changingPassword ? (
+        <ChangePasswordDialog
+          onClose={() => setChangingPassword(false)}
+        />
       ) : null}
     </div>
   );

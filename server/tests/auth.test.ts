@@ -147,4 +147,37 @@ describe("auth and RBAC", () => {
     expect(response.status).toBe(200);
     expect(containsSensitiveFields(response.body)).toBe(false);
   });
+
+  it("changes password successfully when given correct current password", async () => {
+    const newPass = "BrandNewPass@999";
+    const res = await request(app)
+      .post("/api/auth/change-password")
+      .set("Cookie", supervisor.cookie)
+      .send({
+        currentPassword: TEST_PASSWORD,
+        newPassword: newPass,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Verify login with new password
+    const loginRes = await request(app).post("/api/auth/login").send({
+      email: supervisor.email,
+      password: newPass,
+    });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it("rejects password change with incorrect current password", async () => {
+    const res = await request(app)
+      .post("/api/auth/change-password")
+      .set("Cookie", dgm.cookie)
+      .send({
+        currentPassword: "WrongCurrentPassword123",
+        newPassword: "BrandNewPass@999",
+      });
+
+    expect(res.status).toBe(400);
+  });
 });

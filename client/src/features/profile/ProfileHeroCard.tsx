@@ -9,9 +9,10 @@ const SCOPE_LABEL: Record<string, string> = {
 
 interface Props {
   user: SessionUser;
+  onChangePassword?: () => void;
 }
 
-export function ProfileHeroCard({ user }: Props): React.ReactElement {
+export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactElement {
   const { employee, email, employeeId, scope, roles } = user;
 
   return (
@@ -89,6 +90,27 @@ export function ProfileHeroCard({ user }: Props): React.ReactElement {
               </div>
             )}
           </dl>
+
+          {!user.isSystemAdmin && onChangePassword && (
+            <div style={{ marginTop: "1rem" }}>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={onChangePassword}
+                style={{
+                  fontSize: "0.85rem",
+                  padding: "0.4rem 0.85rem",
+                  borderRadius: "0.375rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                Change password
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

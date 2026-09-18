@@ -263,6 +263,7 @@ async function main() {
     { name: "attendance:approve", description: "Approve/finalize attendance" },
 
     { name: "user:create", description: "Provision login accounts for employees" },
+    { name: "user:update-role", description: "Change login role for employee accounts" },
 
     { name: "report:view", description: "View reports" },
     { name: "report:export", description: "Export reports" },
@@ -336,6 +337,7 @@ async function main() {
     "worker:update",
     "worker:delete",
     "user:create",
+    "user:update-role",
     "attendance:view",
     "attendance:create",
     "attendance:update",

@@ -7,6 +7,7 @@ import { FaceAttendancePage } from "./features/attendance/FaceAttendancePage.js"
 import { AuditLogsPage } from "./features/audit/AuditLogsPage.js";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { OtpLoginPage } from "./features/auth/OtpLoginPage.js";
+import { ForgotPasswordPage } from "./features/auth/ForgotPasswordPage.js";
 import { SetPasswordPage } from "./features/auth/SetPasswordPage.js";
 import { CompaniesPage } from "./features/companies/CompaniesPage.js";
 import { CompanyDetailPage } from "./features/companies/CompanyDetailPage.js";
@@ -41,6 +42,7 @@ export default function App(): React.ReactElement {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/otp-login" element={<OtpLoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>

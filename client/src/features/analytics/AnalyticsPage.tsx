@@ -103,25 +103,28 @@ export function AnalyticsPage(): React.ReactElement {
         </Link>
         <div className="analytics-nav__actions">
           <Link to="/about">
-            <Button variant="secondary">
-              About Project
+            <Button variant="secondary" className="analytics-nav__btn">
+              <span>About</span>
+              <span className="nav-btn__hide-mobile">&nbsp;Project</span>
             </Button>
           </Link>
           <Link to="/face-ai-demo">
-            <Button variant="secondary">
-              <SparklesIcon style={{ width: 14, height: 14, marginRight: 6 }} />
-              Face AI Demo
+            <Button variant="secondary" className="analytics-nav__btn">
+              <SparklesIcon style={{ width: 14, height: 14, marginRight: 5, flexShrink: 0 }} />
+              <span className="nav-btn__hide-mobile">Face AI&nbsp;</span>
+              <span>Demo</span>
             </Button>
           </Link>
           {user ? (
             <Link to="/dashboard">
-              <Button variant="primary">
-                Go to Dashboard
+              <Button variant="primary" className="analytics-nav__btn">
+                <span className="nav-btn__hide-mobile">Go to&nbsp;</span>
+                <span>Dashboard</span>
               </Button>
             </Link>
           ) : (
             <Link to="/login">
-              <Button variant="primary">
+              <Button variant="primary" className="analytics-nav__btn">
                 Sign In
               </Button>
             </Link>

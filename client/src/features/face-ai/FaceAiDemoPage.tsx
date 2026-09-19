@@ -237,25 +237,27 @@ export function FaceAiDemoPage(): React.ReactElement {
         </Link>
         <div className="face-demo-nav__actions">
           <Link to="/about">
-            <Button variant="secondary">
-              About Project
+            <Button variant="secondary" className="face-demo-nav__btn">
+              <span>About</span>
+              <span className="nav-btn__hide-mobile">&nbsp;Project</span>
             </Button>
           </Link>
           <Link to="/analytics">
-            <Button variant="secondary">
-              <AnalyticsIcon style={{ width: 14, height: 14, marginRight: 6 }} />
-              Live Analytics
+            <Button variant="secondary" className="face-demo-nav__btn">
+              <AnalyticsIcon style={{ width: 14, height: 14, marginRight: 5, flexShrink: 0 }} />
+              <span className="nav-btn__hide-mobile">Live&nbsp;</span>
+              <span>Analytics</span>
             </Button>
           </Link>
           {user ? (
             <Link to="/dashboard">
-              <Button variant="primary">
+              <Button variant="primary" className="face-demo-nav__btn">
                 Dashboard
               </Button>
             </Link>
           ) : (
             <Link to="/login">
-              <Button variant="primary">
+              <Button variant="primary" className="face-demo-nav__btn">
                 Sign In
               </Button>
             </Link>

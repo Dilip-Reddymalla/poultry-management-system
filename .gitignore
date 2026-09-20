@@ -84,3 +84,6 @@ prisma/*.db
 src/generated/
 **/generated/
 *.tsbuildinfo
+
+# docs
+EFFORT_ESTIMATION_AND_PRICING.md

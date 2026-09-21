@@ -31,6 +31,7 @@ import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
 import { MarkUnmarkedAbsentDialog } from "./MarkUnmarkedAbsentDialog.js";
+import { AttendanceAvatar } from "./AttendanceDashboardPage.js";
 
 const PAGE_SIZE = 50;
 
@@ -353,13 +354,23 @@ export function AttendancePage({
                         </Link>
                       </td>
                       <td data-label="Person">
-                        {record.person.name}
-                        <span className="table__sub numeric">
-                          {record.person.type === "EMPLOYEE"
-                            ? "Employee"
-                            : "Worker"}{" "}
-                          · {record.person.code}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                          <AttendanceAvatar
+                            photoUrl={record.person.photoUrl}
+                            name={record.person.name}
+                            type={record.person.type}
+                            size={32}
+                          />
+                          <div>
+                            <div>{record.person.name}</div>
+                            <span className="table__sub numeric">
+                              {record.person.type === "EMPLOYEE"
+                                ? "Employee"
+                                : "Worker"}{" "}
+                              · {record.person.code}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       {showFarm ? (
                         <td data-label="Farm">

@@ -146,6 +146,7 @@ export interface AttendancePerson {
   id: string;
   code: string;
   name: string;
+  photoUrl?: string | null;
 }
 
 export interface AttendanceActor {
@@ -168,6 +169,7 @@ export interface Attendance {
     name: string;
     code: string;
     type: PersonType;
+    photoUrl?: string | null;
   };
   shedId: string | null;
   shed?: {

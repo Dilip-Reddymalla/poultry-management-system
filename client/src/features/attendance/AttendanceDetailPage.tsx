@@ -19,6 +19,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatDate, statusLabel } from "../../lib/display.js";
 import { AttendanceCorrectionDialog } from "./AttendanceCorrectionDialog.js";
+import { AttendanceAvatar } from "./AttendanceDashboardPage.js";
 
 export function AttendanceDetailPage(): React.ReactElement {
   const { id = "" } = useParams();
@@ -133,7 +134,20 @@ export function AttendanceDetailPage(): React.ReactElement {
             items={[
               {
                 label: "Person",
-                value: `${record.person.name} · ${record.person.code}`,
+                value: (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <AttendanceAvatar
+                      photoUrl={record.person.photoUrl}
+                      name={record.person.name}
+                      type={record.person.type}
+                      size={42}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{record.person.name}</div>
+                      <span className="table__sub numeric">{record.person.code}</span>
+                    </div>
+                  </div>
+                ),
               },
               {
                 label: "Type",
@@ -179,6 +193,40 @@ export function AttendanceDetailPage(): React.ReactElement {
                     <span className="muted">Not recorded</span>
                   ),
               },
+              ...(record.verificationMode
+                ? [
+                    {
+                      label: "Verification",
+                      value: (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" as const }}>
+                          <span
+                            className="tag"
+                            style={{
+                              background: record.verificationMode === "FACE_AI" ? "#e8f0fe" : "var(--surface-sunk)",
+                              color: record.verificationMode === "FACE_AI" ? "#1f4d8f" : "inherit",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {record.verificationMode === "FACE_AI"
+                              ? `📸 Face AI ${record.confidenceScore ? `(${Math.round(record.confidenceScore)}%)` : ""}`
+                              : record.verificationMode}
+                          </span>
+                          {record.snapshotUrl && (
+                            <a
+                              href={record.snapshotUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="button button--ghost"
+                              style={{ padding: "2px 8px", fontSize: "0.75rem", minHeight: "22px" }}
+                            >
+                              🔍 View Verification Snapshot ↗
+                            </a>
+                          )}
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
               {
                 label: "Notes",
                 value: record.notes ? (

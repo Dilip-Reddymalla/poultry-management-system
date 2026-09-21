@@ -7,6 +7,7 @@ export interface SafeAttendancePerson {
   id: string;
   code: string;
   name: string;
+  photoUrl: string | null;
 }
 
 // A brief actor summary for the correction/approval lifecycle. Null when the

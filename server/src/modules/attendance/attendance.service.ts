@@ -68,6 +68,7 @@ const attendanceSelect = {
       id: true,
       employeeId: true,
       name: true,
+      photoUrl: true,
     },
   },
   worker: {
@@ -75,6 +76,7 @@ const attendanceSelect = {
       id: true,
       workerId: true,
       name: true,
+      photoUrl: true,
     },
   },
   recordedBy: {
@@ -111,12 +113,14 @@ function toSafeAttendance(record: AttendanceRecord): SafeAttendance {
         id: record.employee.id,
         code: record.employee.employeeId,
         name: record.employee.name,
+        photoUrl: record.employee.photoUrl ?? null,
       }
     : {
         type: "WORKER" as const,
         id: record.worker!.id,
         code: record.worker!.workerId,
         name: record.worker!.name,
+        photoUrl: record.worker!.photoUrl ?? null,
       };
 
   return {
@@ -145,6 +149,10 @@ function toSafeAttendance(record: AttendanceRecord): SafeAttendance {
     recordedBy: toSafeActor(record.recordedBy),
     approvedBy: toSafeActor(record.approvedBy),
     approvedAt: record.approvedAt,
+    verificationMode: record.verificationMode,
+    livenessScore: record.livenessScore,
+    confidenceScore: record.confidenceScore,
+    snapshotUrl: record.snapshotUrl,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -595,6 +603,7 @@ export async function getUnmarkedSummary(
         id: true,
         name: true,
         employeeId: true,
+        photoUrl: true,
       },
       orderBy: { name: "asc" },
     }),
@@ -607,6 +616,7 @@ export async function getUnmarkedSummary(
         id: true,
         name: true,
         workerId: true,
+        photoUrl: true,
       },
       orderBy: { name: "asc" },
     }),

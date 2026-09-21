@@ -192,7 +192,11 @@ export function MarkUnmarkedAbsentDialog({
             <option value="">All Sheds / General</option>
             {(sheds.data ?? []).map((s) => (
               <option key={s.id} value={s.id}>
-                Shed {s.number}
+                {s.number.toLowerCase().includes("ac room")
+                  ? "❄️ AC Room"
+                  : s.number.toLowerCase().startsWith("shed")
+                  ? s.number.replace("-", " ")
+                  : `Shed ${s.number}`}
               </option>
             ))}
           </SelectField>

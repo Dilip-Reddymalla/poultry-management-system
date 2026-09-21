@@ -15,15 +15,18 @@ export function ShedStrip({
   return (
     <ul className="strip">
       {sheds.map((shed) => {
+        const isAcRoom = shed.number.toLowerCase().includes("ac room");
         const content = (
           <>
             <span className="strip__number numeric">{shed.number}</span>
-            <span className="strip__capacity numeric">
-              {formatNumber(shed.capacity ?? 0)}
-            </span>
+            {!isAcRoom && (
+              <span className="strip__capacity numeric">
+                {formatNumber(shed.capacity ?? 0)}
+              </span>
+            )}
             <span className="visually-hidden">
-              Shed {shed.number}, {statusLabel(shed.status)},{" "}
-              {formatNumber(shed.capacity ?? 0)} birds
+              {shed.number}, {statusLabel(shed.status)}
+              {!isAcRoom && `, ${formatNumber(shed.capacity ?? 0)} birds`}
             </span>
           </>
         );

@@ -217,10 +217,11 @@ export function AttendanceDashboardPage(): React.ReactElement {
 
     // Seed from shed list
     for (const s of shedList) {
+      const isAcRoom = s.number.toLowerCase().includes("ac room");
       map.set(s.id, {
         shedId: s.id,
         shedNumber: s.number,
-        capacity: s.capacity,
+        capacity: isAcRoom ? undefined : (s.capacity && s.capacity > 0 ? s.capacity : undefined),
         present: 0,
         absent: 0,
         halfDay: 0,
@@ -803,9 +804,15 @@ export function AttendanceDashboardPage(): React.ReactElement {
                     }}
                   >
                     <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                      {s.shedId === "unassigned" ? "General / Staff" : `Shed ${s.shedNumber}`}
+                      {s.shedId === "unassigned"
+                        ? "General / Staff"
+                        : s.shedNumber.toLowerCase().includes("ac room")
+                        ? "❄️ AC Room"
+                        : s.shedNumber.toLowerCase().startsWith("shed")
+                        ? s.shedNumber.replace("-", " ")
+                        : `Shed ${s.shedNumber}`}
                     </div>
-                    {s.capacity != null && (
+                    {s.capacity != null && s.capacity > 0 && (
                       <div className="muted" style={{ fontSize: "0.68rem" }}>
                         {formatNumber(s.capacity)} birds
                       </div>
@@ -910,7 +917,14 @@ export function AttendanceDashboardPage(): React.ReactElement {
               <span className="muted">Filtered by:</span>
               {selectedShedId && (
                 <span className="tag" style={{ background: "var(--paper)", fontSize: "0.75rem" }}>
-                  Shed: {selectedShedId === "unassigned" ? "General / Staff" : shedList.find(s => s.id === selectedShedId)?.number ? `Shed ${shedList.find(s => s.id === selectedShedId)?.number}` : selectedShedId}
+                  Shed: {selectedShedId === "unassigned"
+                    ? "General / Staff"
+                    : (() => {
+                        const num = shedList.find((s) => s.id === selectedShedId)?.number;
+                        if (!num) return selectedShedId;
+                        if (num.toLowerCase().includes("ac room")) return "❄️ AC Room";
+                        return num.toLowerCase().startsWith("shed") ? num.replace("-", " ") : `Shed ${num}`;
+                      })()}
                   <button type="button" onClick={() => setSelectedShedId("")} style={{ border: "none", background: "transparent", cursor: "pointer", marginLeft: "4px" }}>✕</button>
                 </span>
               )}
@@ -1017,7 +1031,11 @@ export function AttendanceDashboardPage(): React.ReactElement {
                       <td data-label="Shed">
                         {record.shed?.number ? (
                           <span className="tag" style={{ background: "var(--surface-sunk)", fontWeight: 600 }}>
-                            Shed {record.shed.number}
+                            {record.shed.number.toLowerCase().includes("ac room")
+                              ? "❄️ AC Room"
+                              : record.shed.number.toLowerCase().startsWith("shed")
+                              ? record.shed.number.replace("-", " ")
+                              : `Shed ${record.shed.number}`}
                           </span>
                         ) : (
                           <span className="muted">General / Staff</span>

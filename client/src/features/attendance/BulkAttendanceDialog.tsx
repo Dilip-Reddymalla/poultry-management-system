@@ -262,12 +262,16 @@ export function BulkAttendanceDialog({
             </label>
           )}
           <label className="filters__field">
-            Shed
+            Shed / Location
             <select className="input select" value={shedId} onChange={(e) => setShedId(e.target.value)}>
-              <option value="">No specific shed</option>
+              <option value="">No specific shed / General</option>
               {sheds.data?.map((s) => (
                 <option key={s.id} value={s.id}>
-                  Shed {s.number}
+                  {s.number.toLowerCase().includes("ac room")
+                    ? "❄️ AC Room"
+                    : s.number.toLowerCase().startsWith("shed")
+                    ? s.number.replace("-", " ")
+                    : `Shed ${s.number}`}
                 </option>
               ))}
             </select>

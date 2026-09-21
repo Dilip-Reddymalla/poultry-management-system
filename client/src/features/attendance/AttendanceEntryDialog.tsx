@@ -251,10 +251,14 @@ export function AttendanceEntryDialog({
           disabled={farmId === "" || sheds.loading}
           onChange={(event) => setShedId(event.target.value)}
         >
-          <option value="">No specific shed</option>
+          <option value="">No specific shed / General</option>
           {(sheds.data ?? []).map((shed) => (
             <option key={shed.id} value={shed.id}>
-              Shed {shed.number}
+              {shed.number.toLowerCase().includes("ac room")
+                ? "❄️ AC Room"
+                : shed.number.toLowerCase().startsWith("shed")
+                ? shed.number.replace("-", " ")
+                : `Shed ${shed.number}`}
             </option>
           ))}
         </SelectField>

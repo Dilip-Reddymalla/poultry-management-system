@@ -26,7 +26,7 @@ const faceAttendanceRecordSchema = z.object({
   // Exactly one of these identifies the person.
   employeeId: z.uuid("Invalid employee ID").optional(),
   workerId: z.uuid("Invalid worker ID").optional(),
-  shedId: z.uuid("Invalid shed ID").optional(),
+  shedId: z.union([z.uuid("Invalid shed ID"), z.literal("AC_ROOM")]).optional(),
   date: dateOnlySchema,
   shift: shiftSchema.default("MORNING_SHIFT"),
   status: statusSchema.default("PRESENT"),

@@ -80,6 +80,20 @@ export async function listSheds(
     ...(query.status !== undefined && { status: query.status }),
   };
 
+  if (query.farmId) {
+    // Ensure the farm always has an AC Room shed, even if not seeded
+    await prisma.shed.upsert({
+      where: { farmId_number: { farmId: query.farmId, number: "AC Room" } },
+      update: { capacity: 0 },
+      create: {
+        farmId: query.farmId,
+        number: "AC Room",
+        capacity: 0,
+        status: "AVAILABLE",
+      },
+    }).catch(() => {});
+  }
+
   const sheds = await prisma.shed.findMany({
     where,
     orderBy: {

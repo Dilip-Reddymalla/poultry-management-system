@@ -83,7 +83,9 @@ export function DashboardPage(): React.ReactElement {
     (farm) => farm.status === "ACTIVE",
   );
   const available = shedList.filter((shed) => shed.status === "AVAILABLE");
-  const capacity = shedList.reduce((total, shed) => total + (shed.capacity ?? 0), 0);
+  const capacity = shedList
+    .filter((s) => !s.number.toLowerCase().includes("ac room"))
+    .reduce((total, shed) => total + (shed.capacity ?? 0), 0);
   const groups = groupByFarm(shedList);
 
   const firstName = user?.employee.name.split(" ")[0] ?? "there";

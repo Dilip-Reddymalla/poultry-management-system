@@ -144,6 +144,14 @@ export async function createFarm(
     });
 
     const safeFarm = toSafeFarm(farm);
+    await prisma.shed.create({
+      data: {
+        farmId: farm.id,
+        number: "AC Room",
+        capacity: 0,
+        status: "AVAILABLE",
+      },
+    }).catch(() => {});
     void recordAuditLog({
       scope,
       action: "CREATE",

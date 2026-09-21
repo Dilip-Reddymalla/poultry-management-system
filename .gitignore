@@ -87,3 +87,6 @@ src/generated/
 
 # docs
 EFFORT_ESTIMATION_AND_PRICING.md
+SRS.md
+SYSTEM_DESIGN.md
+PROJECT_AUDIT.md

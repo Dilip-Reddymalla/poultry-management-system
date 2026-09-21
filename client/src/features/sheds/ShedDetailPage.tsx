@@ -107,14 +107,23 @@ export function ShedDetailPage(): React.ReactElement {
                   record.farm.name
                 ),
               },
-              {
-                label: "Bird capacity",
-                value: (
-                  <span className="numeric">
-                    {formatNumber(record.capacity)}
-                  </span>
-                ),
-              },
+              ...(record.number.toLowerCase().includes("ac room")
+                ? [
+                    {
+                      label: "Facility type",
+                      value: <span>Climate Control &amp; Operations Room</span>,
+                    },
+                  ]
+                : [
+                    {
+                      label: "Bird capacity",
+                      value: (
+                        <span className="numeric">
+                          {formatNumber(record.capacity)}
+                        </span>
+                      ),
+                    },
+                  ]),
               { label: "Status", value: <StatusTag status={record.status} /> },
             ]}
           />

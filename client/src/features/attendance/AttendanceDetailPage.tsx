@@ -144,11 +144,17 @@ export function AttendanceDetailPage(): React.ReactElement {
                 value: `${record.farm.code} — ${record.farm.name}`,
               },
               {
-                label: "Shed",
+                label: "Shed / Location",
                 value: record.shed?.number ? (
-                  <span className="numeric">Shed {record.shed.number}</span>
+                  <span className="numeric">
+                    {record.shed.number.toLowerCase().includes("ac room")
+                      ? "❄️ AC Room"
+                      : record.shed.number.toLowerCase().startsWith("shed")
+                      ? record.shed.number.replace("-", " ")
+                      : `Shed ${record.shed.number}`}
+                  </span>
                 ) : (
-                  <span className="muted">None / General</span>
+                  <span className="muted">General / Staff</span>
                 ),
               },
               {

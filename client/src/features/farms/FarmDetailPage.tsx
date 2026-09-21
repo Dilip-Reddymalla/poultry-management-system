@@ -46,7 +46,9 @@ export function FarmDetailPage(): React.ReactElement {
   const shedList = [...(sheds.data ?? [])].sort((a, b) =>
     a.number.localeCompare(b.number, undefined, { numeric: true }),
   );
-  const capacity = shedList.reduce((total, shed) => total + (shed.capacity ?? 0), 0);
+  const capacity = shedList
+    .filter((s) => !s.number.toLowerCase().includes("ac room"))
+    .reduce((total, shed) => total + (shed.capacity ?? 0), 0);
 
   async function handleToggleStatus(): Promise<void> {
     if (!record) {

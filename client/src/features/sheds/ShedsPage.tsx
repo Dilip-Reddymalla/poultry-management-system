@@ -42,7 +42,9 @@ export function ShedsPage(): React.ReactElement {
 
   const rows = sheds.data ?? [];
   const filtered = farmId !== "" || status !== "";
-  const capacity = rows.reduce((total, shed) => total + (shed.capacity ?? 0), 0);
+  const capacity = rows
+    .filter((s) => !s.number.toLowerCase().includes("ac room"))
+    .reduce((total, shed) => total + (shed.capacity ?? 0), 0);
 
   function setParam(key: string, value: string): void {
     const next = new URLSearchParams(params);
@@ -189,7 +191,11 @@ export function ShedsPage(): React.ReactElement {
                       <span className="table__sub numeric">{shed.farm.code}</span>
                     </td>
                     <td className="numeric" data-label="Capacity">
-                      {formatNumber(shed.capacity)}
+                      {shed.number.toLowerCase().includes("ac room") ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        formatNumber(shed.capacity)
+                      )}
                     </td>
                     <td data-label="Status">
                       <StatusTag status={shed.status} />

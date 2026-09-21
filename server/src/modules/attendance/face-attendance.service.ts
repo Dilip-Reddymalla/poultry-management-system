@@ -162,11 +162,24 @@ export async function bulkMarkFaceAttendance(
         id: person.farmId,
       });
 
+      let finalShedId: string | null = record.shedId ?? null;
+      if (record.shedId === "AC_ROOM") {
+        let acShed = await prisma.shed.findFirst({
+          where: { farmId: person.farmId, number: { equals: "AC Room", mode: "insensitive" } },
+        });
+        if (!acShed) {
+          acShed = await prisma.shed.create({
+            data: { farmId: person.farmId, number: "AC Room", capacity: 0, status: "AVAILABLE" },
+          });
+        }
+        finalShedId = acShed.id;
+      }
+
       await prisma.attendance.create({
         data: {
           date: record.date,
           farmId: person.farmId,
-          shedId: record.shedId ?? null,
+          shedId: finalShedId,
           ...personLink,
           shift: record.shift,
           status: record.status,

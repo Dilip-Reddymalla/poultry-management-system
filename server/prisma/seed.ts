@@ -732,6 +732,11 @@ async function main() {
         create: { farmId, number, capacity: 5000 },
       });
     }
+    await prisma.shed.upsert({
+      where: { farmId_number: { farmId, number: "AC Room" } },
+      update: { capacity: 0 },
+      create: { farmId, number: "AC Room", capacity: 0 },
+    });
   }
 
   async function upsertEmployee(input: {

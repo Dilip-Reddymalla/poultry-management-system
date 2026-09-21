@@ -350,9 +350,27 @@ export function FaceAttendancePage(): React.ReactElement {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+
+    const isBackCamera = modeToUse === "environment";
+
+    // 16:9 widescreen for back camera; portrait for front camera
+    const videoConstraints: MediaTrackConstraints = isBackCamera
+      ? {
+          facingMode: { ideal: "environment" },
+          aspectRatio: { ideal: 16 / 9 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        }
+      : {
+          facingMode: { ideal: "user" },
+          aspectRatio: { ideal: 3 / 4 },
+          width: { ideal: 720 },
+          height: { ideal: 960 },
+        };
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: modeToUse } },
+        video: videoConstraints,
       });
       streamRef.current = stream;
       setCameraActive(true);
@@ -362,7 +380,12 @@ export function FaceAttendancePage(): React.ReactElement {
       }
     } catch (err: any) {
       try {
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const fallbackConstraints: MediaTrackConstraints = isBackCamera
+          ? { facingMode: { ideal: "environment" } }
+          : { facingMode: { ideal: "user" } };
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: fallbackConstraints,
+        });
         streamRef.current = fallbackStream;
         setCameraActive(true);
         if (videoRef.current) {
@@ -370,12 +393,24 @@ export function FaceAttendancePage(): React.ReactElement {
           videoRef.current.play().catch(() => {});
         }
       } catch (fallbackErr: any) {
-        setCameraError(
-          err.name === "NotAllowedError" || fallbackErr.name === "NotAllowedError"
-            ? "Camera access denied. Please grant permission."
-            : "Could not open camera: " + (err.message || fallbackErr.message || "Unknown error"),
-        );
-        stopCamera();
+        try {
+          const genericStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamRef.current = genericStream;
+          setCameraActive(true);
+          if (videoRef.current) {
+            videoRef.current.srcObject = genericStream;
+            videoRef.current.play().catch(() => {});
+          }
+        } catch (lastErr: any) {
+          setCameraError(
+            err.name === "NotAllowedError" ||
+              fallbackErr.name === "NotAllowedError" ||
+              lastErr.name === "NotAllowedError"
+              ? "Camera access denied. Please grant permission."
+              : "Could not open camera: " + (err.message || fallbackErr.message || lastErr.message || "Unknown error"),
+          );
+          stopCamera();
+        }
       }
     }
   };
@@ -396,11 +431,51 @@ export function FaceAttendancePage(): React.ReactElement {
     if (cameraActive && videoRef.current) {
       const video = videoRef.current;
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 1280;
-      canvas.height = video.videoHeight || 720;
+      const isBack = facingMode === "environment";
+      const vw = video.videoWidth || (isBack ? 1280 : 720);
+      const vh = video.videoHeight || (isBack ? 720 : 960);
+      const currentRatio = vw / vh;
+
+      let sx = 0;
+      let sy = 0;
+      let sWidth = vw;
+      let sHeight = vh;
+
+      if (isBack) {
+        // Back camera: strictly 16:9 ratio matching widescreen viewfinder
+        const targetRatio = 16 / 9;
+        if (Math.abs(currentRatio - targetRatio) > 0.02) {
+          if (currentRatio < targetRatio) {
+            // Source stream is taller than 16:9 (e.g. mobile sensor held in portrait)
+            sWidth = vw;
+            sHeight = Math.round(vw / targetRatio);
+            sx = 0;
+            sy = Math.round((vh - sHeight) / 2);
+          } else {
+            // Source stream is wider than 16:9
+            sHeight = vh;
+            sWidth = Math.round(vh * targetRatio);
+            sy = 0;
+            sx = Math.round((vw - sWidth) / 2);
+          }
+        }
+      } else {
+        // Front camera: portrait ratio matching viewfinder
+        if (currentRatio > 1) {
+          // Source is landscape (e.g. desktop webcam), crop center to 3:4 portrait
+          const targetRatio = 3 / 4;
+          sHeight = vh;
+          sWidth = Math.round(vh * targetRatio);
+          sy = 0;
+          sx = Math.round((vw - sWidth) / 2);
+        }
+      }
+
+      canvas.width = sWidth;
+      canvas.height = sHeight;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
         const blob = await new Promise<Blob | null>((resolve) =>
           canvas.toBlob(resolve, "image/jpeg", 0.95),
         );
@@ -495,6 +570,11 @@ export function FaceAttendancePage(): React.ReactElement {
     [],
   );
 
+  const acRoomShed = sheds.find(
+    (s) => s.number.toLowerCase() === "ac room" || s.number.toLowerCase().includes("ac room"),
+  );
+  const regularSheds = sheds.filter((s) => s.id !== acRoomShed?.id);
+
   const handleSubmitAttendance = useCallback(async () => {
     if (!result) return;
 
@@ -511,6 +591,11 @@ export function FaceAttendancePage(): React.ReactElement {
     const lat = location?.latitude ?? 0;
     const lng = location?.longitude ?? 0;
 
+    const resolvedShedId =
+      selectedShedId === "AC_ROOM"
+        ? (acRoomShed?.id ?? "AC_ROOM")
+        : (selectedShedId || undefined);
+
     for (const sel of selections) {
       if (!sel.personId || !sel.personType) continue;
 
@@ -522,7 +607,7 @@ export function FaceAttendancePage(): React.ReactElement {
       const record: FaceAttendanceRecord = {
         employeeId: sel.personType === "EMPLOYEE" ? sel.personId : undefined,
         workerId: sel.personType === "WORKER" ? sel.personId : undefined,
-        shedId: selectedShedId || undefined,
+        shedId: resolvedShedId,
         date: today,
         shift: selectedShift,
         status: "PRESENT",
@@ -555,7 +640,7 @@ export function FaceAttendancePage(): React.ReactElement {
     } finally {
       setSubmitting(false);
     }
-  }, [result, selections, selectedShift, selectedShedId, location]);
+  }, [result, selections, selectedShift, selectedShedId, location, acRoomShed]);
 
   const confirmedCount = selections.filter((s) => s.personId).length;
   const liveFaces = result?.faces.filter((f) => f.status === "LIVE") ?? [];
@@ -592,13 +677,20 @@ export function FaceAttendancePage(): React.ReactElement {
         <select
           style={styles.select}
           value={selectedShedId}
-          disabled={!selectedFarmId || sheds.length === 0}
+          disabled={!selectedFarmId}
           onChange={(e) => setSelectedShedId(e.target.value)}
         >
-          <option value="">All Sheds / Unassigned</option>
-          {sheds.map((s) => (
+          <option value="">🏢 General / Unassigned</option>
+          {acRoomShed ? (
+            <option value={acRoomShed.id}>❄️ AC Room</option>
+          ) : (
+            <option value="AC_ROOM">❄️ AC Room</option>
+          )}
+          {regularSheds.map((s) => (
             <option key={s.id} value={s.id}>
-              Shed {s.number}
+              {s.number.toLowerCase().startsWith("shed")
+                ? s.number.replace("-", " ")
+                : `Shed ${s.number}`}
             </option>
           ))}
         </select>
@@ -628,8 +720,8 @@ export function FaceAttendancePage(): React.ReactElement {
             }
           }}
         >
-          <option value="user">📷 Front Camera</option>
-          <option value="environment">📸 Back Camera</option>
+          <option value="user">📷 Front Camera (Portrait)</option>
+          <option value="environment">📸 Back Camera (16:9 Widescreen)</option>
         </select>
       </div>
 
@@ -658,7 +750,13 @@ export function FaceAttendancePage(): React.ReactElement {
 
         {cameraActive && (
           <div style={{ textAlign: "center" }}>
-            <div style={styles.imageContainer}>
+            <div
+              style={{
+                ...styles.imageContainer,
+                width: "100%",
+                maxWidth: facingMode === "environment" ? 920 : 420,
+              }}
+            >
               <video
                 ref={videoRef}
                 autoPlay
@@ -666,15 +764,23 @@ export function FaceAttendancePage(): React.ReactElement {
                 muted
                 style={{
                   width: "100%",
-                  maxWidth: 720,
-                  maxHeight: 480,
+                  maxWidth: facingMode === "environment" ? 920 : 420,
+                  aspectRatio: facingMode === "environment" ? "16 / 9" : "3 / 4",
+                  objectFit: "cover",
                   borderRadius: 12,
                   background: "#000",
+                  display: "block",
+                  margin: "0 auto",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
                 }}
               />
             </div>
             <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
-              Position faces clearly in the viewfinder and click <strong>Capture & Recognize</strong>.
+              {facingMode === "environment"
+                ? "📸 Back Camera (16:9 Widescreen) — Position workers across the frame"
+                : "📷 Front Camera (Portrait) — Position face clearly inside the frame"}
+              {" and click "}
+              <strong>Capture & Recognize</strong>.
             </p>
           </div>
         )}
@@ -899,7 +1005,7 @@ export function FaceAttendancePage(): React.ReactElement {
                 onClick={toggleCamera}
                 title="Switch between front and back camera"
               >
-                🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
+                🔄 {facingMode === "user" ? "Use Back Cam (16:9)" : "Use Front Cam (Portrait)"}
               </button>
               <button
                 style={{ ...styles.btn, background: "#fee2e2", color: "#991b1b" }}

@@ -237,11 +237,24 @@ export async function createEmployeeId(
   input: CreateEmployeeInput,
 ): Promise<string> {
   const farm = await getFarmById(scope, input.farmId);
-  const totalEmployees = await prisma.employee.count({
-    where: { farmId: input.farmId },
-  });
+  let counter =
+    (await prisma.employee.count({
+      where: { farmId: input.farmId },
+    })) + 1;
 
-  return `${farm.name}-E${totalEmployees + 1}`;
+  let candidateId = `${farm.name}-E${counter}`;
+
+  while (
+    await prisma.employee.findUnique({
+      where: { employeeId: candidateId },
+      select: { id: true },
+    })
+  ) {
+    counter += 1;
+    candidateId = `${farm.name}-E${counter}`;
+  }
+
+  return candidateId;
 }
 
 /** Optional face-AI data attached during create/update. */
@@ -259,7 +272,10 @@ export async function createEmployee(
 
   await assertDesignationExists(input.designationId);
 
-  const employeeId = input.employeeId ? input.employeeId: await createEmployeeId(scope,input);
+  const trimmedEmployeeId = input.employeeId?.trim();
+  const employeeId = trimmedEmployeeId
+    ? trimmedEmployeeId
+    : await createEmployeeId(scope, input);
 
   const existingEmployee = await prisma.employee.findUnique({
     where: {

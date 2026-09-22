@@ -167,11 +167,24 @@ export async function createWorkerId(
   input: CreateWorkerInput,
 ): Promise<string> {
   const farm = await getFarmById(scope, input.farmId);
-  const totalWorkers = await prisma.worker.count({
-    where: { farmId: input.farmId },
-  });
+  let counter =
+    (await prisma.worker.count({
+      where: { farmId: input.farmId },
+    })) + 1;
 
-  return `${farm.name}-W${totalWorkers + 1}`;
+  let candidateId = `${farm.name}-W${counter}`;
+
+  while (
+    await prisma.worker.findUnique({
+      where: { workerId: candidateId },
+      select: { id: true },
+    })
+  ) {
+    counter += 1;
+    candidateId = `${farm.name}-W${counter}`;
+  }
+
+  return candidateId;
 }
 
 /** Optional face-AI data attached during create/update. */
@@ -187,7 +200,10 @@ export async function createWorker(
 ): Promise<SafeWorker> {
   await assertFarmWritableById(scope, input.farmId);
 
-  const finalWorkerId = input.workerId ? input.workerId : await createWorkerId(scope, input);
+  const trimmedWorkerId = input.workerId?.trim();
+  const finalWorkerId = trimmedWorkerId
+    ? trimmedWorkerId
+    : await createWorkerId(scope, input);
 
   const existingWorker = await prisma.worker.findUnique({
     where: {

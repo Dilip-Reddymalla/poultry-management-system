@@ -109,7 +109,7 @@ export function EmployeeFormDialog({
         : await createEmployee(
             {
               ...payload,
-              employeeId: form.employeeId,
+              employeeId: form.employeeId?.trim() || undefined,
               farmId: effectiveFarmId,
             },
             photoFile,

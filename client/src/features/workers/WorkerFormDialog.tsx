@@ -94,7 +94,7 @@ export function WorkerFormDialog({
         : await createWorker(
             {
               ...payload,
-              workerId: form.workerId,
+              workerId: form.workerId.trim() || undefined,
               farmId: effectiveFarmId,
             },
             photoFile,

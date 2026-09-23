@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { fetchFarms } from "../../api/resources.js";
 import type { Farm, FarmStatus } from "../../api/types.js";
@@ -19,6 +20,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { FarmFormDialog } from "./FarmFormDialog.js";
 
 export function FarmsPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const { notify } = useToast();
 
@@ -34,9 +36,9 @@ export function FarmsPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Sites"
-        title="Farms"
-        description="Each farm belongs to a company and holds its own sheds."
+        eyebrow={t("farms.pageEyebrow")}
+        title={t("farms.pageTitle")}
+        description={t("farms.pageDescription")}
         actions={
           can("farm:create") ? (
             <Button
@@ -46,7 +48,7 @@ export function FarmsPage(): React.ReactElement {
               }}
             >
               <PlusIcon className="button__icon" />
-              Add farm
+              {t("farms.addFarm")}
             </Button>
           ) : null
         }
@@ -55,7 +57,7 @@ export function FarmsPage(): React.ReactElement {
       <Panel bleed>
         <div className="filters">
           <label className="filters__field">
-            <span className="visually-hidden">Status</span>
+            <span className="visually-hidden">{t("common.status")}</span>
             <select
               className="input select"
               value={status}
@@ -63,9 +65,9 @@ export function FarmsPage(): React.ReactElement {
                 setStatus(event.target.value as FarmStatus | "");
               }}
             >
-              <option value="">All statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="">{t("common.allStatuses")}</option>
+              <option value="ACTIVE">{t("common.active")}</option>
+              <option value="INACTIVE">{t("common.inactive")}</option>
             </select>
           </label>
         </div>
@@ -81,11 +83,11 @@ export function FarmsPage(): React.ReactElement {
         ) : rows.length === 0 ? (
           <div className="panel__pad">
             <EmptyState
-              title={status ? "No farms with this status" : "No farms yet"}
+              title={status ? t("farms.noFarmsWithStatus.title") : t("farms.noFarms.title")}
               description={
                 status
-                  ? "Change the status filter to see the rest."
-                  : "Add a farm, then add the sheds that sit on it."
+                  ? t("farms.noFarmsWithStatus.description")
+                  : t("farms.noFarms.description")
               }
             />
           </div>
@@ -94,31 +96,31 @@ export function FarmsPage(): React.ReactElement {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Code</th>
-                  <th scope="col">Farm</th>
-                  <th scope="col">Company</th>
-                  <th scope="col">Status</th>
+                  <th scope="col">{t("farms.code")}</th>
+                  <th scope="col">{t("common.farm")}</th>
+                  <th scope="col">{t("farms.company")}</th>
+                  <th scope="col">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((farm) => (
                   <tr key={farm.id}>
                     {/* data-label feeds the row-as-card layout on phones. */}
-                    <td className="numeric" data-label="Code">
+                    <td className="numeric" data-label={t("farms.code")}>
                       {farm.code}
                     </td>
-                    <td data-label="Farm">
+                    <td data-label={t("common.farm")}>
                       <Link className="table__link" to={`/farms/${farm.id}`}>
                         {farm.name}
                       </Link>
                     </td>
-                    <td data-label="Company">
+                    <td data-label={t("farms.company")}>
                       {farm.company.name}
                       <span className="table__sub numeric">
                         {farm.company.code}
                       </span>
                     </td>
-                    <td data-label="Status">
+                    <td data-label={t("common.status")}>
                       <StatusTag status={farm.status} />
                     </td>
                   </tr>

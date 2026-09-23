@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button, type ButtonVariant } from "./ui.js";
 
@@ -75,11 +76,13 @@ export function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps): React.ReactElement {
+  const { t } = useTranslation();
+
   return (
     <Dialog title={title} description={description} onClose={onClose}>
       <div className="dialog__footer">
         <Button variant="ghost" onClick={onClose} disabled={busy}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button variant={confirmVariant} onClick={onConfirm} busy={busy}>
           {confirmLabel}

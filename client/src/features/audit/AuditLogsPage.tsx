@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/use-auth.js";
 import { fetchAuditLogs, exportAuditLogsUrl } from "../../api/resources.js";
 import type { AuditLogListResponse } from "../../api/resources.js";
@@ -12,6 +13,7 @@ const PAGE_SIZE = 25;
 const ENTITIES = ["Employee", "Farm", "Shed", "Attendance", "Company", "Worker", "User"];
 
 export function AuditLogsPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -33,7 +35,7 @@ export function AuditLogsPage(): React.ReactElement {
   if (!user?.isSystemAdmin) {
     return (
       <div className="stack">
-        <PageHeader title="Audit Logs" />
+        <PageHeader title={t("auditLogs.pageTitle")} />
         <Panel>
           <EmptyState
             title="Access Restricted"
@@ -78,11 +80,11 @@ export function AuditLogsPage(): React.ReactElement {
     <div className="stack">
       <PageHeader
         eyebrow="System Administration"
-        title="Audit Logs"
+        title={t("auditLogs.pageTitle")}
         description="Comprehensive audit trail of all database mutations across companies, farms, and users."
         actions={
           <Button variant="primary" onClick={handleExport}>
-            Export to Excel (.xlsx)
+            {t("common.exportExcel")} (.xlsx)
           </Button>
         }
       />
@@ -90,7 +92,7 @@ export function AuditLogsPage(): React.ReactElement {
       <Panel bleed>
         <div className="filters" style={{ flexWrap: "wrap" }}>
           <label className="filters__field">
-            <span className="label">Search</span>
+            <span className="label">{t("common.search")}</span>
             <input
               type="text"
               className="input"
@@ -249,7 +251,7 @@ export function AuditLogsPage(): React.ReactElement {
             </pre>
             <div style={{ textAlign: "right", marginTop: "1rem" }}>
               <Button variant="secondary" onClick={() => setSelectedChanges(null)}>
-                Close
+                {t("common.close")}
               </Button>
             </div>
           </div>

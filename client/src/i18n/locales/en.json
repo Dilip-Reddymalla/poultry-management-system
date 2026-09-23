@@ -1,0 +1,435 @@
+﻿{
+  "_meta": {
+    "language": "English",
+    "code": "en",
+    "note": "Source-of-truth file. Every key here must exist in te.json and hi.json."
+  },
+
+  "common": {
+    "appName": "PoultryOps",
+    "loading": "Loading",
+    "tryAgain": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "clearFilters": "Clear filters",
+    "allStatuses": "All statuses",
+    "active": "Active",
+    "inactive": "Inactive",
+    "status": "Status",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "farm": "Farm",
+    "allFarms": "All farms",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "notRecorded": "Not recorded",
+    "signedInAs": "Signed in as",
+    "internalUseOnly": "Internal use only",
+    "importExcel": "Import Excel",
+    "exportExcel": "Export Excel",
+    "showPasswords": "Show passwords",
+    "hidePasswords": "Hide passwords",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "attendance": "Attendance",
+    "pending": "Pending",
+    "approved": "Approved",
+    "of": "of"
+  },
+
+  "error": {
+    "notAvailableToRole": "Not available to your role",
+    "couldNotLoad": "Could not load",
+    "somethingWentWrong": "Something went wrong.",
+    "workerNotFound": "Worker not found.",
+    "farmNotFound": "Farm not found.",
+    "shedNotFound": "Shed not found."
+  },
+
+  "offline": {
+    "notice": "No connection. Records will not load or refresh, and changes cannot be saved until the network returns."
+  },
+
+  "pwa": {
+    "installApp": "Install app"
+  },
+
+  "nav": {
+    "overview": "Overview",
+    "companies": "Companies",
+    "farms": "Farms",
+    "sheds": "Sheds",
+    "employees": "Employees",
+    "workers": "Workers",
+    "attDashboard": "Att. Dashboard",
+    "attendanceList": "Attendance List",
+    "faceAttendance": "Face Attendance",
+    "auditLogs": "Audit Logs",
+    "myProfile": "My profile",
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "signOut": "Sign out"
+  },
+
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Use the work email your manager set up for you.",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signInButton": "Sign in",
+      "noPassword": "No password yet?",
+      "signInWithPhone": "Sign in with your phone",
+      "tagline": "Farms, sheds and the people who run them — in one register.",
+      "aboutLink": "About PoultryOps",
+      "analyticsLink": "View Public Analytics",
+      "faceAiLink": "Test Face AI Sandbox"
+    },
+    "otpLogin": {
+      "title": "Sign in with your phone",
+      "subtitle": "Log in with your password, or enter your number to receive an SMS code.",
+      "phoneNumber": "Phone number",
+      "phoneHint": "Select country code and enter your registered mobile number.",
+      "passwordOptional": "Password (optional if using OTP)",
+      "passwordHint": "Enter your password to sign in immediately, or leave blank to receive an OTP code.",
+      "forgotPassword": "Forgot password?",
+      "signInWithPassword": "Sign in with password",
+      "sendOtpCode": "Send OTP code",
+      "sendOtpInstead": "Send OTP code instead",
+      "enterCodeTitle": "Enter your code",
+      "sentTo": "Sent to",
+      "sixDigitCode": "Six-digit code",
+      "verifyAndSignIn": "Verify and sign in",
+      "useDifferentNumber": "Use a different number",
+      "chooseAccount": "Choose an account",
+      "multipleAccounts": "This number is linked to more than one account.",
+      "signInWithEmail": "Sign in with email and password instead"
+    },
+    "forgotPassword": {
+      "resetTitle": "Reset password",
+      "resetSubtitle": "Enter the registered phone number associated with your account to receive an OTP.",
+      "registeredPhone": "Registered phone number",
+      "phoneHint": "Select country code and enter your mobile number.",
+      "sendOtp": "Send OTP code",
+      "rememberPassword": "Remember your password?",
+      "signIn": "Sign in",
+      "newPasswordTitle": "Create new password",
+      "codeSentTo": "We sent a 6-digit verification code to",
+      "sixDigitCode": "Six-digit code",
+      "workEmailOptional": "Work email (optional)",
+      "workEmailHint": "Only required if multiple employees share this phone number.",
+      "newPassword": "New password",
+      "newPasswordHint": "Must be at least 8 characters long.",
+      "confirmNewPassword": "Confirm new password",
+      "resetPasswordButton": "Reset password",
+      "changePhoneNumber": "Change phone number",
+      "successTitle": "Password reset!",
+      "successSubtitle": "Your password has been successfully updated. You can now sign in with your new password.",
+      "signInNow": "Sign in now",
+      "validationPhoneRequired": "Please enter your phone number",
+      "validationOtpIncomplete": "Enter the complete 6-digit OTP code",
+      "validationPasswordTooShort": "Password must be at least 8 characters",
+      "validationPasswordMismatch": "Passwords do not match",
+      "errorSendingOtp": "Failed to send verification code. Please try again.",
+      "errorResettingPassword": "Failed to reset password. Please check your OTP and try again."
+    },
+    "setPassword": {
+      "title": "Set your password",
+      "subtitle": "Welcome{{name}}. Choose a password to finish setting up your account. You will use it with a phone code from now on.",
+      "newPassword": "New password",
+      "passwordHint": "At least {{count}} characters.",
+      "confirmPassword": "Confirm password",
+      "mismatchError": "The two passwords do not match.",
+      "submitButton": "Set password and continue"
+    }
+  },
+
+  "dashboard": {
+    "eyebrow": "Overview",
+    "title": "Good day, {{name}}",
+    "description": "Where the farms stand right now.",
+    "noAccess": {
+      "title": "Nothing to show yet",
+      "description": "Your role does not include access to employees, farms or sheds. Ask a manager if you need it."
+    },
+    "kpi": {
+      "activeEmployees": "Active employees",
+      "activeEmployeesDetail": "On the register today",
+      "activeFarms": "Active farms",
+      "activeFarmsDetail": "on record",
+      "shedsAvailable": "Sheds available",
+      "shedsAvailableDetail": "of {{total}} sheds",
+      "birdCapacity": "Bird capacity",
+      "birdCapacityDetail": "Across every shed"
+    },
+    "shedBoard": {
+      "eyebrow": "Shed board",
+      "title": "Every shed, farm by farm",
+      "noSheds": {
+        "title": "No sheds recorded",
+        "description": "Sheds appear here as soon as they are added to a farm."
+      }
+    }
+  },
+
+  "workers": {
+    "pageEyebrow": "People",
+    "pageTitle": "Workers",
+    "pageDescription": "Field staff recorded for attendance. Workers never sign in.",
+    "addWorker": "Add worker",
+    "searchPlaceholder": "Search name, worker ID or phone",
+    "searchAriaLabel": "Search workers",
+    "workerID": "Worker ID",
+    "sortByWorkerID": "Sort by Worker ID",
+    "sortByName": "Sort by Name",
+    "sortByStatus": "Sort by Status",
+    "noMatches": {
+      "title": "No matches",
+      "description": "Try a different name, status or farm."
+    },
+    "noWorkers": {
+      "title": "No workers yet",
+      "description": "Add the first worker to start recording attendance."
+    },
+    "importCompleted": "Worker import completed.",
+    "detail": {
+      "title": "Worker",
+      "allWorkers": "All workers",
+      "recordPanel": "Record",
+      "appAccessPanel": "App access",
+      "appAccessText": "Workers are recorded for attendance only. They do not have a login and cannot sign in to the app.",
+      "updateSuccess": "Worker updated.",
+      "deleteSuccess": "{{name}} deleted.",
+      "deactivateTitle": "Deactivate worker?",
+      "reactivateTitle": "Reactivate worker?",
+      "deactivateDescription": "{{name}} stays on record but is marked inactive and drops off attendance entry.",
+      "reactivateDescription": "{{name}} goes back to active and can be marked in attendance again.",
+      "deleteTitle": "Delete {{name}}?",
+      "deleteDescription": "This will permanently delete the worker and direct attendance records. This action cannot be undone.",
+      "deleteConfirmLabel": "Delete worker",
+      "deactivatedSuccess": "{{name}} deactivated.",
+      "reactivatedSuccess": "{{name}} reactivated.",
+      "failedToDelete": "Failed to delete worker."
+    }
+  },
+
+  "employees": {
+    "pageEyebrow": "People",
+    "pageTitle": "Employees",
+    "pageDescription": "Everyone on the register, with the designation they work under.",
+    "addEmployee": "Add employee",
+    "searchPlaceholder": "Search name, employee ID or phone",
+    "searchAriaLabel": "Search employees",
+    "employeeID": "Employee ID",
+    "designation": "Designation",
+    "allDesignations": "All designations",
+    "joined": "Joined",
+    "login": "Login",
+    "sortByEmployeeID": "Sort by Employee ID",
+    "sortByName": "Sort by Name",
+    "sortByLogin": "Sort by Login Access",
+    "sortByStatus": "Sort by Status",
+    "noMatches": {
+      "title": "No matches",
+      "description": "Try a different name, status or designation."
+    },
+    "noEmployees": {
+      "title": "No employees yet",
+      "description": "Add the first employee to start building the register."
+    },
+    "importCompleted": "Employee import completed.",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteDescription": "This will permanently delete the employee, login account, and direct attendance records. This action cannot be undone.",
+    "deleteConfirmLabel": "Delete employee",
+    "failedToDelete": "Failed to delete employee.",
+    "detail": {
+      "title": "Employee",
+      "allEmployees": "All employees"
+    }
+  },
+
+  "farms": {
+    "pageEyebrow": "Sites",
+    "pageTitle": "Farms",
+    "pageDescription": "Each farm belongs to a company and holds its own sheds.",
+    "addFarm": "Add farm",
+    "code": "Code",
+    "company": "Company",
+    "noFarmsWithStatus": {
+      "title": "No farms with this status",
+      "description": "Change the status filter to see the rest."
+    },
+    "noFarms": {
+      "title": "No farms yet",
+      "description": "Add a farm, then add the sheds that sit on it."
+    },
+    "detail": {
+      "title": "Farm",
+      "allFarms": "All farms",
+      "recordPanel": "Record",
+      "farmCode": "Farm code",
+      "companyCode": "Company code",
+      "capacityPanel": "Capacity",
+      "sheds": "Sheds",
+      "available": "Available",
+      "birdCapacity": "Bird capacity",
+      "shedBoardEyebrow": "Shed board",
+      "shedBoardTitle": "Sheds on this farm",
+      "manageSheds": "Manage sheds",
+      "noSheds": {
+        "title": "No sheds on this farm",
+        "description": "Add sheds from the shed list to start tracking capacity."
+      },
+      "deactivateTitle": "Deactivate farm?",
+      "reactivateTitle": "Reactivate farm?",
+      "deactivateDescription": "{{name}} is marked inactive. Its sheds stay on record.",
+      "reactivateDescription": "{{name}} goes back to active.",
+      "farmUpdated": "Farm updated.",
+      "deactivatedSuccess": "{{name}} deactivated.",
+      "reactivatedSuccess": "{{name}} reactivated."
+    }
+  },
+
+  "sheds": {
+    "pageEyebrow": "Housing",
+    "pageTitle": "Sheds",
+    "pageDescription": "Every shed on every farm, with the capacity it holds.",
+    "addShed": "Add shed",
+    "capacity": "Capacity",
+    "available": "Available",
+    "occupied": "Occupied",
+    "maintenance": "Maintenance",
+    "noShedsMatch": {
+      "title": "No sheds match",
+      "description": "Try another farm or status."
+    },
+    "noSheds": {
+      "title": "No sheds yet",
+      "description": "Add a shed to a farm to start tracking capacity."
+    },
+    "addedSuccess": "Shed {{number}} added.",
+    "detail": {
+      "title": "Shed",
+      "allSheds": "All sheds",
+      "recordPanel": "Record",
+      "shedNumber": "Shed number",
+      "birdCapacity": "Bird capacity",
+      "facilityType": "Facility type",
+      "climateControl": "Climate Control & Operations Room",
+      "statusMeaningPanel": "What status means",
+      "availableDesc": "Ready to take a batch.",
+      "occupiedDesc": "Holding birds. Set by batch placement, not by hand.",
+      "maintenanceDesc": "Out of use while work is done.",
+      "inactiveDesc": "On record but not in use.",
+      "setStatus": "Set status",
+      "shedUpdated": "Shed updated.",
+      "shedNowStatus": "Shed {{number}} is now {{status}}."
+    }
+  },
+
+  "attendance": {
+    "pageEyebrow": "Operations",
+    "pageTitle": "Attendance",
+    "pageDescriptionRoster": "The days roster. Colour shows who is present, absent, or off.",
+    "pageDescriptionPerson": "Every record on file for this person.",
+    "faceAttendance": "Face Attendance",
+    "bulkMark": "Bulk mark",
+    "markUnmarkedAbsent": "Mark Unmarked Absent",
+    "recordAttendance": "Record attendance",
+    "personHistory": "Showing one persons history.",
+    "backToRoster": "Back to the roster",
+    "date": "Date",
+    "person": "Person",
+    "shed": "Shed",
+    "shift": "Shift",
+    "allShifts": "All shifts",
+    "gpsLocation": "GPS Location",
+    "approval": "Approval",
+    "employee": "Employee",
+    "worker": "Worker",
+    "shedNumber": "Shed {{number}}",
+    "recorded": "Attendance recorded.",
+    "noRecordsYet": {
+      "title": "No records yet",
+      "description": "Attendance recorded for this person will appear here."
+    },
+    "noOneWithStatus": {
+      "title": "No one with this status",
+      "description": "Clear the status filter to see the rest of the roster."
+    },
+    "nothingForDay": {
+      "title": "Nothing recorded for this day",
+      "description": "Use Record attendance to mark the first person for this day."
+    }
+  },
+
+  "profile": {
+    "noSession": {
+      "title": "No session",
+      "description": "Sign in again to see your profile."
+    },
+    "attendanceAnalyticsTitle": "Attendance Analytics",
+    "attendanceAnalyticsSub": "Your last 30 days at a glance",
+    "attendanceHistoryTitle": "Attendance History",
+    "attendanceHistorySub": "Full record of your attendance entries",
+    "changePassword": "Change password",
+    "employeeID": "Employee ID",
+    "email": "Email",
+    "phone": "Phone",
+    "joined": "Joined",
+    "scopeLabel": "{{scope}} scope",
+    "permissions": {
+      "title": "Permissions",
+      "total": "{{count}} total",
+      "empty": "No permissions assigned yet. Ask a manager to assign a role."
+    },
+    "changePasswordDialog": {
+      "title": "Change password",
+      "description": "Enter your current password and choose a new password with at least 8 characters.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "newPasswordHint": "Must be at least 8 characters long.",
+      "confirmNewPassword": "Confirm new password",
+      "showPasswords": "Show passwords",
+      "hidePasswords": "Hide passwords",
+      "updateButton": "Update password",
+      "changedSuccess": "Password changed successfully.",
+      "validationTooShort": "New password must be at least 8 characters",
+      "validationMismatch": "Passwords do not match"
+    }
+  },
+
+  "companies": {
+    "pageEyebrow": "Account",
+    "pageTitle": "Companies",
+    "pageDescription": "The organisations that own the farms."
+  },
+
+  "auditLogs": {
+    "pageTitle": "Audit Logs"
+  },
+
+  "notFound": {
+    "pageTitle": "Page not found",
+    "title": "That screen does not exist",
+    "description": "The link may be out of date. Head back to the overview.",
+    "goToOverview": "Go to overview"
+  },
+
+  "language": {
+    "switcherLabel": "Language",
+    "en": "EN",
+    "te": "తె",
+    "hi": "हि"
+  }
+}

@@ -1,4 +1,6 @@
-﻿interface Props {
+import { useTranslation } from "react-i18next";
+
+interface Props {
   permissions: string[];
 }
 
@@ -13,17 +15,20 @@ function groupPermissions(permissions: string[]): [string, string[]][] {
 }
 
 export function ProfilePermissionsPanel({ permissions }: Props): React.ReactElement {
+  const { t } = useTranslation();
   const groups = groupPermissions(permissions);
 
   return (
     <div className="ph-perms">
       <div className="ph-perms__header">
-        <p className="eyebrow">Permissions</p>
-        <span className="ph-perms__badge">{permissions.length} total</span>
+        <p className="eyebrow">{t("profile.permissions.title")}</p>
+        <span className="ph-perms__badge">
+          {t("profile.permissions.total", { count: permissions.length })}
+        </span>
       </div>
 
       {groups.length === 0 ? (
-        <p className="ph-perms__empty">No permissions assigned yet. Ask a manager to assign a role.</p>
+        <p className="ph-perms__empty">{t("profile.permissions.empty")}</p>
       ) : (
         <ul className="ph-perms__list">
           {groups.map(([resource, actions]) => (

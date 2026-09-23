@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   deleteWorker,
@@ -29,6 +30,7 @@ import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 const PAGE_SIZE = 20;
 
 export function WorkersPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { can, user } = useAuth();
   const { notify } = useToast();
 
@@ -84,9 +86,9 @@ export function WorkersPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="People"
-        title="Workers"
-        description="Field staff recorded for attendance. Workers never sign in."
+        eyebrow={t("workers.pageEyebrow")}
+        title={t("workers.pageTitle")}
+        description={t("workers.pageDescription")}
         actions={
           can("worker:create") ? (
             <div style={{ display: "flex", gap: 8 }}>
@@ -94,7 +96,7 @@ export function WorkersPage(): React.ReactElement {
                 variant="secondary"
                 onClick={() => setImportingExcel(true)}
               >
-                📊 Import Excel
+                📊 {t("common.importExcel")}
               </Button>
               <Button
                 variant="primary"
@@ -103,7 +105,7 @@ export function WorkersPage(): React.ReactElement {
                 }}
               >
                 <PlusIcon className="button__icon" />
-                Add worker
+                {t("workers.addWorker")}
               </Button>
             </div>
           ) : null
@@ -117,8 +119,8 @@ export function WorkersPage(): React.ReactElement {
             <input
               type="search"
               className="input"
-              placeholder="Search name, worker ID or phone"
-              aria-label="Search workers"
+              placeholder={t("workers.searchPlaceholder")}
+              aria-label={t("workers.searchAriaLabel")}
               value={searchInput}
               onChange={(event) => {
                 setSearchInput(event.target.value);
@@ -127,7 +129,7 @@ export function WorkersPage(): React.ReactElement {
           </div>
 
           <label className="filters__field">
-            <span className="visually-hidden">Status</span>
+            <span className="visually-hidden">{t("common.status")}</span>
             <select
               className="input select"
               value={status}
@@ -136,15 +138,15 @@ export function WorkersPage(): React.ReactElement {
                 setPage(1);
               }}
             >
-              <option value="">All statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="">{t("common.allStatuses")}</option>
+              <option value="ACTIVE">{t("common.active")}</option>
+              <option value="INACTIVE">{t("common.inactive")}</option>
             </select>
           </label>
 
           {showFarm ? (
             <label className="filters__field">
-              <span className="visually-hidden">Farm</span>
+              <span className="visually-hidden">{t("common.farm")}</span>
               <select
                 className="input select"
                 value={farmId}
@@ -153,7 +155,7 @@ export function WorkersPage(): React.ReactElement {
                   setPage(1);
                 }}
               >
-                <option value="">All farms</option>
+                <option value="">{t("common.allFarms")}</option>
                 {(farms.data ?? []).map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.code} — {farm.name}
@@ -175,11 +177,11 @@ export function WorkersPage(): React.ReactElement {
         ) : rows.length === 0 ? (
           <div className="panel__pad">
             <EmptyState
-              title={filtered ? "No matches" : "No workers yet"}
+              title={filtered ? t("workers.noMatches.title") : t("workers.noWorkers.title")}
               description={
                 filtered
-                  ? "Try a different name, status or farm."
-                  : "Add the first worker to start recording attendance."
+                  ? t("workers.noMatches.description")
+                  : t("workers.noWorkers.description")
               }
               {...(filtered
                 ? {
@@ -192,7 +194,7 @@ export function WorkersPage(): React.ReactElement {
                           setFarmId("");
                         }}
                       >
-                        Clear filters
+                        {t("common.clearFilters")}
                       </Button>
                     ),
                   }
@@ -210,9 +212,9 @@ export function WorkersPage(): React.ReactElement {
                         type="button"
                         className={`table__sort-btn ${sortBy === "workerId" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("workerId")}
-                        title="Sort by Worker ID"
+                        title={t("workers.sortByWorkerID")}
                       >
-                        Worker ID
+                        {t("workers.workerID")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "workerId" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
@@ -223,39 +225,39 @@ export function WorkersPage(): React.ReactElement {
                         type="button"
                         className={`table__sort-btn ${sortBy === "name" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("name")}
-                        title="Sort by Name"
+                        title={t("workers.sortByName")}
                       >
-                        Name
+                        {t("common.name")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "name" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     </th>
-                    {showFarm ? <th scope="col">Farm</th> : null}
+                    {showFarm ? <th scope="col">{t("common.farm")}</th> : null}
                     <th scope="col">
                       <button
                         type="button"
                         className={`table__sort-btn ${sortBy === "status" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("status")}
-                        title="Sort by Status"
+                        title={t("workers.sortByStatus")}
                       >
-                        Status
+                        {t("common.status")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     </th>
-                    {can("worker:delete") ? <th scope="col">Actions</th> : null}
+                    {can("worker:delete") ? <th scope="col">{t("common.actions")}</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((worker) => (
                     <tr key={worker.id}>
                       {/* data-label feeds the row-as-card layout on phones. */}
-                      <td className="numeric" data-label="Worker ID">
+                      <td className="numeric" data-label={t("workers.workerID")}>
                         {worker.workerId}
                       </td>
-                      <td data-label="Name">
+                      <td data-label={t("common.name")}>
                         <Link
                           className="table__link"
                           to={`/workers/${worker.id}`}
@@ -269,22 +271,22 @@ export function WorkersPage(): React.ReactElement {
                         ) : null}
                       </td>
                       {showFarm ? (
-                        <td data-label="Farm">
+                        <td data-label={t("common.farm")}>
                           <span className="table__sub">{worker.farm.code}</span>
                           {worker.farm.name}
                         </td>
                       ) : null}
-                      <td data-label="Status">
+                      <td data-label={t("common.status")}>
                         <StatusTag status={worker.status} />
                       </td>
                       {can("worker:delete") ? (
-                        <td data-label="Actions">
+                        <td data-label={t("common.actions")}>
                           <Button
                             variant="danger"
                             onClick={() => setWorkerToDelete(worker)}
                             style={{ padding: "4px 8px", fontSize: "0.8125rem" }}
                           >
-                            Delete
+                            {t("common.delete")}
                           </Button>
                         </td>
                       ) : null}
@@ -324,27 +326,27 @@ export function WorkersPage(): React.ReactElement {
           onClose={() => setImportingExcel(false)}
           onSuccess={() => {
             workers.reload();
-            notify("success", "Worker import completed.");
+            notify("success", t("workers.importCompleted"));
           }}
         />
       ) : null}
 
       {workerToDelete ? (
         <ConfirmDialog
-          title={`Delete ${workerToDelete.name}?`}
-          description="This will permanently delete the worker and direct attendance records. This action cannot be undone."
-          confirmLabel="Delete worker"
+          title={t("workers.detail.deleteTitle", { name: workerToDelete.name })}
+          description={t("workers.detail.deleteDescription")}
+          confirmLabel={t("workers.detail.deleteConfirmLabel")}
           confirmVariant="danger"
           busy={deleteBusy}
           onConfirm={async () => {
             setDeleteBusy(true);
             try {
               await deleteWorker(workerToDelete.id);
-              notify("success", `${workerToDelete.name} deleted.`);
+              notify("success", t("workers.detail.deleteSuccess", { name: workerToDelete.name }));
               setWorkerToDelete(null);
               workers.reload();
             } catch (caught: any) {
-              notify("error", caught?.message || "Failed to delete worker.");
+              notify("error", caught?.message || t("workers.detail.failedToDelete"));
             } finally {
               setDeleteBusy(false);
             }

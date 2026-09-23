@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client.js";
 import { deleteWorker, fetchWorker, setWorkerActive } from "../../api/resources.js";
@@ -20,6 +21,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
 
 export function WorkerDetailPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { can } = useAuth();
@@ -47,12 +49,12 @@ export function WorkerDetailPage(): React.ReactElement {
 
     try {
       await deleteWorker(record.id);
-      notify("success", `${record.name} deleted.`);
+      notify("success", t("workers.detail.deleteSuccess", { name: record.name }));
       navigate("/workers");
     } catch (caught) {
       notify(
         "error",
-        caught instanceof ApiError ? caught.message : "Failed to delete worker.",
+        caught instanceof ApiError ? caught.message : t("workers.detail.failedToDelete"),
       );
       setDeleteBusy(false);
       setConfirmingDelete(false);
@@ -72,13 +74,15 @@ export function WorkerDetailPage(): React.ReactElement {
       worker.replace(updated);
       notify(
         "success",
-        active ? `${updated.name} deactivated.` : `${updated.name} reactivated.`,
+        active
+          ? t("workers.detail.deactivatedSuccess", { name: updated.name })
+          : t("workers.detail.reactivatedSuccess", { name: updated.name }),
       );
       setConfirmingStatus(false);
     } catch (caught) {
       notify(
         "error",
-        caught instanceof ApiError ? caught.message : "Something went wrong.",
+        caught instanceof ApiError ? caught.message : t("error.somethingWentWrong"),
       );
     } finally {
       setStatusBusy(false);
@@ -89,8 +93,8 @@ export function WorkerDetailPage(): React.ReactElement {
     return (
       <div className="stack">
         <PageHeader
-          title="Worker"
-          back={{ to: "/workers", label: "All workers" }}
+          title={t("workers.detail.title")}
+          back={{ to: "/workers", label: t("workers.detail.allWorkers") }}
         />
         <Panel>
           <CardSkeleton />
@@ -103,12 +107,12 @@ export function WorkerDetailPage(): React.ReactElement {
     return (
       <div className="stack">
         <PageHeader
-          title="Worker"
-          back={{ to: "/workers", label: "All workers" }}
+          title={t("workers.detail.title")}
+          back={{ to: "/workers", label: t("workers.detail.allWorkers") }}
         />
         <Panel>
           <ErrorState
-            error={worker.error ?? new ApiError(404, "Worker not found.")}
+            error={worker.error ?? new ApiError(404, t("error.workerNotFound"))}
             onRetry={worker.reload}
           />
         </Panel>
@@ -121,7 +125,7 @@ export function WorkerDetailPage(): React.ReactElement {
       <PageHeader
         eyebrow={`${record.farm.code} · ${record.farm.name}`}
         title={record.name}
-        back={{ to: "/workers", label: "All workers" }}
+        back={{ to: "/workers", label: t("workers.detail.allWorkers") }}
         actions={
           <>
             {can("attendance:view") ? (
@@ -129,7 +133,7 @@ export function WorkerDetailPage(): React.ReactElement {
                 className="button button--secondary"
                 to={`/attendance?workerId=${record.id}`}
               >
-                Attendance
+                {t("common.attendance")}
               </Link>
             ) : null}
             {can("worker:update") ? (
@@ -139,7 +143,7 @@ export function WorkerDetailPage(): React.ReactElement {
                   setEditing(true);
                 }}
               >
-                Edit
+                {t("common.edit")}
               </Button>
             ) : null}
             {canToggle ? (
@@ -149,7 +153,7 @@ export function WorkerDetailPage(): React.ReactElement {
                   setConfirmingStatus(true);
                 }}
               >
-                {active ? "Deactivate" : "Reactivate"}
+                {active ? t("common.deactivate") : t("common.reactivate")}
               </Button>
             ) : null}
             {can("worker:delete") ? (
@@ -159,7 +163,7 @@ export function WorkerDetailPage(): React.ReactElement {
                   setConfirmingDelete(true);
                 }}
               >
-                Delete
+                {t("common.delete")}
               </Button>
             ) : null}
           </>
@@ -167,7 +171,7 @@ export function WorkerDetailPage(): React.ReactElement {
       />
 
       <div className="split">
-        <Panel title="Record">
+        <Panel title={t("workers.detail.recordPanel")}>
           {record.photoUrl ? (
             <div style={{ marginBottom: 16, textAlign: "center" }}>
               <img
@@ -186,30 +190,29 @@ export function WorkerDetailPage(): React.ReactElement {
           <DetailList
             items={[
               {
-                label: "Worker ID",
+                label: t("workers.workerID"),
                 value: <span className="numeric">{record.workerId}</span>,
               },
               {
-                label: "Farm",
+                label: t("common.farm"),
                 value: `${record.farm.code} — ${record.farm.name}`,
               },
               {
-                label: "Phone",
+                label: t("common.phone"),
                 value: record.phone ? (
                   <span className="numeric">{record.phone}</span>
                 ) : (
-                  <span className="muted">Not recorded</span>
+                  <span className="muted">{t("common.notRecorded")}</span>
                 ),
               },
-              { label: "Status", value: <StatusTag status={record.status} /> },
+              { label: t("common.status"), value: <StatusTag status={record.status} /> },
             ]}
           />
         </Panel>
 
-        <Panel title="App access">
+        <Panel title={t("workers.detail.appAccessPanel")}>
           <p className="panel__text">
-            Workers are recorded for attendance only. They do not have a login
-            and cannot sign in to the app.
+            {t("workers.detail.appAccessText")}
           </p>
         </Panel>
       </div>
@@ -223,20 +226,20 @@ export function WorkerDetailPage(): React.ReactElement {
           onSaved={(updated) => {
             worker.replace(updated);
             setEditing(false);
-            notify("success", "Worker updated.");
+            notify("success", t("workers.detail.updateSuccess"));
           }}
         />
       ) : null}
 
       {confirmingStatus ? (
         <ConfirmDialog
-          title={active ? "Deactivate worker?" : "Reactivate worker?"}
+          title={active ? t("workers.detail.deactivateTitle") : t("workers.detail.reactivateTitle")}
           description={
             active
-              ? `${record.name} stays on record but is marked inactive and drops off attendance entry.`
-              : `${record.name} goes back to active and can be marked in attendance again.`
+              ? t("workers.detail.deactivateDescription", { name: record.name })
+              : t("workers.detail.reactivateDescription", { name: record.name })
           }
-          confirmLabel={active ? "Deactivate" : "Reactivate"}
+          confirmLabel={active ? t("common.deactivate") : t("common.reactivate")}
           confirmVariant={active ? "danger" : "primary"}
           busy={statusBusy}
           onConfirm={() => {
@@ -250,9 +253,9 @@ export function WorkerDetailPage(): React.ReactElement {
 
       {confirmingDelete && record ? (
         <ConfirmDialog
-          title={`Delete ${record.name}?`}
-          description="This will permanently delete the worker and direct attendance records. This action cannot be undone."
-          confirmLabel="Delete worker"
+          title={t("workers.detail.deleteTitle", { name: record.name })}
+          description={t("workers.detail.deleteDescription")}
+          confirmLabel={t("workers.detail.deleteConfirmLabel")}
           confirmVariant="danger"
           busy={deleteBusy}
           onConfirm={() => {

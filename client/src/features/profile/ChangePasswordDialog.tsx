@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { changePassword } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
@@ -14,6 +15,7 @@ interface ChangePasswordDialogProps {
 export function ChangePasswordDialog({
   onClose,
 }: ChangePasswordDialogProps): React.ReactElement {
+  const { t } = useTranslation();
   const { setSession } = useAuth();
   const { notify } = useToast();
 
@@ -30,7 +32,7 @@ export function ChangePasswordDialog({
     if (newPassword.length < 8) {
       setError(
         new ApiError(400, "Validation error", {
-          newPassword: ["New password must be at least 8 characters"],
+          newPassword: [t("profile.changePasswordDialog.validationTooShort")],
         }),
       );
       return;
@@ -39,7 +41,7 @@ export function ChangePasswordDialog({
     if (newPassword !== confirmPassword) {
       setError(
         new ApiError(400, "Validation error", {
-          confirmPassword: ["Passwords do not match"],
+          confirmPassword: [t("profile.changePasswordDialog.validationMismatch")],
         }),
       );
       return;
@@ -53,13 +55,13 @@ export function ChangePasswordDialog({
       if (response.user) {
         setSession(response.user);
       }
-      notify("success", "Password changed successfully.");
+      notify("success", t("profile.changePasswordDialog.changedSuccess"));
       onClose();
     } catch (caught) {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "Something went wrong."),
+          : new ApiError(0, t("error.somethingWentWrong")),
       );
     } finally {
       setBusy(false);
@@ -68,8 +70,8 @@ export function ChangePasswordDialog({
 
   return (
     <Dialog
-      title="Change password"
-      description="Enter your current password and choose a new password with at least 8 characters."
+      title={t("profile.changePasswordDialog.title")}
+      description={t("profile.changePasswordDialog.description")}
       onClose={onClose}
     >
       <form className="dialog__form" onSubmit={handleSubmit} noValidate>
@@ -77,7 +79,7 @@ export function ChangePasswordDialog({
 
         <TextField
           id="current-password"
-          label="Current password"
+          label={t("profile.changePasswordDialog.currentPassword")}
           type={showPasswords ? "text" : "password"}
           autoComplete="current-password"
           required
@@ -90,12 +92,12 @@ export function ChangePasswordDialog({
 
         <TextField
           id="new-password"
-          label="New password"
+          label={t("profile.changePasswordDialog.newPassword")}
           type={showPasswords ? "text" : "password"}
           autoComplete="new-password"
           required
           value={newPassword}
-          hint="Must be at least 8 characters long."
+          hint={t("profile.changePasswordDialog.newPasswordHint")}
           errors={error?.fieldErrors.newPassword}
           onChange={(event) => {
             setNewPassword(event.target.value);
@@ -104,7 +106,7 @@ export function ChangePasswordDialog({
 
         <TextField
           id="confirm-password"
-          label="Confirm new password"
+          label={t("profile.changePasswordDialog.confirmNewPassword")}
           type={showPasswords ? "text" : "password"}
           autoComplete="new-password"
           required
@@ -127,16 +129,18 @@ export function ChangePasswordDialog({
             }}
             onClick={() => setShowPasswords(!showPasswords)}
           >
-            {showPasswords ? "Hide passwords" : "Show passwords"}
+            {showPasswords
+              ? t("profile.changePasswordDialog.hidePasswords")
+              : t("profile.changePasswordDialog.showPasswords")}
           </button>
         </div>
 
         <div className="dialog__footer">
           <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="primary" busy={busy}>
-            Update password
+            {t("profile.changePasswordDialog.updateButton")}
           </Button>
         </div>
       </form>

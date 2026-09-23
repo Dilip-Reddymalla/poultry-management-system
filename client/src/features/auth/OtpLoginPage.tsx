@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   requestOtp,
@@ -13,6 +14,7 @@ import { useAuth } from "../../auth/use-auth.js";
 import { EggIcon } from "../../components/icons.js";
 import { PhoneField } from "../../components/PhoneField.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 
 type Step =
@@ -20,13 +22,8 @@ type Step =
   | { name: "otp" }
   | { name: "select"; selectionToken: string; accounts: PhoneAccount[] };
 
-function toApiError(caught: unknown): ApiError {
-  return caught instanceof ApiError
-    ? caught
-    : new ApiError(0, "Something went wrong.");
-}
-
 export function OtpLoginPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { setSession } = useAuth();
   const navigate = useNavigate();
 
@@ -36,6 +33,12 @@ export function OtpLoginPage(): React.ReactElement {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function toApiError(caught: unknown): ApiError {
+    return caught instanceof ApiError
+      ? caught
+      : new ApiError(0, t("error.somethingWentWrong"));
+  }
 
   async function handleSendOtp(): Promise<void> {
     setBusy(true);
@@ -137,41 +140,44 @@ export function OtpLoginPage(): React.ReactElement {
     <div className="signin signin--single">
       <main className="signin__main">
         <div className="signin__form">
-          <div className="signin__brand signin__brand--dark">
-            <EggIcon className="signin__mark" />
-            <span>
-              Poultry<strong>Ops</strong>
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div className="signin__brand signin__brand--dark" style={{ margin: 0 }}>
+              <EggIcon className="signin__mark" />
+              <span>
+                Poultry<strong>Ops</strong>
+              </span>
+            </div>
+            <LanguageSwitcher />
           </div>
 
           <OfflineNotice />
 
           {step.name === "phone" ? (
             <form onSubmit={handlePhoneSubmit} className="stack" noValidate>
-              <h1 className="signin__title">Sign in with your phone</h1>
+              <h1 className="signin__title">{t("auth.otpLogin.title")}</h1>
               <p className="signin__subtitle">
-                Log in with your password, or enter your number to receive an SMS code.
+                {t("auth.otpLogin.subtitle")}
               </p>
 
               <FormAlert error={error} />
 
               <PhoneField
                 id="phone"
-                label="Phone number"
+                label={t("auth.otpLogin.phoneNumber")}
                 required
                 value={phone}
-                hint="Select country code and enter your registered mobile number."
+                hint={t("auth.otpLogin.phoneHint")}
                 errors={error?.fieldErrors.phone}
                 onChange={(val) => setPhone(val)}
               />
 
               <TextField
                 id="phone-password"
-                label="Password (optional if using OTP)"
+                label={t("auth.otpLogin.passwordOptional")}
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                hint="Enter your password to sign in immediately, or leave blank to receive an OTP code."
+                hint={t("auth.otpLogin.passwordHint")}
                 errors={error?.fieldErrors.password}
                 onChange={(event) => {
                   setPassword(event.target.value);
@@ -180,13 +186,13 @@ export function OtpLoginPage(): React.ReactElement {
 
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.25rem" }}>
                 <Link to="/forgot-password" style={{ fontSize: "0.85rem" }}>
-                  Forgot password?
+                  {t("auth.otpLogin.forgotPassword")}
                 </Link>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <Button type="submit" variant="primary" busy={busy}>
-                  {password.trim() ? "Sign in with password" : "Send OTP code"}
+                  {password.trim() ? t("auth.otpLogin.signInWithPassword") : t("auth.otpLogin.sendOtpCode")}
                 </Button>
                 {password.trim() ? (
                   <Button
@@ -197,7 +203,7 @@ export function OtpLoginPage(): React.ReactElement {
                       void handleSendOtp();
                     }}
                   >
-                    Send OTP code instead
+                    {t("auth.otpLogin.sendOtpInstead")}
                   </Button>
                 ) : null}
               </div>
@@ -206,16 +212,16 @@ export function OtpLoginPage(): React.ReactElement {
 
           {step.name === "otp" ? (
             <form onSubmit={handleVerifyOtp} className="stack" noValidate>
-              <h1 className="signin__title">Enter your code</h1>
+              <h1 className="signin__title">{t("auth.otpLogin.enterCodeTitle")}</h1>
               <p className="signin__subtitle">
-                Sent to <span className="numeric">{phone}</span>.
+                {t("auth.otpLogin.sentTo")} <span className="numeric">{phone}</span>.
               </p>
 
               <FormAlert error={error} />
 
               <TextField
                 id="otp"
-                label="Six-digit code"
+                label={t("auth.otpLogin.sixDigitCode")}
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
@@ -229,7 +235,7 @@ export function OtpLoginPage(): React.ReactElement {
               />
 
               <Button type="submit" variant="primary" busy={busy}>
-                Verify and sign in
+                {t("auth.otpLogin.verifyAndSignIn")}
               </Button>
 
               <button
@@ -241,16 +247,16 @@ export function OtpLoginPage(): React.ReactElement {
                   setStep({ name: "phone" });
                 }}
               >
-                Use a different number
+                {t("auth.otpLogin.useDifferentNumber")}
               </button>
             </form>
           ) : null}
 
           {step.name === "select" ? (
             <div className="stack">
-              <h1 className="signin__title">Choose an account</h1>
+              <h1 className="signin__title">{t("auth.otpLogin.chooseAccount")}</h1>
               <p className="signin__subtitle">
-                This number is linked to more than one account.
+                {t("auth.otpLogin.multipleAccounts")}
               </p>
 
               <FormAlert error={error} />
@@ -279,7 +285,7 @@ export function OtpLoginPage(): React.ReactElement {
           ) : null}
 
           <p className="signin__alt">
-            <Link to="/login">Sign in with email and password instead</Link>
+            <Link to="/login">{t("auth.otpLogin.signInWithEmail")}</Link>
           </p>
         </div>
       </main>

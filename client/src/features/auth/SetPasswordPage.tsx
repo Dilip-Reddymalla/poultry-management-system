@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { setPassword } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { EggIcon } from "../../components/icons.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 
 const MIN_LENGTH = 8;
@@ -16,6 +18,7 @@ const MIN_LENGTH = 8;
  * succeeds, so there is no way around this screen — it is not just a redirect.
  */
 export function SetPasswordPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { user, setSession } = useAuth();
   const navigate = useNavigate();
 
@@ -49,7 +52,7 @@ export function SetPasswordPage(): React.ReactElement {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "Something went wrong."),
+          : new ApiError(0, t("error.somethingWentWrong")),
       );
     } finally {
       setBusy(false);
@@ -60,34 +63,37 @@ export function SetPasswordPage(): React.ReactElement {
     <div className="signin signin--single">
       <main className="signin__main">
         <div className="signin__form">
-          <div className="signin__brand signin__brand--dark">
-            <EggIcon className="signin__mark" />
-            <span>
-              Poultry<strong>Ops</strong>
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div className="signin__brand signin__brand--dark" style={{ margin: 0 }}>
+              <EggIcon className="signin__mark" />
+              <span>
+                Poultry<strong>Ops</strong>
+              </span>
+            </div>
+            <LanguageSwitcher />
           </div>
 
           <OfflineNotice />
 
           <form onSubmit={handleSubmit} className="stack" noValidate>
-            <h1 className="signin__title">Set your password</h1>
+            <h1 className="signin__title">{t("auth.setPassword.title")}</h1>
             <p className="signin__subtitle">
-              Welcome{user ? `, ${user.employee.name}` : ""}. Choose a password
-              to finish setting up your account. You will use it with a phone
-              code from now on.
+              {t("auth.setPassword.subtitle", {
+                name: user ? `, ${user.employee.name}` : "",
+              })}
             </p>
 
             <FormAlert error={error} />
 
             <TextField
               id="new-password"
-              label="New password"
+              label={t("auth.setPassword.newPassword")}
               type="password"
               autoComplete="new-password"
               required
               minLength={MIN_LENGTH}
               value={password}
-              hint={`At least ${MIN_LENGTH} characters.`}
+              hint={t("auth.setPassword.passwordHint", { count: MIN_LENGTH })}
               errors={error?.fieldErrors.password}
               onChange={(event) => {
                 setPasswordValue(event.target.value);
@@ -97,12 +103,12 @@ export function SetPasswordPage(): React.ReactElement {
 
             <TextField
               id="confirm-password"
-              label="Confirm password"
+              label={t("auth.setPassword.confirmPassword")}
               type="password"
               autoComplete="new-password"
               required
               value={confirm}
-              errors={mismatch ? ["The two passwords do not match."] : undefined}
+              errors={mismatch ? [t("auth.setPassword.mismatchError")] : undefined}
               onChange={(event) => {
                 setConfirm(event.target.value);
                 setMismatch(false);
@@ -110,7 +116,7 @@ export function SetPasswordPage(): React.ReactElement {
             />
 
             <Button type="submit" variant="primary" busy={busy}>
-              Set password and continue
+              {t("auth.setPassword.submitButton")}
             </Button>
           </form>
         </div>

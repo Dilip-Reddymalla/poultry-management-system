@@ -31,6 +31,7 @@ import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
 import { MarkUnmarkedAbsentDialog } from "./MarkUnmarkedAbsentDialog.js";
+import { useTranslation } from "react-i18next";
 import { AttendanceAvatar } from "./AttendanceDashboardPage.js";
 
 const PAGE_SIZE = 50;
@@ -42,6 +43,7 @@ export function AttendancePage({
   employeeId?: string;
   workerId?: string;
 } = {}): React.ReactElement {
+  const { t } = useTranslation();
   const { can, user } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
@@ -115,30 +117,30 @@ export function AttendancePage({
 
   function handleSaved(): void {
     setCreating(false);
-    notify("success", "Attendance recorded.");
+    notify("success", t("attendance.recorded"));
     attendance.reload();
   }
 
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Operations"
-        title="Attendance"
+        eyebrow={t("attendance.pageEyebrow")}
+        title={t("attendance.pageTitle")}
         description={
           personMode
-            ? "Every record on file for this person."
-            : "The day's roster. Colour shows who is present, absent, or off."
+            ? t("attendance.pageDescriptionPerson")
+            : t("attendance.pageDescriptionRoster")
         }
         actions={
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            {/*user?.role === "ACCOUNTANT" || user?.role === "SYSTEM_ADMIN" || */can("report:export") ? (
+            {can("report:export") ? (
               <Button
                 variant="secondary"
                 onClick={() => {
                   setExporting(true);
                 }}
               >
-                Export Excel
+                {t("common.exportExcel")}
               </Button>
             ) : null}
             {can("attendance:create") ? (
@@ -149,7 +151,7 @@ export function AttendancePage({
                     navigate("/attendance/face");
                   }}
                 >
-                  🎯 Face Attendance
+                  🎯 {t("attendance.faceAttendance")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -157,7 +159,7 @@ export function AttendancePage({
                     setBulkCreating(true);
                   }}
                 >
-                  Bulk mark
+                  {t("attendance.bulkMark")}
                 </Button>
                 <Button
                   variant="secondary"
@@ -165,9 +167,9 @@ export function AttendancePage({
                     setMarkingUnmarkedAbsent(true);
                   }}
                   style={{ color: "var(--rust, #b91c1c)" }}
-                  title="Mark all unmarked personnel as absent for a shift"
+                  title={t("attendance.markUnmarkedAbsent")}
                 >
-                  ⚠️ Mark Unmarked Absent
+                  ⚠️ {t("attendance.markUnmarkedAbsent")}
                 </Button>
                 <Button
                   variant="primary"
@@ -176,7 +178,7 @@ export function AttendancePage({
                   }}
                 >
                   <PlusIcon className="button__icon" />
-                  Record attendance
+                  {t("attendance.recordAttendance")}
                 </Button>
               </>
             ) : null}
@@ -186,9 +188,9 @@ export function AttendancePage({
 
       {personMode ? (
         <div className="notice">
-          <span>Showing one person's history.</span>
+          <span>{t("attendance.personHistory")}</span>
           <Link className="notice__link" to="/attendance">
-            Back to the roster
+            {t("attendance.backToRoster")}
           </Link>
         </div>
       ) : null}
@@ -197,11 +199,11 @@ export function AttendancePage({
         <div className="filters">
           {!personMode ? (
             <label className="filters__field">
-              <span className="visually-hidden">Date</span>
+              <span className="visually-hidden">{t("attendance.date")}</span>
               <input
                 type="date"
                 className="input"
-                aria-label="Attendance date"
+                aria-label={t("attendance.date")}
                 value={date}
                 onChange={(event) => {
                   setDate(event.target.value);
@@ -213,7 +215,7 @@ export function AttendancePage({
 
           {showFarm && !personMode ? (
               <label className="filters__field">
-                <span className="visually-hidden">Farm</span>
+                <span className="visually-hidden">{t("common.farm")}</span>
                 <select
                   className="input select"
                   value={farmId}
@@ -222,7 +224,7 @@ export function AttendancePage({
                     setPage(1);
                   }}
                 >
-                  <option value="">All farms</option>
+                  <option value="">{t("common.allFarms")}</option>
                   {(farms.data ?? []).map((farm) => (
                     <option key={farm.id} value={farm.id}>
                       {farm.code} — {farm.name}
@@ -233,7 +235,7 @@ export function AttendancePage({
             ) : null}
 
             <label className="filters__field">
-              <span className="visually-hidden">Shift</span>
+              <span className="visually-hidden">{t("attendance.shift")}</span>
               <select
                 className="input select"
                 value={shift}
@@ -242,7 +244,7 @@ export function AttendancePage({
                   setPage(1);
                 }}
               >
-                <option value="">All shifts</option>
+                <option value="">{t("attendance.allShifts")}</option>
                 {SHIFTS.map((value) => (
                   <option key={value} value={value}>
                     {statusLabel(value)}
@@ -252,7 +254,7 @@ export function AttendancePage({
             </label>
 
             <label className="filters__field">
-              <span className="visually-hidden">Status</span>
+              <span className="visually-hidden">{t("common.status")}</span>
               <select
                 className="input select"
                 value={status}
@@ -261,7 +263,7 @@ export function AttendancePage({
                   setPage(1);
                 }}
               >
-                <option value="">All statuses</option>
+                <option value="">{t("common.allStatuses")}</option>
                 {ATTENDANCE_STATUSES.map((value) => (
                   <option key={value} value={value}>
                     {statusLabel(value)}
@@ -270,11 +272,11 @@ export function AttendancePage({
               </select>
             </label>
             <label className="filters__field">
-              <span className="visually-hidden">Search</span>
+              <span className="visually-hidden">{t("common.search")}</span>
               <input
                 type="text"
                 className="input"
-                placeholder="Search..."
+                placeholder={`${t("common.search")}...`}
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -297,17 +299,17 @@ export function AttendancePage({
             <EmptyState
               title={
                 personMode
-                  ? "No records yet"
+                  ? t("attendance.noRecordsYet.title")
                   : status
-                    ? "No one with this status"
-                    : "Nothing recorded for this day"
+                    ? t("attendance.noOneWithStatus.title")
+                    : t("attendance.nothingForDay.title")
               }
               description={
                 personMode
-                  ? "Attendance recorded for this person will appear here."
+                  ? t("attendance.noRecordsYet.description")
                   : status
-                    ? "Clear the status filter to see the rest of the roster."
-                    : "Use Record attendance to mark the first person for this day."
+                    ? t("attendance.noOneWithStatus.description")
+                    : t("attendance.nothingForDay.description")
               }
               {...(can("attendance:create") && !personMode
                 ? {
@@ -318,7 +320,7 @@ export function AttendancePage({
                           setCreating(true);
                         }}
                       >
-                        Record attendance
+                        {t("attendance.recordAttendance")}
                       </Button>
                     ),
                   }
@@ -331,21 +333,21 @@ export function AttendancePage({
               <table className="table">
                 <thead>
                   <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Person</th>
-                    {showFarm ? <th scope="col">Farm</th> : null}
-                    <th scope="col">Shed</th>
-                    <th scope="col">Shift</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">GPS Location</th>
-                    <th scope="col">Approval</th>
+                    <th scope="col">{t("attendance.date")}</th>
+                    <th scope="col">{t("attendance.person")}</th>
+                    {showFarm ? <th scope="col">{t("common.farm")}</th> : null}
+                    <th scope="col">{t("attendance.shed")}</th>
+                    <th scope="col">{t("attendance.shift")}</th>
+                    <th scope="col">{t("common.status")}</th>
+                    <th scope="col">{t("attendance.gpsLocation")}</th>
+                    <th scope="col">{t("attendance.approval")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((record) => (
                     <tr key={record.id}>
                       {/* data-label feeds the row-as-card layout on phones. */}
-                      <td className="numeric" data-label="Date">
+                      <td className="numeric" data-label={t("attendance.date")}>
                         <Link
                           className="table__link"
                           to={`/attendance/${record.id}`}
@@ -353,7 +355,7 @@ export function AttendancePage({
                           {formatDate(record.date)}
                         </Link>
                       </td>
-                      <td data-label="Person">
+                      <td data-label={t("attendance.person")}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                           <AttendanceAvatar
                             photoUrl={record.person.photoUrl}
@@ -365,29 +367,29 @@ export function AttendancePage({
                             <div>{record.person.name}</div>
                             <span className="table__sub numeric">
                               {record.person.type === "EMPLOYEE"
-                                ? "Employee"
-                                : "Worker"}{" "}
+                                ? t("attendance.employee")
+                                : t("attendance.worker")}{" "}
                               · {record.person.code}
                             </span>
                           </div>
                         </div>
                       </td>
                       {showFarm ? (
-                        <td data-label="Farm">
+                        <td data-label={t("common.farm")}>
                           <span className="table__sub">{record.farm.code}</span>
                           {record.farm.name}
                         </td>
                       ) : null}
-                      <td data-label="Shed">
-                        {record.shed?.number ? `Shed ${record.shed.number}` : <span className="muted">—</span>}
+                      <td data-label={t("attendance.shed")}>
+                        {record.shed?.number ? t("attendance.shedNumber", { number: record.shed.number }) : <span className="muted">—</span>}
                       </td>
-                      <td data-label="Shift">
+                      <td data-label={t("attendance.shift")}>
                         {statusLabel(record.shift)}
                       </td>
-                      <td data-label="Status">
+                      <td data-label={t("common.status")}>
                         <StatusTag status={record.status} />
                       </td>
-                      <td className="numeric" data-label="GPS Location">
+                      <td className="numeric" data-label={t("attendance.gpsLocation")}>
                         {record.latitude != null && record.longitude != null ? (
                           <span title={`${record.latitude}, ${record.longitude}`}>
                             📍 {record.latitude.toFixed(4)}, {record.longitude.toFixed(4)}
@@ -396,11 +398,11 @@ export function AttendancePage({
                           <span className="muted">—</span>
                         )}
                       </td>
-                      <td data-label="Approval">
+                      <td data-label={t("attendance.approval")}>
                         {record.approvedAt ? (
-                          "Approved"
+                          t("common.approved")
                         ) : (
-                          <span className="muted">Pending</span>
+                          <span className="muted">{t("common.pending")}</span>
                         )}
                       </td>
                     </tr>

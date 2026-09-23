@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { Shed } from "../api/types.js";
 import { formatNumber, statusLabel, statusTone } from "../lib/display.js";
 
@@ -62,11 +63,12 @@ export function ShedStrip({
 }
 
 export function ShedLegend(): React.ReactElement {
+  const { t } = useTranslation();
   const entries = [
-    { tone: "running", label: "Available" },
-    { tone: "busy", label: "Occupied" },
-    { tone: "attention", label: "Maintenance" },
-    { tone: "idle", label: "Inactive" },
+    { tone: "running", label: t("sheds.available") },
+    { tone: "busy", label: t("sheds.occupied") },
+    { tone: "attention", label: t("sheds.maintenance") },
+    { tone: "idle", label: t("common.inactive") },
   ];
 
   return (

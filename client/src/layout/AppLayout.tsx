@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 import { useAuth } from "../auth/use-auth.js";
 import { MenuIcon, SignOutIcon } from "../components/icons.js";
 import { Button } from "../components/ui.js";
 import { useToast } from "../components/use-toast.js";
+import { LanguageSwitcher } from "../i18n/LanguageSwitcher.js";
 import { initials } from "../lib/display.js";
 import { InstallButton } from "../pwa/InstallButton.js";
 import { OfflineNotice } from "../pwa/OfflineNotice.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function AppLayout(): React.ReactElement {
+  const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
@@ -42,7 +46,7 @@ export function AppLayout(): React.ReactElement {
       <button
         type="button"
         className="shell__scrim"
-        aria-label="Close menu"
+        aria-label={t("nav.closeMenu")}
         onClick={() => {
           setDrawerOpen(false);
         }}
@@ -58,10 +62,12 @@ export function AppLayout(): React.ReactElement {
             }}
           >
             <MenuIcon />
-            <span className="visually-hidden">Menu</span>
+            <span className="visually-hidden">{t("nav.menu")}</span>
           </button>
 
           <div className="topbar__spacer" />
+
+          <LanguageSwitcher />
 
           <InstallButton />
 
@@ -79,10 +85,10 @@ export function AppLayout(): React.ReactElement {
             variant="ghost"
             onClick={handleSignOut}
             busy={signingOut}
-            aria-label="Sign out"
+            aria-label={t("nav.signOut")}
           >
             <SignOutIcon className="button__icon" />
-            <span className="button__label">Sign out</span>
+            <span className="button__label">{t("nav.signOut")}</span>
           </Button>
         </header>
 

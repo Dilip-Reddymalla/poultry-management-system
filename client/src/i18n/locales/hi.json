@@ -1,0 +1,418 @@
+{
+  "_meta": {
+    "language": "Hindi",
+    "code": "hi",
+    "note": "Source-of-truth file. Every key here must exist in te.json and hi.json."
+  },
+  "common": {
+    "appName": "PoultryOps",
+    "loading": "लोड हो रहा है",
+    "tryAgain": "फिर कोशिश करें",
+    "cancel": "रद्द करें",
+    "save": "सेव करें",
+    "edit": "एडिट करें",
+    "delete": "डिलीट करें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "next": "आगे",
+    "previous": "पिछला",
+    "search": "खोजें",
+    "clearFilters": "फिल्टर हटाएँ",
+    "allStatuses": "सभी स्टेटस",
+    "active": "एक्टिव",
+    "inactive": "इनएक्टिव",
+    "status": "स्टेटस",
+    "name": "नाम",
+    "phone": "फोन",
+    "email": "ईमेल",
+    "farm": "फार्म",
+    "allFarms": "सभी फार्म",
+    "actions": "एक्शन",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "notRecorded": "रिकॉर्ड नहीं है",
+    "signedInAs": "इस अकाउंट से लॉगिन है",
+    "internalUseOnly": "सिर्फ अंदरूनी इस्तेमाल के लिए",
+    "importExcel": "Excel से इम्पोर्ट करें",
+    "exportExcel": "Excel में एक्सपोर्ट करें",
+    "showPasswords": "पासवर्ड दिखाएँ",
+    "hidePasswords": "पासवर्ड छिपाएँ",
+    "deactivate": "डीएक्टिवेट करें",
+    "reactivate": "फिर से एक्टिवेट करें",
+    "attendance": "हाजिरी",
+    "pending": "पेंडिंग",
+    "approved": "मंजूर",
+    "of": "में"
+  },
+  "error": {
+    "notAvailableToRole": "आपके रोल में यह सुविधा नहीं है",
+    "couldNotLoad": "लोड नहीं हो पाया",
+    "somethingWentWrong": "कुछ गड़बड़ हो गई।",
+    "workerNotFound": "वर्कर नहीं मिला।",
+    "farmNotFound": "फार्म नहीं मिला।",
+    "shedNotFound": "शेड नहीं मिला।"
+  },
+  "offline": {
+    "notice": "नेटवर्क कनेक्शन नहीं है। नेटवर्क वापस आने तक रिकॉर्ड लोड या रिफ्रेश नहीं होंगे और बदलाव सेव नहीं किए जा सकेंगे।"
+  },
+  "pwa": {
+    "installApp": "ऐप इंस्टॉल करें"
+  },
+  "nav": {
+    "overview": "ओवरव्यू",
+    "companies": "कंपनियाँ",
+    "farms": "फार्म",
+    "sheds": "शेड",
+    "employees": "कर्मचारी",
+    "workers": "वर्कर",
+    "attDashboard": "हाजिरी डैशबोर्ड",
+    "attendanceList": "हाजिरी सूची",
+    "faceAttendance": "फेस अटेंडेंस",
+    "auditLogs": "ऑडिट लॉग",
+    "myProfile": "मेरी प्रोफाइल",
+    "menu": "मेन्यू",
+    "closeMenu": "मेन्यू बंद करें",
+    "signOut": "लॉग आउट करें"
+  },
+  "auth": {
+    "login": {
+      "title": "लॉगिन करें",
+      "subtitle": "अपने मैनेजर से मिला वर्क ईमेल डालकर लॉगिन करें।",
+      "email": "ईमेल",
+      "password": "पासवर्ड",
+      "forgotPassword": "पासवर्ड भूल गए?",
+      "signInButton": "लॉगिन करें",
+      "noPassword": "अभी पासवर्ड नहीं है?",
+      "signInWithPhone": "फोन से लॉगिन करें",
+      "tagline": "फार्म, शेड और उन्हें संभालने वाले लोग — सब एक ही जगह।",
+      "aboutLink": "PoultryOps के बारे में",
+      "analyticsLink": "पब्लिक एनालिटिक्स देखें",
+      "faceAiLink": "Face AI सैंडबॉक्स टेस्ट करें"
+    },
+    "otpLogin": {
+      "title": "फोन से लॉगिन करें",
+      "subtitle": "पासवर्ड से लॉगिन करें या अपना नंबर डालकर SMS कोड लें।",
+      "phoneNumber": "फोन नंबर",
+      "phoneHint": "कंट्री कोड चुनें और अपना रजिस्टर्ड मोबाइल नंबर डालें।",
+      "passwordOptional": "पासवर्ड (OTP इस्तेमाल करने पर जरूरी नहीं)",
+      "passwordHint": "तुरंत लॉगिन करने के लिए पासवर्ड डालें, या खाली छोड़कर OTP लें।",
+      "forgotPassword": "पासवर्ड भूल गए?",
+      "signInWithPassword": "पासवर्ड से लॉगिन करें",
+      "sendOtpCode": "OTP कोड भेजें",
+      "sendOtpInstead": "इसके बजाय OTP भेजें",
+      "enterCodeTitle": "कोड डालें",
+      "sentTo": "यहाँ भेजा गया",
+      "sixDigitCode": "6 अंकों का कोड",
+      "verifyAndSignIn": "वेरिफाई करके लॉगिन करें",
+      "useDifferentNumber": "दूसरा नंबर इस्तेमाल करें",
+      "chooseAccount": "अकाउंट चुनें",
+      "multipleAccounts": "इस नंबर से एक से ज्यादा अकाउंट जुड़े हैं।",
+      "signInWithEmail": "ईमेल और पासवर्ड से लॉगिन करें"
+    },
+    "forgotPassword": {
+      "resetTitle": "पासवर्ड रीसेट करें",
+      "resetSubtitle": "अपने अकाउंट से जुड़ा रजिस्टर्ड फोन नंबर डालें। OTP आएगा।",
+      "registeredPhone": "रजिस्टर्ड फोन नंबर",
+      "phoneHint": "कंट्री कोड चुनें और अपना मोबाइल नंबर डालें।",
+      "sendOtp": "OTP कोड भेजें",
+      "rememberPassword": "पासवर्ड याद है?",
+      "signIn": "लॉगिन करें",
+      "newPasswordTitle": "नया पासवर्ड बनाएँ",
+      "codeSentTo": "6 अंकों का वेरिफिकेशन कोड यहाँ भेजा गया है",
+      "sixDigitCode": "6 अंकों का कोड",
+      "workEmailOptional": "वर्क ईमेल (वैकल्पिक)",
+      "workEmailHint": "सिर्फ तब जरूरी है जब एक ही फोन नंबर कई कर्मचारी इस्तेमाल करते हों।",
+      "newPassword": "नया पासवर्ड",
+      "newPasswordHint": "कम से कम 8 अक्षर होने चाहिए।",
+      "confirmNewPassword": "नया पासवर्ड दोबारा डालें",
+      "resetPasswordButton": "पासवर्ड रीसेट करें",
+      "changePhoneNumber": "फोन नंबर बदलें",
+      "successTitle": "पासवर्ड रीसेट हो गया!",
+      "successSubtitle": "आपका पासवर्ड सफलतापूर्वक बदल गया है। अब नए पासवर्ड से लॉगिन कर सकते हैं।",
+      "signInNow": "अभी लॉगिन करें",
+      "validationPhoneRequired": "फोन नंबर डालें",
+      "validationOtpIncomplete": "पूरा 6 अंकों का OTP डालें",
+      "validationPasswordTooShort": "पासवर्ड कम से कम 8 अक्षरों का होना चाहिए",
+      "validationPasswordMismatch": "दोनों पासवर्ड एक जैसे नहीं हैं",
+      "errorSendingOtp": "वेरिफिकेशन कोड नहीं भेज पाए। फिर कोशिश करें।",
+      "errorResettingPassword": "पासवर्ड रीसेट नहीं हो पाया। OTP चेक करके फिर कोशिश करें।"
+    },
+    "setPassword": {
+      "title": "अपना पासवर्ड सेट करें",
+      "subtitle": "स्वागत है{{name}}। अकाउंट सेटअप पूरा करने के लिए पासवर्ड चुनें। अब से इसे फोन कोड के साथ इस्तेमाल करेंगे।",
+      "newPassword": "नया पासवर्ड",
+      "passwordHint": "कम से कम {{count}} अक्षर।",
+      "confirmPassword": "पासवर्ड दोबारा डालें",
+      "mismatchError": "दोनों पासवर्ड एक जैसे नहीं हैं।",
+      "submitButton": "पासवर्ड सेट करके आगे बढ़ें"
+    }
+  },
+  "dashboard": {
+    "eyebrow": "ओवरव्यू",
+    "title": "नमस्ते, {{name}}",
+    "description": "अभी फार्मों की स्थिति यहाँ देखें।",
+    "noAccess": {
+      "title": "अभी दिखाने के लिए कुछ नहीं है",
+      "description": "आपके रोल में कर्मचारी, फार्म या शेड देखने की अनुमति नहीं है। जरूरत हो तो मैनेजर से पूछें।"
+    },
+    "kpi": {
+      "activeEmployees": "एक्टिव कर्मचारी",
+      "activeEmployeesDetail": "आज रजिस्टर में हैं",
+      "activeFarms": "एक्टिव फार्म",
+      "activeFarmsDetail": "रिकॉर्ड में हैं",
+      "shedsAvailable": "उपलब्ध शेड",
+      "shedsAvailableDetail": "कुल {{total}} शेड में से",
+      "birdCapacity": "पक्षियों की क्षमता",
+      "birdCapacityDetail": "सभी शेड मिलाकर"
+    },
+    "shedBoard": {
+      "eyebrow": "शेड बोर्ड",
+      "title": "हर फार्म के शेड",
+      "noSheds": {
+        "title": "कोई शेड रिकॉर्ड नहीं है",
+        "description": "फार्म में शेड जोड़ते ही यहाँ दिखाई देगा।"
+      }
+    }
+  },
+  "workers": {
+    "pageEyebrow": "स्टाफ",
+    "pageTitle": "वर्कर",
+    "pageDescription": "हाजिरी के लिए दर्ज किए गए फील्ड स्टाफ। वर्कर ऐप में लॉगिन नहीं करते।",
+    "addWorker": "वर्कर जोड़ें",
+    "searchPlaceholder": "नाम, वर्कर ID या फोन से खोजें",
+    "searchAriaLabel": "वर्कर खोजें",
+    "workerID": "वर्कर ID",
+    "sortByWorkerID": "वर्कर ID के हिसाब से",
+    "sortByName": "नाम के हिसाब से",
+    "sortByStatus": "स्टेटस के हिसाब से",
+    "noMatches": {
+      "title": "कोई मैच नहीं मिला",
+      "description": "दूसरा नाम, स्टेटस या फार्म आज़माएँ।"
+    },
+    "noWorkers": {
+      "title": "अभी कोई वर्कर नहीं है",
+      "description": "हाजिरी दर्ज करना शुरू करने के लिए पहला वर्कर जोड़ें।"
+    },
+    "importCompleted": "वर्कर इम्पोर्ट पूरा हो गया।",
+    "detail": {
+      "title": "वर्कर",
+      "allWorkers": "सभी वर्कर",
+      "recordPanel": "रिकॉर्ड",
+      "appAccessPanel": "ऐप एक्सेस",
+      "appAccessText": "वर्कर सिर्फ हाजिरी के लिए दर्ज किए जाते हैं। उनका लॉगिन नहीं होता और वे ऐप में साइन इन नहीं कर सकते।",
+      "updateSuccess": "वर्कर की जानकारी अपडेट हो गई।",
+      "deleteSuccess": "{{name}} डिलीट हो गया।",
+      "deactivateTitle": "वर्कर को डीएक्टिवेट करें?",
+      "reactivateTitle": "वर्कर को फिर से एक्टिवेट करें?",
+      "deactivateDescription": "{{name}} रिकॉर्ड में रहेगा, लेकिन इनएक्टिव हो जाएगा और हाजिरी दर्ज करने की सूची में नहीं आएगा।",
+      "reactivateDescription": "{{name}} फिर से एक्टिव हो जाएगा और उसकी हाजिरी फिर दर्ज कर सकते हैं।",
+      "deleteTitle": "{{name}} को डिलीट करें?",
+      "deleteDescription": "वर्कर और उससे जुड़े हाजिरी रिकॉर्ड हमेशा के लिए डिलीट हो जाएंगे। इसे वापस नहीं किया जा सकता।",
+      "deleteConfirmLabel": "वर्कर डिलीट करें",
+      "deactivatedSuccess": "{{name}} डीएक्टिवेट हो गया।",
+      "reactivatedSuccess": "{{name}} फिर से एक्टिव हो गया।",
+      "failedToDelete": "वर्कर डिलीट नहीं हो पाया।"
+    }
+  },
+  "employees": {
+    "pageEyebrow": "स्टाफ",
+    "pageTitle": "कर्मचारी",
+    "pageDescription": "रजिस्टर में दर्ज सभी लोग और उनकी काम की जिम्मेदारी।",
+    "addEmployee": "कर्मचारी जोड़ें",
+    "searchPlaceholder": "नाम, कर्मचारी ID या फोन से खोजें",
+    "searchAriaLabel": "कर्मचारी खोजें",
+    "employeeID": "कर्मचारी ID",
+    "designation": "पद",
+    "allDesignations": "सभी पद",
+    "joined": "जुड़ने की तारीख",
+    "login": "लॉगिन",
+    "sortByEmployeeID": "कर्मचारी ID के हिसाब से",
+    "sortByName": "नाम के हिसाब से",
+    "sortByLogin": "लॉगिन एक्सेस के हिसाब से",
+    "sortByStatus": "स्टेटस के हिसाब से",
+    "noMatches": {
+      "title": "कोई मैच नहीं मिला",
+      "description": "दूसरा नाम, स्टेटस या पद आज़माएँ।"
+    },
+    "noEmployees": {
+      "title": "अभी कोई कर्मचारी नहीं है",
+      "description": "रजिस्टर बनाना शुरू करने के लिए पहला कर्मचारी जोड़ें।"
+    },
+    "importCompleted": "कर्मचारी इम्पोर्ट पूरा हो गया।",
+    "deleteTitle": "{{name}} को डिलीट करें?",
+    "deleteDescription": "कर्मचारी, उसका लॉगिन अकाउंट और उससे जुड़े हाजिरी रिकॉर्ड हमेशा के लिए डिलीट हो जाएंगे। इसे वापस नहीं किया जा सकता।",
+    "deleteConfirmLabel": "कर्मचारी डिलीट करें",
+    "failedToDelete": "कर्मचारी डिलीट नहीं हो पाया।",
+    "detail": {
+      "title": "कर्मचारी",
+      "allEmployees": "सभी कर्मचारी"
+    }
+  },
+  "farms": {
+    "pageEyebrow": "साइट",
+    "pageTitle": "फार्म",
+    "pageDescription": "हर फार्म एक कंपनी का है और उसमें अपने शेड होते हैं।",
+    "addFarm": "फार्म जोड़ें",
+    "code": "कोड",
+    "company": "कंपनी",
+    "noFarmsWithStatus": {
+      "title": "इस स्टेटस वाला कोई फार्म नहीं है",
+      "description": "बाकी फार्म देखने के लिए स्टेटस फिल्टर बदलें।"
+    },
+    "noFarms": {
+      "title": "अभी कोई फार्म नहीं है",
+      "description": "पहले फार्म जोड़ें, फिर उसमें मौजूद शेड जोड़ें।"
+    },
+    "detail": {
+      "title": "फार्म",
+      "allFarms": "सभी फार्म",
+      "recordPanel": "रिकॉर्ड",
+      "farmCode": "फार्म कोड",
+      "companyCode": "कंपनी कोड",
+      "capacityPanel": "क्षमता",
+      "sheds": "शेड",
+      "available": "उपलब्ध",
+      "birdCapacity": "पक्षियों की क्षमता",
+      "shedBoardEyebrow": "शेड बोर्ड",
+      "shedBoardTitle": "इस फार्म के शेड",
+      "manageSheds": "शेड मैनेज करें",
+      "noSheds": {
+        "title": "इस फार्म में कोई शेड नहीं है",
+        "description": "क्षमता ट्रैक करने के लिए शेड लिस्ट से शेड जोड़ें।"
+      },
+      "deactivateTitle": "फार्म को डीएक्टिवेट करें?",
+      "reactivateTitle": "फार्म को फिर से एक्टिवेट करें?",
+      "deactivateDescription": "{{name}} को इनएक्टिव कर दिया जाएगा। इसके शेड रिकॉर्ड में रहेंगे।",
+      "reactivateDescription": "{{name}} फिर से एक्टिव हो जाएगा।",
+      "farmUpdated": "फार्म अपडेट हो गया।",
+      "deactivatedSuccess": "{{name}} डीएक्टिवेट हो गया।",
+      "reactivatedSuccess": "{{name}} फिर से एक्टिव हो गया।"
+    }
+  },
+  "sheds": {
+    "pageEyebrow": "शेड",
+    "pageTitle": "शेड",
+    "pageDescription": "हर फार्म के सभी शेड और उनकी क्षमता यहाँ देखें।",
+    "addShed": "शेड जोड़ें",
+    "capacity": "क्षमता",
+    "available": "उपलब्ध",
+    "occupied": "भरा हुआ",
+    "maintenance": "मेंटेनेंस",
+    "noShedsMatch": {
+      "title": "कोई शेड मैच नहीं मिला",
+      "description": "दूसरा फार्म या स्टेटस आज़माएँ।"
+    },
+    "noSheds": {
+      "title": "अभी कोई शेड नहीं है",
+      "description": "क्षमता ट्रैक करने के लिए फार्म में शेड जोड़ें।"
+    },
+    "addedSuccess": "शेड {{number}} जोड़ दिया गया।",
+    "detail": {
+      "title": "शेड",
+      "allSheds": "सभी शेड",
+      "recordPanel": "रिकॉर्ड",
+      "shedNumber": "शेड नंबर",
+      "birdCapacity": "पक्षियों की क्षमता",
+      "facilityType": "सुविधा का प्रकार",
+      "climateControl": "क्लाइमेट कंट्रोल और ऑपरेशंस रूम",
+      "statusMeaningPanel": "स्टेटस का मतलब",
+      "availableDesc": "नया बैच रखने के लिए तैयार है।",
+      "occupiedDesc": "पक्षी मौजूद हैं। बैच रखने के हिसाब से स्टेटस अपने आप तय होता है।",
+      "maintenanceDesc": "काम चलने के कारण अभी इस्तेमाल में नहीं है।",
+      "inactiveDesc": "रिकॉर्ड में है, लेकिन अभी इस्तेमाल में नहीं है।",
+      "setStatus": "स्टेटस सेट करें",
+      "shedUpdated": "शेड अपडेट हो गया।",
+      "shedNowStatus": "शेड {{number}} अब {{status}} है।"
+    }
+  },
+  "attendance": {
+    "pageEyebrow": "ऑपरेशंस",
+    "pageTitle": "हाजिरी",
+    "pageDescriptionRoster": "रोज की हाजिरी सूची। कौन आया, कौन नहीं आया या छुट्टी पर है, रंग से दिखता है।",
+    "pageDescriptionPerson": "इस व्यक्ति की सभी हाजिरी एंट्री का रिकॉर्ड।",
+    "faceAttendance": "फेस अटेंडेंस",
+    "bulkMark": "एक साथ मार्क करें",
+    "markUnmarkedAbsent": "जिनकी हाजिरी नहीं लगी, उन्हें अनुपस्थित करें",
+    "recordAttendance": "हाजिरी दर्ज करें",
+    "personHistory": "एक व्यक्ति की हाजिरी हिस्ट्री दिखाई जा रही है।",
+    "backToRoster": "हाजिरी सूची पर वापस जाएँ",
+    "date": "तारीख",
+    "person": "व्यक्ति",
+    "shed": "शेड",
+    "shift": "शिफ्ट",
+    "allShifts": "सभी शिफ्ट",
+    "gpsLocation": "GPS लोकेशन",
+    "approval": "मंजूरी",
+    "employee": "कर्मचारी",
+    "worker": "वर्कर",
+    "shedNumber": "शेड {{number}}",
+    "recorded": "हाजिरी दर्ज हो गई।",
+    "noRecordsYet": {
+      "title": "अभी कोई रिकॉर्ड नहीं है",
+      "description": "इस व्यक्ति की हाजिरी दर्ज होने के बाद यहाँ दिखाई देगी।"
+    },
+    "noOneWithStatus": {
+      "title": "इस स्टेटस वाला कोई नहीं है",
+      "description": "बाकी लोगों को देखने के लिए स्टेटस फिल्टर हटाएँ।"
+    },
+    "nothingForDay": {
+      "title": "आज के लिए कुछ रिकॉर्ड नहीं है",
+      "description": "आज की पहली हाजिरी दर्ज करने के लिए 'हाजिरी दर्ज करें' इस्तेमाल करें।"
+    }
+  },
+  "profile": {
+    "noSession": {
+      "title": "सेशन नहीं है",
+      "description": "अपनी प्रोफाइल देखने के लिए फिर से लॉगिन करें।"
+    },
+    "attendanceAnalyticsTitle": "हाजिरी एनालिटिक्स",
+    "attendanceAnalyticsSub": "पिछले 30 दिनों की हाजिरी एक नजर में",
+    "attendanceHistoryTitle": "हाजिरी हिस्ट्री",
+    "attendanceHistorySub": "आपकी हाजिरी एंट्री का पूरा रिकॉर्ड",
+    "changePassword": "पासवर्ड बदलें",
+    "employeeID": "कर्मचारी ID",
+    "email": "ईमेल",
+    "phone": "फोन",
+    "joined": "जुड़ने की तारीख",
+    "scopeLabel": "{{scope}} का दायरा",
+    "permissions": {
+      "title": "अनुमतियाँ",
+      "total": "कुल {{count}}",
+      "empty": "अभी कोई अनुमति नहीं दी गई है। रोल देने के लिए मैनेजर से कहें।"
+    },
+    "changePasswordDialog": {
+      "title": "पासवर्ड बदलें",
+      "description": "अपना मौजूदा पासवर्ड डालें और कम से कम 8 अक्षरों का नया पासवर्ड चुनें।",
+      "currentPassword": "मौजूदा पासवर्ड",
+      "newPassword": "नया पासवर्ड",
+      "newPasswordHint": "कम से कम 8 अक्षर होने चाहिए।",
+      "confirmNewPassword": "नया पासवर्ड दोबारा डालें",
+      "showPasswords": "पासवर्ड दिखाएँ",
+      "hidePasswords": "पासवर्ड छिपाएँ",
+      "updateButton": "पासवर्ड अपडेट करें",
+      "changedSuccess": "पासवर्ड सफलतापूर्वक बदल गया।",
+      "validationTooShort": "नया पासवर्ड कम से कम 8 अक्षरों का होना चाहिए",
+      "validationMismatch": "दोनों पासवर्ड एक जैसे नहीं हैं"
+    }
+  },
+  "companies": {
+    "pageEyebrow": "अकाउंट",
+    "pageTitle": "कंपनियाँ",
+    "pageDescription": "वे संस्थाएँ जो फार्म चलाती हैं।"
+  },
+  "auditLogs": {
+    "pageTitle": "ऑडिट लॉग"
+  },
+  "notFound": {
+    "pageTitle": "पेज नहीं मिला",
+    "title": "यह स्क्रीन मौजूद नहीं है",
+    "description": "लिंक पुराना हो सकता है। ओवरव्यू पर वापस जाएँ।",
+    "goToOverview": "ओवरव्यू पर जाएँ"
+  },
+  "language": {
+    "switcherLabel": "भाषा",
+    "en": "EN",
+    "te": "ते",
+    "hi": "हि"
+  }
+}

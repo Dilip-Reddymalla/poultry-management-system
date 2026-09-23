@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   deleteEmployee,
@@ -36,6 +37,7 @@ import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 const PAGE_SIZE = 20;
 
 export function EmployeesPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { can, user } = useAuth();
   const { notify } = useToast();
 
@@ -149,9 +151,9 @@ export function EmployeesPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="People"
-        title="Employees"
-        description="Everyone on the register, with the designation they work under."
+        eyebrow={t("employees.pageEyebrow")}
+        title={t("employees.pageTitle")}
+        description={t("employees.pageDescription")}
         actions={
           can("employee:create") ? (
             <div style={{ display: "flex", gap: 8 }}>
@@ -159,7 +161,7 @@ export function EmployeesPage(): React.ReactElement {
                 variant="secondary"
                 onClick={() => setImportingExcel(true)}
               >
-                📊 Import Excel
+                📊 {t("common.importExcel")}
               </Button>
               <Button
                 variant="primary"
@@ -168,7 +170,7 @@ export function EmployeesPage(): React.ReactElement {
                 }}
               >
                 <PlusIcon className="button__icon" />
-                Add employee
+                {t("employees.addEmployee")}
               </Button>
             </div>
           ) : null
@@ -182,8 +184,8 @@ export function EmployeesPage(): React.ReactElement {
             <input
               type="search"
               className="input"
-              placeholder="Search name, employee ID or phone"
-              aria-label="Search employees"
+              placeholder={t("employees.searchPlaceholder")}
+              aria-label={t("employees.searchAriaLabel")}
               value={searchInput}
               onChange={(event) => {
                 setSearchInput(event.target.value);
@@ -192,7 +194,7 @@ export function EmployeesPage(): React.ReactElement {
           </div>
 
           <label className="filters__field">
-            <span className="visually-hidden">Status</span>
+            <span className="visually-hidden">{t("common.status")}</span>
             <select
               className="input select"
               value={status}
@@ -201,14 +203,14 @@ export function EmployeesPage(): React.ReactElement {
                 setPage(1);
               }}
             >
-              <option value="">All statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="">{t("common.allStatuses")}</option>
+              <option value="ACTIVE">{t("common.active")}</option>
+              <option value="INACTIVE">{t("common.inactive")}</option>
             </select>
           </label>
 
           <label className="filters__field">
-            <span className="visually-hidden">Designation</span>
+            <span className="visually-hidden">{t("employees.designation")}</span>
             <select
               className="input select"
               value={designationId}
@@ -217,7 +219,7 @@ export function EmployeesPage(): React.ReactElement {
                 setPage(1);
               }}
             >
-              <option value="">All designations</option>
+              <option value="">{t("employees.allDesignations")}</option>
               {(designations.data ?? []).map((designation) => (
                 <option key={designation.id} value={designation.id}>
                   {designation.name}
@@ -228,7 +230,7 @@ export function EmployeesPage(): React.ReactElement {
 
           {showFarm ? (
             <label className="filters__field">
-              <span className="visually-hidden">Farm</span>
+              <span className="visually-hidden">{t("common.farm")}</span>
               <select
                 className="input select"
                 value={farmId}
@@ -237,7 +239,7 @@ export function EmployeesPage(): React.ReactElement {
                   setPage(1);
                 }}
               >
-                <option value="">All farms</option>
+                <option value="">{t("common.allFarms")}</option>
                 {(farms.data ?? []).map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.code} — {farm.name}
@@ -259,11 +261,11 @@ export function EmployeesPage(): React.ReactElement {
         ) : rows.length === 0 ? (
           <div className="panel__pad">
             <EmptyState
-              title={filtered ? "No matches" : "No employees yet"}
+              title={filtered ? t("employees.noMatches.title") : t("employees.noEmployees.title")}
               description={
                 filtered
-                  ? "Try a different name, status or designation."
-                  : "Add the first employee to start building the register."
+                  ? t("employees.noMatches.description")
+                  : t("employees.noEmployees.description")
               }
               {...(filtered
                 ? {
@@ -277,7 +279,7 @@ export function EmployeesPage(): React.ReactElement {
                           setFarmId("");
                         }}
                       >
-                        Clear filters
+                        {t("common.clearFilters")}
                       </Button>
                     ),
                   }
@@ -295,9 +297,9 @@ export function EmployeesPage(): React.ReactElement {
                         type="button"
                         className={`table__sort-btn ${sortBy === "employeeId" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("employeeId")}
-                        title="Sort by Employee ID"
+                        title={t("employees.sortByEmployeeID")}
                       >
-                        Employee ID
+                        {t("employees.employeeID")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "employeeId" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
@@ -308,25 +310,25 @@ export function EmployeesPage(): React.ReactElement {
                         type="button"
                         className={`table__sort-btn ${sortBy === "name" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("name")}
-                        title="Sort by Name"
+                        title={t("employees.sortByName")}
                       >
-                        Name
+                        {t("common.name")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "name" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     </th>
-                    <th scope="col">Designation</th>
-                    {showFarm ? <th scope="col">Farm</th> : null}
-                    <th scope="col">Joined</th>
+                    <th scope="col">{t("employees.designation")}</th>
+                    {showFarm ? <th scope="col">{t("common.farm")}</th> : null}
+                    <th scope="col">{t("employees.joined")}</th>
                     <th scope="col">
                       <button
                         type="button"
                         className={`table__sort-btn ${sortBy === "login" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("login")}
-                        title="Sort by Login Access"
+                        title={t("employees.sortByLogin")}
                       >
-                        Login
+                        {t("employees.login")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "login" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
@@ -337,25 +339,25 @@ export function EmployeesPage(): React.ReactElement {
                         type="button"
                         className={`table__sort-btn ${sortBy === "status" ? "table__sort-btn--active" : ""}`}
                         onClick={() => handleSort("status")}
-                        title="Sort by Status"
+                        title={t("employees.sortByStatus")}
                       >
-                        Status
+                        {t("common.status")}
                         <span className="table__sort-icon" aria-hidden="true">
                           {sortBy === "status" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>
                     </th>
-                    {can("employee:delete") ? <th scope="col">Actions</th> : null}
+                    {can("employee:delete") ? <th scope="col">{t("common.actions")}</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((employee) => (
                     <tr key={employee.id}>
                       {/* data-label feeds the row-as-card layout on phones. */}
-                      <td className="numeric" data-label="Employee ID">
+                      <td className="numeric" data-label={t("employees.employeeID")}>
                         {employee.employeeId}
                       </td>
-                      <td data-label="Name">
+                      <td data-label={t("common.name")}>
                         <Link
                           className="table__link"
                           to={`/employees/${employee.id}`}
@@ -368,39 +370,39 @@ export function EmployeesPage(): React.ReactElement {
                           </span>
                         ) : null}
                       </td>
-                      <td data-label="Designation">
+                      <td data-label={t("employees.designation")}>
                         {employee.designation.name}
                       </td>
                       {showFarm ? (
-                        <td data-label="Farm">
+                        <td data-label={t("common.farm")}>
                           <span className="table__sub">
                             {employee.farm.code}
                           </span>
                           {employee.farm.name}
                         </td>
                       ) : null}
-                      <td className="numeric" data-label="Joined">
+                      <td className="numeric" data-label={t("employees.joined")}>
                         {formatDate(employee.joiningDate)}
                       </td>
-                      <td data-label="Login">
+                      <td data-label={t("employees.login")}>
                         {employee.hasUser ? (
-                          "Yes"
+                          t("common.yes")
                         ) : (
-                          <span className="muted">No</span>
+                          <span className="muted">{t("common.no")}</span>
                         )}
                       </td>
-                      <td data-label="Status">
+                      <td data-label={t("common.status")}>
                         <StatusTag status={employee.status} />
                       </td>
                       {can("employee:delete") ? (
-                        <td data-label="Actions">
+                        <td data-label={t("common.actions")}>
                           {canDeleteEmployee(employee) ? (
                             <Button
                               variant="danger"
                               onClick={() => setEmployeeToDelete(employee)}
                               style={{ padding: "4px 8px", fontSize: "0.8125rem" }}
                             >
-                              Delete
+                              {t("common.delete")}
                             </Button>
                           ) : null}
                         </td>
@@ -439,16 +441,16 @@ export function EmployeesPage(): React.ReactElement {
           onClose={() => setImportingExcel(false)}
           onSuccess={() => {
             employees.reload();
-            notify("success", "Employee import completed.");
+            notify("success", t("employees.importCompleted"));
           }}
         />
       ) : null}
 
       {employeeToDelete ? (
         <ConfirmDialog
-          title={`Delete ${employeeToDelete.name}?`}
-          description="This will permanently delete the employee, login account, and direct attendance records. This action cannot be undone."
-          confirmLabel="Delete employee"
+          title={t("employees.deleteTitle", { name: employeeToDelete.name })}
+          description={t("employees.deleteDescription")}
+          confirmLabel={t("employees.deleteConfirmLabel")}
           confirmVariant="danger"
           busy={deleteBusy}
           onConfirm={async () => {
@@ -459,7 +461,7 @@ export function EmployeesPage(): React.ReactElement {
               setEmployeeToDelete(null);
               employees.reload();
             } catch (caught: any) {
-              notify("error", caught?.message || "Failed to delete employee.");
+              notify("error", caught?.message || t("employees.failedToDelete"));
             } finally {
               setDeleteBusy(false);
             }

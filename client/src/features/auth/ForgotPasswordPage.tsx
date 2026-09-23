@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { requestOtp, resetPassword } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
 import { EggIcon } from "../../components/icons.js";
 import { PhoneField } from "../../components/PhoneField.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 
 type Step = "request" | "reset" | "success";
 
 export function ForgotPasswordPage(): React.ReactElement {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>("request");
@@ -28,7 +31,7 @@ export function ForgotPasswordPage(): React.ReactElement {
     if (!phone || phone === "+91") {
       setError(
         new ApiError(400, "Validation error", {
-          phone: ["Please enter your phone number"],
+          phone: [t("auth.forgotPassword.validationPhoneRequired")],
         }),
       );
       return;
@@ -44,7 +47,7 @@ export function ForgotPasswordPage(): React.ReactElement {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "Failed to send verification code. Please try again."),
+          : new ApiError(0, t("auth.forgotPassword.errorSendingOtp")),
       );
     } finally {
       setBusy(false);
@@ -57,7 +60,7 @@ export function ForgotPasswordPage(): React.ReactElement {
     if (!otp || otp.length !== 6) {
       setError(
         new ApiError(400, "Validation error", {
-          otp: ["Enter the complete 6-digit OTP code"],
+          otp: [t("auth.forgotPassword.validationOtpIncomplete")],
         }),
       );
       return;
@@ -66,7 +69,7 @@ export function ForgotPasswordPage(): React.ReactElement {
     if (newPassword.length < 8) {
       setError(
         new ApiError(400, "Validation error", {
-          newPassword: ["Password must be at least 8 characters"],
+          newPassword: [t("auth.forgotPassword.validationPasswordTooShort")],
         }),
       );
       return;
@@ -75,7 +78,7 @@ export function ForgotPasswordPage(): React.ReactElement {
     if (newPassword !== confirmPassword) {
       setError(
         new ApiError(400, "Validation error", {
-          confirmPassword: ["Passwords do not match"],
+          confirmPassword: [t("auth.forgotPassword.validationPasswordMismatch")],
         }),
       );
       return;
@@ -91,7 +94,7 @@ export function ForgotPasswordPage(): React.ReactElement {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "Failed to reset password. Please check your OTP and try again."),
+          : new ApiError(0, t("auth.forgotPassword.errorResettingPassword")),
       );
     } finally {
       setBusy(false);
@@ -102,49 +105,53 @@ export function ForgotPasswordPage(): React.ReactElement {
     <div className="signin signin--single">
       <main className="signin__main">
         <div className="signin__form">
-          <div className="signin__brand signin__brand--dark">
-            <EggIcon className="signin__mark" />
-            <span>
-              Poultry<strong>Ops</strong>
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div className="signin__brand signin__brand--dark" style={{ margin: 0 }}>
+              <EggIcon className="signin__mark" />
+              <span>
+                Poultry<strong>Ops</strong>
+              </span>
+            </div>
+            <LanguageSwitcher />
           </div>
 
           <OfflineNotice />
 
           {step === "request" ? (
             <form onSubmit={handleSendOtp} className="stack" noValidate>
-              <h1 className="signin__title">Reset password</h1>
+              <h1 className="signin__title">{t("auth.forgotPassword.resetTitle")}</h1>
               <p className="signin__subtitle">
-                Enter the registered phone number associated with your account to receive an OTP.
+                {t("auth.forgotPassword.resetSubtitle")}
               </p>
 
               <FormAlert error={error} />
 
               <PhoneField
                 id="reset-phone"
-                label="Registered phone number"
+                label={t("auth.forgotPassword.registeredPhone")}
                 required
                 value={phone}
-                hint="Select country code and enter your mobile number."
+                hint={t("auth.forgotPassword.phoneHint")}
                 errors={error?.fieldErrors.phone}
                 onChange={(val: string) => setPhone(val)}
               />
 
               <Button type="submit" variant="primary" busy={busy}>
-                Send OTP code
+                {t("auth.forgotPassword.sendOtp")}
               </Button>
 
               <p className="signin__alt">
-                Remember your password? <Link to="/login">Sign in</Link>
+                {t("auth.forgotPassword.rememberPassword")}{" "}
+                <Link to="/login">{t("auth.forgotPassword.signIn")}</Link>
               </p>
             </form>
           ) : null}
 
           {step === "reset" ? (
             <form onSubmit={handleResetPassword} className="stack" noValidate>
-              <h1 className="signin__title">Create new password</h1>
+              <h1 className="signin__title">{t("auth.forgotPassword.newPasswordTitle")}</h1>
               <p className="signin__subtitle">
-                We sent a 6-digit verification code to{" "}
+                {t("auth.forgotPassword.codeSentTo")}{" "}
                 <span className="numeric">{phone}</span>.
               </p>
 
@@ -152,7 +159,7 @@ export function ForgotPasswordPage(): React.ReactElement {
 
               <TextField
                 id="reset-otp"
-                label="Six-digit code"
+                label={t("auth.forgotPassword.sixDigitCode")}
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
@@ -167,11 +174,11 @@ export function ForgotPasswordPage(): React.ReactElement {
 
               <TextField
                 id="reset-email"
-                label="Work email (optional)"
+                label={t("auth.forgotPassword.workEmailOptional")}
                 type="email"
                 autoComplete="email"
                 value={email}
-                hint="Only required if multiple employees share this phone number."
+                hint={t("auth.forgotPassword.workEmailHint")}
                 errors={error?.fieldErrors.email}
                 onChange={(event) => {
                   setEmail(event.target.value);
@@ -180,12 +187,12 @@ export function ForgotPasswordPage(): React.ReactElement {
 
               <TextField
                 id="reset-new-password"
-                label="New password"
+                label={t("auth.forgotPassword.newPassword")}
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 value={newPassword}
-                hint="Must be at least 8 characters long."
+                hint={t("auth.forgotPassword.newPasswordHint")}
                 errors={error?.fieldErrors.newPassword}
                 onChange={(event) => {
                   setNewPassword(event.target.value);
@@ -194,7 +201,7 @@ export function ForgotPasswordPage(): React.ReactElement {
 
               <TextField
                 id="reset-confirm-password"
-                label="Confirm new password"
+                label={t("auth.forgotPassword.confirmNewPassword")}
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
@@ -217,13 +224,13 @@ export function ForgotPasswordPage(): React.ReactElement {
                   }}
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? "Hide passwords" : "Show passwords"}
+                  {showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
                 </button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 <Button type="submit" variant="primary" busy={busy}>
-                  Reset password
+                  {t("auth.forgotPassword.resetPasswordButton")}
                 </Button>
                 <Button
                   type="button"
@@ -235,21 +242,22 @@ export function ForgotPasswordPage(): React.ReactElement {
                     setError(null);
                   }}
                 >
-                  Change phone number
+                  {t("auth.forgotPassword.changePhoneNumber")}
                 </Button>
               </div>
 
               <p className="signin__alt">
-                Remember your password? <Link to="/login">Sign in</Link>
+                {t("auth.forgotPassword.rememberPassword")}{" "}
+                <Link to="/login">{t("auth.forgotPassword.signIn")}</Link>
               </p>
             </form>
           ) : null}
 
           {step === "success" ? (
             <div className="stack" style={{ textAlign: "center", padding: "1rem 0" }}>
-              <h1 className="signin__title">Password reset!</h1>
+              <h1 className="signin__title">{t("auth.forgotPassword.successTitle")}</h1>
               <p className="signin__subtitle">
-                Your password has been successfully updated. You can now sign in with your new password.
+                {t("auth.forgotPassword.successSubtitle")}
               </p>
 
               <Button
@@ -257,7 +265,7 @@ export function ForgotPasswordPage(): React.ReactElement {
                 variant="primary"
                 onClick={() => navigate("/login", { replace: true })}
               >
-                Sign in now
+                {t("auth.forgotPassword.signInNow")}
               </Button>
             </div>
           ) : null}

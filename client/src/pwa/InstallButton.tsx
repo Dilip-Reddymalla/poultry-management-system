@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { InstallIcon } from "../components/icons.js";
 import { Button } from "../components/ui.js";
 import type { ButtonVariant } from "../components/ui.js";
@@ -12,6 +13,7 @@ export function InstallButton({
 }: {
   variant?: ButtonVariant;
 }): React.ReactElement | null {
+  const { t } = useTranslation();
   const { canInstall, install } = useInstallPrompt();
 
   if (!canInstall) {
@@ -22,13 +24,13 @@ export function InstallButton({
     <Button
       variant={variant}
       className="install-button"
-      aria-label="Install app"
+      aria-label={t("pwa.installApp")}
       onClick={() => {
         void install();
       }}
     >
       <InstallIcon className="button__icon" />
-      <span className="button__label">Install app</span>
+      <span className="button__label">{t("pwa.installApp")}</span>
     </Button>
   );
 }

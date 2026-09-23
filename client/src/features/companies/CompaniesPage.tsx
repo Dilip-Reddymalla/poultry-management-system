@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { fetchCompanies } from "../../api/resources.js";
 import type { Company } from "../../api/types.js";
@@ -19,6 +20,7 @@ import { formatNumber } from "../../lib/display.js";
 import { CompanyFormDialog } from "./CompanyFormDialog.js";
 
 export function CompaniesPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const { notify } = useToast();
 
@@ -33,9 +35,9 @@ export function CompaniesPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Organization"
-        title="Companies"
-        description="The top of the hierarchy. Each company owns its own farms."
+        eyebrow={t("companies.pageEyebrow")}
+        title={t("companies.pageTitle")}
+        description={t("companies.pageDescription")}
         actions={
           can("company:create") ? (
             <Button
@@ -45,7 +47,7 @@ export function CompaniesPage(): React.ReactElement {
               }}
             >
               <PlusIcon className="button__icon" />
-              Add company
+              {t("companies.addCompany", "Add company")}
             </Button>
           ) : null
         }
@@ -63,8 +65,8 @@ export function CompaniesPage(): React.ReactElement {
         ) : rows.length === 0 ? (
           <div className="panel__pad">
             <EmptyState
-              title="No companies yet"
-              description="Add a company, then add the farms that belong to it."
+              title={t("companies.noCompaniesYet", "No companies yet")}
+              description={t("companies.noCompaniesDesc", "Add a company, then add the farms that belong to it.")}
             />
           </div>
         ) : (
@@ -72,19 +74,19 @@ export function CompaniesPage(): React.ReactElement {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Code</th>
-                  <th scope="col">Company</th>
-                  <th scope="col">Farms</th>
+                  <th scope="col">{t("farms.code", "Code")}</th>
+                  <th scope="col">{t("companies.pageTitle", "Company")}</th>
+                  <th scope="col">{t("nav.farms", "Farms")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((company) => (
                   <tr key={company.id}>
                     {/* data-label feeds the row-as-card layout on phones. */}
-                    <td className="numeric" data-label="Code">
+                    <td className="numeric" data-label={t("farms.code", "Code")}>
                       {company.code}
                     </td>
-                    <td data-label="Company">
+                    <td data-label={t("companies.pageTitle", "Company")}>
                       <Link
                         className="table__link"
                         to={`/companies/${company.id}`}
@@ -92,7 +94,7 @@ export function CompaniesPage(): React.ReactElement {
                         {company.name}
                       </Link>
                     </td>
-                    <td className="numeric" data-label="Farms">
+                    <td className="numeric" data-label={t("nav.farms", "Farms")}>
                       {company.farmCount === undefined
                         ? "—"
                         : formatNumber(company.farmCount)}

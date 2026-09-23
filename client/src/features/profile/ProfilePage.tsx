@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/use-auth.js";
 import { EmptyState, Panel } from "../../components/ui.js";
 import { AttendancePage } from "../attendance/AttendancePage.js";
@@ -9,6 +10,7 @@ import { ProfileDocumentsPanel } from "./ProfileDocumentsPanel.js";
 import { ChangePasswordDialog } from "./ChangePasswordDialog.js";
 
 export function ProfilePage(): React.ReactElement {
+  const { t } = useTranslation();
   const { user, can } = useAuth();
   const [changingPassword, setChangingPassword] = useState(false);
 
@@ -17,8 +19,8 @@ export function ProfilePage(): React.ReactElement {
       <div className="stack">
         <Panel>
           <EmptyState
-            title="No session"
-            description="Sign in again to see your profile."
+            title={t("profile.noSession.title")}
+            description={t("profile.noSession.description")}
           />
         </Panel>
       </div>
@@ -39,8 +41,8 @@ export function ProfilePage(): React.ReactElement {
       {canViewAttendance && user.employee?.id ? (
         <section className="ph-section">
           <div className="ph-section__header">
-            <h2 className="ph-section__title">Attendance Analytics</h2>
-            <p className="ph-section__sub">Your last 30 days at a glance</p>
+            <h2 className="ph-section__title">{t("profile.attendanceAnalyticsTitle")}</h2>
+            <p className="ph-section__sub">{t("profile.attendanceAnalyticsSub")}</p>
           </div>
           <ProfileAttendanceStats employeeId={user.employee.id} />
         </section>
@@ -54,7 +56,7 @@ export function ProfilePage(): React.ReactElement {
         <div className="ph-bottom-grid__right">
           <ProfileDocumentsPanel
             photoUrl={user.employee?.photoUrl ?? null}
-            employeeName={user.employee?.name ?? "Employee"}
+            employeeName={user.employee?.name ?? t("attendance.employee")}
           />
         </div>
       </div>
@@ -63,8 +65,8 @@ export function ProfilePage(): React.ReactElement {
       {user.employee?.id ? (
         <section className="ph-section">
           <div className="ph-section__header">
-            <h2 className="ph-section__title">Attendance History</h2>
-            <p className="ph-section__sub">Full record of your attendance entries</p>
+            <h2 className="ph-section__title">{t("profile.attendanceHistoryTitle")}</h2>
+            <p className="ph-section__sub">{t("profile.attendanceHistorySub")}</p>
           </div>
           <AttendancePage employeeId={user.employee.id} />
         </section>

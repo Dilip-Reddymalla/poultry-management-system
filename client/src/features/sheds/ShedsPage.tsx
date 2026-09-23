@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { fetchFarms, fetchSheds } from "../../api/resources.js";
 import type { Farm, Shed, ShedStatus } from "../../api/types.js";
@@ -20,6 +21,7 @@ import { formatNumber } from "../../lib/display.js";
 import { ShedFormDialog } from "./ShedFormDialog.js";
 
 export function ShedsPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { can } = useAuth();
   const { notify } = useToast();
 
@@ -61,9 +63,9 @@ export function ShedsPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Housing"
-        title="Sheds"
-        description="Every shed on every farm, with the capacity it holds."
+        eyebrow={t("sheds.pageEyebrow")}
+        title={t("sheds.pageTitle")}
+        description={t("sheds.pageDescription")}
         actions={
           can("shed:create") ? (
             <Button
@@ -73,7 +75,7 @@ export function ShedsPage(): React.ReactElement {
               }}
             >
               <PlusIcon className="button__icon" />
-              Add shed
+              {t("sheds.addShed")}
             </Button>
           ) : null
         }
@@ -83,7 +85,7 @@ export function ShedsPage(): React.ReactElement {
         <div className="filters">
           {can("farm:view") ? (
             <label className="filters__field">
-              <span className="visually-hidden">Farm</span>
+              <span className="visually-hidden">{t("common.farm")}</span>
               <select
                 className="input select"
                 value={farmId}
@@ -91,7 +93,7 @@ export function ShedsPage(): React.ReactElement {
                   setParam("farmId", event.target.value);
                 }}
               >
-                <option value="">All farms</option>
+                <option value="">{t("common.allFarms")}</option>
                 {(farms.data ?? []).map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.code} — {farm.name}
@@ -102,7 +104,7 @@ export function ShedsPage(): React.ReactElement {
           ) : null}
 
           <label className="filters__field">
-            <span className="visually-hidden">Status</span>
+            <span className="visually-hidden">{t("common.status")}</span>
             <select
               className="input select"
               value={status}
@@ -110,11 +112,11 @@ export function ShedsPage(): React.ReactElement {
                 setParam("status", event.target.value);
               }}
             >
-              <option value="">All statuses</option>
-              <option value="AVAILABLE">Available</option>
-              <option value="OCCUPIED">Occupied</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="">{t("common.allStatuses")}</option>
+              <option value="AVAILABLE">{t("sheds.available")}</option>
+              <option value="OCCUPIED">{t("sheds.occupied")}</option>
+              <option value="MAINTENANCE">{t("sheds.maintenance")}</option>
+              <option value="INACTIVE">{t("common.inactive")}</option>
             </select>
           </label>
 
@@ -138,11 +140,11 @@ export function ShedsPage(): React.ReactElement {
         ) : rows.length === 0 ? (
           <div className="panel__pad">
             <EmptyState
-              title={filtered ? "No sheds match" : "No sheds yet"}
+              title={filtered ? t("sheds.noShedsMatch.title") : t("sheds.noSheds.title")}
               description={
                 filtered
-                  ? "Try another farm or status."
-                  : "Add a shed to a farm to start tracking capacity."
+                  ? t("sheds.noShedsMatch.description")
+                  : t("sheds.noSheds.description")
               }
               {...(filtered
                 ? {
@@ -153,7 +155,7 @@ export function ShedsPage(): React.ReactElement {
                           setParams(new URLSearchParams(), { replace: true });
                         }}
                       >
-                        Clear filters
+                        {t("common.clearFilters")}
                       </Button>
                     ),
                   }
@@ -165,22 +167,22 @@ export function ShedsPage(): React.ReactElement {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Shed</th>
-                  <th scope="col">Farm</th>
-                  <th scope="col">Capacity</th>
-                  <th scope="col">Status</th>
+                  <th scope="col">{t("nav.sheds")}</th>
+                  <th scope="col">{t("common.farm")}</th>
+                  <th scope="col">{t("sheds.capacity")}</th>
+                  <th scope="col">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((shed) => (
                   <tr key={shed.id}>
                     {/* data-label feeds the row-as-card layout on phones. */}
-                    <td data-label="Shed">
+                    <td data-label={t("nav.sheds")}>
                       <Link className="table__link numeric" to={`/sheds/${shed.id}`}>
                         {shed.number}
                       </Link>
                     </td>
-                    <td data-label="Farm">
+                    <td data-label={t("common.farm")}>
                       {can("farm:view") ? (
                         <Link className="table__link" to={`/farms/${shed.farm.id}`}>
                           {shed.farm.name}
@@ -190,14 +192,14 @@ export function ShedsPage(): React.ReactElement {
                       )}
                       <span className="table__sub numeric">{shed.farm.code}</span>
                     </td>
-                    <td className="numeric" data-label="Capacity">
+                    <td className="numeric" data-label={t("sheds.capacity")}>
                       {shed.number.toLowerCase().includes("ac room") ? (
                         <span className="muted">—</span>
                       ) : (
                         formatNumber(shed.capacity)
                       )}
                     </td>
-                    <td data-label="Status">
+                    <td data-label={t("common.status")}>
                       <StatusTag status={shed.status} />
                     </td>
                   </tr>
@@ -217,7 +219,7 @@ export function ShedsPage(): React.ReactElement {
           }}
           onSaved={(shed) => {
             setCreating(false);
-            notify("success", `Shed ${shed.number} added.`);
+            notify("success", t("sheds.addedSuccess", { number: shed.number }));
             sheds.reload();
           }}
         />

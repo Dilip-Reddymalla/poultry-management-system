@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { fetchEmployees, fetchFarms, fetchSheds } from "../../api/resources.js";
 import type { Shed } from "../../api/types.js";
@@ -54,6 +55,7 @@ function groupByFarm(sheds: Shed[]): { farm: Shed["farm"]; sheds: Shed[] }[] {
 }
 
 export function DashboardPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { user, can } = useAuth();
 
   const canViewEmployees = can("employee:view");
@@ -93,16 +95,16 @@ export function DashboardPage(): React.ReactElement {
   return (
     <div className="stack">
       <PageHeader
-        eyebrow="Overview"
-        title={`Good day, ${firstName}`}
-        description="Where the farms stand right now."
+        eyebrow={t("dashboard.eyebrow")}
+        title={t("dashboard.title", { name: firstName })}
+        description={t("dashboard.description")}
       />
 
       {!canViewEmployees && !canViewFarms && !canViewSheds ? (
         <Panel>
           <EmptyState
-            title="Nothing to show yet"
-            description="Your role does not include access to employees, farms or sheds. Ask a manager if you need it."
+            title={t("dashboard.noAccess.title")}
+            description={t("dashboard.noAccess.description")}
           />
         </Panel>
       ) : null}
@@ -115,9 +117,9 @@ export function DashboardPage(): React.ReactElement {
             <ErrorState error={employees.error} onRetry={employees.reload} />
           ) : (
             <Kpi
-              label="Active employees"
+              label={t("dashboard.kpi.activeEmployees")}
               value={formatNumber(employees.data?.pagination.total ?? 0)}
-              detail="On the register today"
+              detail={t("dashboard.kpi.activeEmployeesDetail")}
             />
           )
         ) : null}
@@ -129,9 +131,9 @@ export function DashboardPage(): React.ReactElement {
             <ErrorState error={farms.error} onRetry={farms.reload} />
           ) : (
             <Kpi
-              label="Active farms"
+              label={t("dashboard.kpi.activeFarms")}
               value={formatNumber(activeFarms.length)}
-              detail={`${formatNumber(farms.data?.length ?? 0)} on record`}
+              detail={`${formatNumber(farms.data?.length ?? 0)} ${t("dashboard.kpi.activeFarmsDetail")}`}
             />
           )
         ) : null}
@@ -144,14 +146,14 @@ export function DashboardPage(): React.ReactElement {
           ) : (
             <>
               <Kpi
-                label="Sheds available"
+                label={t("dashboard.kpi.shedsAvailable")}
                 value={formatNumber(available.length)}
-                detail={`of ${formatNumber(shedList.length)} sheds`}
+                detail={t("dashboard.kpi.shedsAvailableDetail", { total: formatNumber(shedList.length) })}
               />
               <Kpi
-                label="Bird capacity"
+                label={t("dashboard.kpi.birdCapacity")}
                 value={formatNumber(capacity)}
-                detail="Across every shed"
+                detail={t("dashboard.kpi.birdCapacityDetail")}
               />
             </>
           )
@@ -160,8 +162,8 @@ export function DashboardPage(): React.ReactElement {
 
       {canViewSheds ? (
         <Panel
-          eyebrow="Shed board"
-          title="Every shed, farm by farm"
+          eyebrow={t("dashboard.shedBoard.eyebrow")}
+          title={t("dashboard.shedBoard.title")}
           actions={<ShedLegend />}
           bleed
         >
@@ -176,8 +178,8 @@ export function DashboardPage(): React.ReactElement {
           ) : groups.length === 0 ? (
             <div className="panel__pad">
               <EmptyState
-                title="No sheds recorded"
-                description="Sheds appear here as soon as they are added to a farm."
+                title={t("dashboard.shedBoard.noSheds.title")}
+                description={t("dashboard.shedBoard.noSheds.description")}
               />
             </div>
           ) : (

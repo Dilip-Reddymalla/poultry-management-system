@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client.js";
 import {
@@ -28,6 +29,7 @@ import { ProvisionUserDialog } from "./ProvisionUserDialog.js";
 import { ChangeRoleDialog } from "./ChangeRoleDialog.js";
 
 export function EmployeeDetailPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { can, user } = useAuth();
@@ -111,7 +113,7 @@ export function EmployeeDetailPage(): React.ReactElement {
     } catch (caught) {
       notify(
         "error",
-        caught instanceof ApiError ? caught.message : "Failed to delete employee.",
+        caught instanceof ApiError ? caught.message : t("employees.failedToDelete"),
       );
       setDeleteBusy(false);
       setConfirmingDelete(false);
@@ -137,7 +139,7 @@ export function EmployeeDetailPage(): React.ReactElement {
     } catch (caught) {
       notify(
         "error",
-        caught instanceof ApiError ? caught.message : "Something went wrong.",
+        caught instanceof ApiError ? caught.message : t("error.somethingWentWrong"),
       );
     } finally {
       setStatusBusy(false);
@@ -148,8 +150,8 @@ export function EmployeeDetailPage(): React.ReactElement {
     return (
       <div className="stack">
         <PageHeader
-          title="Employee"
-          back={{ to: "/employees", label: "All employees" }}
+          title={t("employees.detail.title")}
+          back={{ to: "/employees", label: t("employees.detail.allEmployees") }}
         />
         <Panel>
           <CardSkeleton />
@@ -162,8 +164,8 @@ export function EmployeeDetailPage(): React.ReactElement {
     return (
       <div className="stack">
         <PageHeader
-          title="Employee"
-          back={{ to: "/employees", label: "All employees" }}
+          title={t("employees.detail.title")}
+          back={{ to: "/employees", label: t("employees.detail.allEmployees") }}
         />
         <Panel>
           <ErrorState
@@ -180,7 +182,7 @@ export function EmployeeDetailPage(): React.ReactElement {
       <PageHeader
         eyebrow={record.designation.name}
         title={record.name}
-        back={{ to: "/employees", label: "All employees" }}
+        back={{ to: "/employees", label: t("employees.detail.allEmployees") }}
         actions={
           <>
             {can("attendance:view") ? (
@@ -188,7 +190,7 @@ export function EmployeeDetailPage(): React.ReactElement {
                 className="button button--secondary"
                 to={`/attendance?employeeId=${record.id}`}
               >
-                Attendance
+                {t("common.attendance")}
               </Link>
             ) : null}
             {can("employee:update") ? (
@@ -198,7 +200,7 @@ export function EmployeeDetailPage(): React.ReactElement {
                   setEditing(true);
                 }}
               >
-                Edit
+                {t("common.edit")}
               </Button>
             ) : null}
             {canToggle ? (
@@ -208,7 +210,7 @@ export function EmployeeDetailPage(): React.ReactElement {
                   setConfirmingStatus(true);
                 }}
               >
-                {active ? "Deactivate" : "Reactivate"}
+                {active ? t("common.deactivate") : t("common.reactivate")}
               </Button>
             ) : null}
             {canDelete ? (
@@ -218,7 +220,7 @@ export function EmployeeDetailPage(): React.ReactElement {
                   setConfirmingDelete(true);
                 }}
               >
-                Delete
+                {t("common.delete")}
               </Button>
             ) : null}
           </>
@@ -245,31 +247,31 @@ export function EmployeeDetailPage(): React.ReactElement {
           <DetailList
             items={[
               {
-                label: "Employee ID",
+                label: t("employees.employeeID"),
                 value: <span className="numeric">{record.employeeId}</span>,
               },
-              { label: "Designation", value: record.designation.name },
+              { label: t("employees.designation"), value: record.designation.name },
               {
-                label: "Farm",
+                label: t("common.farm"),
                 value: `${record.farm.code} — ${record.farm.name}`,
               },
               {
-                label: "Phone",
+                label: t("common.phone"),
                 value: record.phone ? (
                   <span className="numeric">{record.phone}</span>
                 ) : (
-                  <span className="muted">Not recorded</span>
+                  <span className="muted">{t("common.notRecorded")}</span>
                 ),
               },
               {
-                label: "Joining date",
+                label: t("employees.joined"),
                 value: (
                   <span className="numeric">
                     {formatDate(record.joiningDate)}
                   </span>
                 ),
               },
-              { label: "Status", value: <StatusTag status={record.status} /> },
+              { label: t("common.status"), value: <StatusTag status={record.status} /> },
             ]}
           />
         </Panel>
@@ -378,7 +380,7 @@ export function EmployeeDetailPage(): React.ReactElement {
               ? `${record.name} stays on the register but is marked inactive and cannot sign in.`
               : `${record.name} goes back to active and can be assigned work again.`
           }
-          confirmLabel={active ? "Deactivate" : "Reactivate"}
+          confirmLabel={active ? t("common.deactivate") : t("common.reactivate")}
           confirmVariant={active ? "danger" : "primary"}
           busy={statusBusy}
           onConfirm={() => {
@@ -392,9 +394,9 @@ export function EmployeeDetailPage(): React.ReactElement {
 
       {confirmingDelete && record ? (
         <ConfirmDialog
-          title={`Delete ${record.name}?`}
-          description="This will permanently delete the employee, login account, and direct attendance records. This action cannot be undone."
-          confirmLabel="Delete employee"
+          title={t("employees.deleteTitle", { name: record.name })}
+          description={t("employees.deleteDescription")}
+          confirmLabel={t("employees.deleteConfirmLabel")}
           confirmVariant="danger"
           busy={deleteBusy}
           onConfirm={() => {

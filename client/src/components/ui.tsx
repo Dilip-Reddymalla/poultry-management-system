@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import type { ApiError } from "../api/client.js";
 import type { Pagination as PaginationMeta } from "../api/types.js";
 import { statusLabel, statusTone } from "../lib/display.js";
@@ -210,9 +212,10 @@ export function FormAlert({
 /* States ------------------------------------------------------------------ */
 
 export function Spinner({ label }: { label?: string }): React.ReactElement {
+  const { t } = useTranslation();
   return (
     <span className="spinner" role="status">
-      <span className="visually-hidden">{label ?? "Loading"}</span>
+      <span className="visually-hidden">{label ?? t("common.loading")}</span>
     </span>
   );
 }
@@ -272,15 +275,16 @@ export function ErrorState({
   error: ApiError;
   onRetry?: () => void;
 }): React.ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="alert alert--error" role="alert">
       <p className="alert__title">
-        {error.isForbidden ? "Not available to your role" : "Could not load"}
+        {error.isForbidden ? t("error.notAvailableToRole") : t("error.couldNotLoad")}
       </p>
       <p className="alert__text">{error.message}</p>
       {onRetry && !error.isForbidden ? (
         <Button variant="secondary" onClick={onRetry}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       ) : null}
     </div>
@@ -313,6 +317,7 @@ export function Pagination({
   pagination: PaginationMeta;
   onPageChange: (page: number) => void;
 }): React.ReactElement {
+  const { t } = useTranslation();
   const { page, limit, total, totalPages } = pagination;
 
   const first = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -321,7 +326,7 @@ export function Pagination({
   return (
     <div className="pagination">
       <p className="pagination__summary numeric">
-        {first}–{last} of {total}
+        {first}–{last} {t("common.of")} {total}
       </p>
       <div className="pagination__controls">
         <Button
@@ -331,7 +336,7 @@ export function Pagination({
           }}
           disabled={page <= 1}
         >
-          Previous
+          {t("common.previous")}
         </Button>
         <span className="pagination__page numeric">
           {page} / {Math.max(totalPages, 1)}
@@ -343,7 +348,7 @@ export function Pagination({
           }}
           disabled={page >= totalPages}
         >
-          Next
+          {t("common.next")}
         </Button>
       </div>
     </div>

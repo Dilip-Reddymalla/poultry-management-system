@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client.js";
 import { fetchFarm, fetchSheds, setFarmActive } from "../../api/resources.js";
@@ -23,6 +24,7 @@ import { formatNumber } from "../../lib/display.js";
 import { FarmFormDialog } from "./FarmFormDialog.js";
 
 export function FarmDetailPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
   const { can } = useAuth();
   const { notify } = useToast();
@@ -63,13 +65,15 @@ export function FarmDetailPage(): React.ReactElement {
       farm.replace(updated);
       notify(
         "success",
-        active ? `${updated.name} deactivated.` : `${updated.name} reactivated.`,
+        active
+          ? t("farms.detail.deactivatedSuccess", { name: updated.name })
+          : t("farms.detail.reactivatedSuccess", { name: updated.name }),
       );
       setConfirmingStatus(false);
     } catch (caught) {
       notify(
         "error",
-        caught instanceof ApiError ? caught.message : "Something went wrong.",
+        caught instanceof ApiError ? caught.message : t("error.somethingWentWrong"),
       );
     } finally {
       setStatusBusy(false);
@@ -79,7 +83,7 @@ export function FarmDetailPage(): React.ReactElement {
   if (farm.loading) {
     return (
       <div className="stack">
-        <PageHeader title="Farm" back={{ to: "/farms", label: "All farms" }} />
+        <PageHeader title={t("farms.detail.title")} back={{ to: "/farms", label: t("farms.detail.allFarms") }} />
         <Panel>
           <CardSkeleton />
         </Panel>
@@ -90,10 +94,10 @@ export function FarmDetailPage(): React.ReactElement {
   if (farm.error || !record) {
     return (
       <div className="stack">
-        <PageHeader title="Farm" back={{ to: "/farms", label: "All farms" }} />
+        <PageHeader title={t("farms.detail.title")} back={{ to: "/farms", label: t("farms.detail.allFarms") }} />
         <Panel>
           <ErrorState
-            error={farm.error ?? new ApiError(404, "Farm not found.")}
+            error={farm.error ?? new ApiError(404, t("error.farmNotFound"))}
             onRetry={farm.reload}
           />
         </Panel>
@@ -106,7 +110,7 @@ export function FarmDetailPage(): React.ReactElement {
       <PageHeader
         eyebrow={`${record.company.name} · ${record.code}`}
         title={record.name}
-        back={{ to: "/farms", label: "All farms" }}
+        back={{ to: "/farms", label: t("farms.detail.allFarms") }}
         actions={
           <>
             {can("farm:update") ? (
@@ -116,7 +120,7 @@ export function FarmDetailPage(): React.ReactElement {
                   setEditing(true);
                 }}
               >
-                Edit
+                {t("common.edit")}
               </Button>
             ) : null}
             {canToggle ? (
@@ -126,7 +130,7 @@ export function FarmDetailPage(): React.ReactElement {
                   setConfirmingStatus(true);
                 }}
               >
-                {active ? "Deactivate" : "Reactivate"}
+                {active ? t("common.deactivate") : t("common.reactivate")}
               </Button>
             ) : null}
           </>
@@ -134,29 +138,29 @@ export function FarmDetailPage(): React.ReactElement {
       />
 
       <div className="split">
-        <Panel title="Record">
+        <Panel title={t("farms.detail.recordPanel")}>
           <DetailList
             items={[
               {
-                label: "Farm code",
+                label: t("farms.detail.farmCode"),
                 value: <span className="numeric">{record.code}</span>,
               },
-              { label: "Company", value: record.company.name },
+              { label: t("farms.company"), value: record.company.name },
               {
-                label: "Company code",
+                label: t("farms.detail.companyCode"),
                 value: <span className="numeric">{record.company.code}</span>,
               },
-              { label: "Status", value: <StatusTag status={record.status} /> },
+              { label: t("common.status"), value: <StatusTag status={record.status} /> },
             ]}
           />
         </Panel>
 
         {can("shed:view") ? (
-          <Panel title="Capacity">
+          <Panel title={t("farms.detail.capacityPanel")}>
             <DetailList
               items={[
                 {
-                  label: "Sheds",
+                  label: t("farms.detail.sheds"),
                   value: (
                     <span className="numeric">
                       {formatNumber(shedList.length)}
@@ -164,7 +168,7 @@ export function FarmDetailPage(): React.ReactElement {
                   ),
                 },
                 {
-                  label: "Available",
+                  label: t("farms.detail.available"),
                   value: (
                     <span className="numeric">
                       {formatNumber(
@@ -175,7 +179,7 @@ export function FarmDetailPage(): React.ReactElement {
                   ),
                 },
                 {
-                  label: "Bird capacity",
+                  label: t("farms.detail.birdCapacity"),
                   value: (
                     <span className="numeric">{formatNumber(capacity)}</span>
                   ),
@@ -188,13 +192,13 @@ export function FarmDetailPage(): React.ReactElement {
 
       {can("shed:view") ? (
         <Panel
-          eyebrow="Shed board"
-          title="Sheds on this farm"
+          eyebrow={t("farms.detail.shedBoardEyebrow")}
+          title={t("farms.detail.shedBoardTitle")}
           actions={
             <>
               <ShedLegend />
               <Link className="button button--secondary" to={`/sheds?farmId=${id}`}>
-                Manage sheds
+                {t("farms.detail.manageSheds")}
               </Link>
             </>
           }
@@ -211,8 +215,8 @@ export function FarmDetailPage(): React.ReactElement {
           ) : shedList.length === 0 ? (
             <div className="panel__pad">
               <EmptyState
-                title="No sheds on this farm"
-                description="Add sheds from the shed list to start tracking capacity."
+                title={t("farms.detail.noSheds.title")}
+                description={t("farms.detail.noSheds.description")}
               />
             </div>
           ) : (
@@ -238,20 +242,20 @@ export function FarmDetailPage(): React.ReactElement {
           onSaved={(updated) => {
             farm.replace(updated);
             setEditing(false);
-            notify("success", "Farm updated.");
+            notify("success", t("farms.detail.farmUpdated"));
           }}
         />
       ) : null}
 
       {confirmingStatus ? (
         <ConfirmDialog
-          title={active ? "Deactivate farm?" : "Reactivate farm?"}
+          title={active ? t("farms.detail.deactivateTitle") : t("farms.detail.reactivateTitle")}
           description={
             active
-              ? `${record.name} is marked inactive. Its sheds stay on record.`
-              : `${record.name} goes back to active.`
+              ? t("farms.detail.deactivateDescription", { name: record.name })
+              : t("farms.detail.reactivateDescription", { name: record.name })
           }
-          confirmLabel={active ? "Deactivate" : "Reactivate"}
+          confirmLabel={active ? t("common.deactivate") : t("common.reactivate")}
           confirmVariant={active ? "danger" : "primary"}
           busy={statusBusy}
           onConfirm={() => {

@@ -1,19 +1,22 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState, Panel } from "../components/ui.js";
 import { PageHeader } from "../layout/PageHeader.js";
 
 export function NotFoundPage(): React.ReactElement {
+  const { t } = useTranslation();
+
   return (
     <div className="stack">
-      <PageHeader title="Page not found" />
+      <PageHeader title={t("notFound.pageTitle")} />
       <Panel>
         <EmptyState
-          title="That screen does not exist"
-          description="The link may be out of date. Head back to the overview."
+          title={t("notFound.title")}
+          description={t("notFound.description")}
           action={
             <Link className="button button--primary" to="/dashboard">
-              Go to overview
+              {t("notFound.goToOverview")}
             </Link>
           }
         />

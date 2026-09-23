@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client.js";
 import { fetchShed } from "../../api/resources.js";
@@ -21,6 +22,7 @@ import { ShedFormDialog } from "./ShedFormDialog.js";
 import { ShedStatusDialog } from "./ShedStatusDialog.js";
 
 export function ShedDetailPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { id = "" } = useParams();
   const { can } = useAuth();
   const { notify } = useToast();
@@ -35,7 +37,7 @@ export function ShedDetailPage(): React.ReactElement {
   if (shed.loading) {
     return (
       <div className="stack">
-        <PageHeader title="Shed" back={{ to: "/sheds", label: "All sheds" }} />
+        <PageHeader title={t("sheds.detail.title")} back={{ to: "/sheds", label: t("sheds.detail.allSheds") }} />
         <Panel>
           <CardSkeleton />
         </Panel>
@@ -46,10 +48,10 @@ export function ShedDetailPage(): React.ReactElement {
   if (shed.error || !record) {
     return (
       <div className="stack">
-        <PageHeader title="Shed" back={{ to: "/sheds", label: "All sheds" }} />
+        <PageHeader title={t("sheds.detail.title")} back={{ to: "/sheds", label: t("sheds.detail.allSheds") }} />
         <Panel>
           <ErrorState
-            error={shed.error ?? new ApiError(404, "Shed not found.")}
+            error={shed.error ?? new ApiError(404, t("error.shedNotFound"))}
             onRetry={shed.reload}
           />
         </Panel>
@@ -62,7 +64,7 @@ export function ShedDetailPage(): React.ReactElement {
       <PageHeader
         eyebrow={`${record.farm.code} · ${record.farm.name}`}
         title={`Shed ${record.number}`}
-        back={{ to: "/sheds", label: "All sheds" }}
+        back={{ to: "/sheds", label: t("sheds.detail.allSheds") }}
         actions={
           <>
             {can("shed:update") ? (
@@ -72,7 +74,7 @@ export function ShedDetailPage(): React.ReactElement {
                   setEditing(true);
                 }}
               >
-                Edit
+                {t("common.edit")}
               </Button>
             ) : null}
             {can("shed:update-status") ? (
@@ -82,7 +84,7 @@ export function ShedDetailPage(): React.ReactElement {
                   setSettingStatus(true);
                 }}
               >
-                Set status
+                {t("sheds.detail.setStatus")}
               </Button>
             ) : null}
           </>
@@ -90,15 +92,15 @@ export function ShedDetailPage(): React.ReactElement {
       />
 
       <div className="split">
-        <Panel title="Record">
+        <Panel title={t("sheds.detail.recordPanel")}>
           <DetailList
             items={[
               {
-                label: "Shed number",
+                label: t("sheds.detail.shedNumber"),
                 value: <span className="numeric">{record.number}</span>,
               },
               {
-                label: "Farm",
+                label: t("common.farm"),
                 value: can("farm:view") ? (
                   <Link className="table__link" to={`/farms/${record.farm.id}`}>
                     {record.farm.name}
@@ -110,13 +112,13 @@ export function ShedDetailPage(): React.ReactElement {
               ...(record.number.toLowerCase().includes("ac room")
                 ? [
                     {
-                      label: "Facility type",
-                      value: <span>Climate Control &amp; Operations Room</span>,
+                      label: t("sheds.detail.facilityType"),
+                      value: <span>{t("sheds.detail.climateControl")}</span>,
                     },
                   ]
                 : [
                     {
-                      label: "Bird capacity",
+                      label: t("sheds.detail.birdCapacity"),
                       value: (
                         <span className="numeric">
                           {formatNumber(record.capacity)}
@@ -124,21 +126,21 @@ export function ShedDetailPage(): React.ReactElement {
                       ),
                     },
                   ]),
-              { label: "Status", value: <StatusTag status={record.status} /> },
+              { label: t("common.status"), value: <StatusTag status={record.status} /> },
             ]}
           />
         </Panel>
 
-        <Panel title="What status means">
+        <Panel title={t("sheds.detail.statusMeaningPanel")}>
           <DetailList
             items={[
-              { label: "Available", value: "Ready to take a batch." },
+              { label: t("sheds.available"), value: t("sheds.detail.availableDesc") },
               {
-                label: "Occupied",
-                value: "Holding birds. Set by batch placement, not by hand.",
+                label: t("sheds.occupied"),
+                value: t("sheds.detail.occupiedDesc"),
               },
-              { label: "Maintenance", value: "Out of use while work is done." },
-              { label: "Inactive", value: "On record but not in use." },
+              { label: t("sheds.maintenance"), value: t("sheds.detail.maintenanceDesc") },
+              { label: t("common.inactive"), value: t("sheds.detail.inactiveDesc") },
             ]}
           />
         </Panel>
@@ -153,7 +155,7 @@ export function ShedDetailPage(): React.ReactElement {
           onSaved={(updated) => {
             shed.replace(updated);
             setEditing(false);
-            notify("success", "Shed updated.");
+            notify("success", t("sheds.detail.shedUpdated"));
           }}
         />
       ) : null}
@@ -169,7 +171,10 @@ export function ShedDetailPage(): React.ReactElement {
             setSettingStatus(false);
             notify(
               "success",
-              `Shed ${updated.number} is now ${updated.status.toLowerCase()}.`,
+              t("sheds.detail.shedNowStatus", {
+                number: updated.number,
+                status: updated.status.toLowerCase(),
+              }),
             );
           }}
         />

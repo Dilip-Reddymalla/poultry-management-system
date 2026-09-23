@@ -1,0 +1,418 @@
+{
+  "_meta": {
+    "language": "Telugu",
+    "code": "te",
+    "note": "Source-of-truth file. Every key here must exist in te.json and hi.json."
+  },
+  "common": {
+    "appName": "PoultryOps",
+    "loading": "లోడ్ అవుతోంది",
+    "tryAgain": "మళ్లీ ప్రయత్నించండి",
+    "cancel": "రద్దు చేయండి",
+    "save": "సేవ్ చేయండి",
+    "edit": "ఎడిట్ చేయండి",
+    "delete": "తొలగించండి",
+    "close": "మూసివేయండి",
+    "back": "వెనక్కి",
+    "next": "తర్వాత",
+    "previous": "ముందు",
+    "search": "వెతకండి",
+    "clearFilters": "ఫిల్టర్లు క్లియర్ చేయండి",
+    "allStatuses": "అన్ని స్టేటస్‌లు",
+    "active": "యాక్టివ్",
+    "inactive": "ఇన్‌యాక్టివ్",
+    "status": "స్టేటస్",
+    "name": "పేరు",
+    "phone": "ఫోన్",
+    "email": "ఈమెయిల్",
+    "farm": "ఫారం",
+    "allFarms": "అన్ని ఫారాలు",
+    "actions": "చర్యలు",
+    "yes": "అవును",
+    "no": "కాదు",
+    "notRecorded": "నమోదు కాలేదు",
+    "signedInAs": "లాగిన్ అయినది",
+    "internalUseOnly": "అంతర్గత వినియోగం కోసం మాత్రమే",
+    "importExcel": "Excel నుంచి ఇంపోర్ట్ చేయండి",
+    "exportExcel": "Excelకి ఎక్స్‌పోర్ట్ చేయండి",
+    "showPasswords": "పాస్‌వర్డ్ చూపించండి",
+    "hidePasswords": "పాస్‌వర్డ్ దాచండి",
+    "deactivate": "డీయాక్టివేట్ చేయండి",
+    "reactivate": "మళ్లీ యాక్టివేట్ చేయండి",
+    "attendance": "హాజరు",
+    "pending": "పెండింగ్",
+    "approved": "ఆమోదించబడింది",
+    "of": "లో"
+  },
+  "error": {
+    "notAvailableToRole": "మీ రోల్‌కు ఇది అందుబాటులో లేదు",
+    "couldNotLoad": "లోడ్ చేయలేకపోయాం",
+    "somethingWentWrong": "ఏదో సమస్య వచ్చింది.",
+    "workerNotFound": "వర్కర్ కనిపించలేదు.",
+    "farmNotFound": "ఫారం కనిపించలేదు.",
+    "shedNotFound": "షెడ్ కనిపించలేదు."
+  },
+  "offline": {
+    "notice": "నెట్‌వర్క్ కనెక్షన్ లేదు. నెట్‌వర్క్ తిరిగి వచ్చే వరకు రికార్డులు లోడ్ లేదా రిఫ్రెష్ కావు, మార్పులు కూడా సేవ్ చేయలేరు."
+  },
+  "pwa": {
+    "installApp": "యాప్ ఇన్‌స్టాల్ చేయండి"
+  },
+  "nav": {
+    "overview": "ఓవerview",
+    "companies": "కంపెనీలు",
+    "farms": "ఫారాలు",
+    "sheds": "షెడ్‌లు",
+    "employees": "ఉద్యోగులు",
+    "workers": "వర్కర్లు",
+    "attDashboard": "హాజరు డాష్‌బోర్డ్",
+    "attendanceList": "హాజరు జాబితా",
+    "faceAttendance": "ఫేస్ అటెండెన్స్",
+    "auditLogs": "ఆడిట్ లాగ్స్",
+    "myProfile": "నా ప్రొఫైల్",
+    "menu": "మెను",
+    "closeMenu": "మెను మూసివేయండి",
+    "signOut": "లాగ్ అవుట్ చేయండి"
+  },
+  "auth": {
+    "login": {
+      "title": "లాగిన్ చేయండి",
+      "subtitle": "మీ మేనేజర్ ఇచ్చిన వర్క్ ఈమెయిల్‌తో లాగిన్ చేయండి.",
+      "email": "ఈమెయిల్",
+      "password": "పాస్‌వర్డ్",
+      "forgotPassword": "పాస్‌వర్డ్ మర్చిపోయారా?",
+      "signInButton": "లాగిన్",
+      "noPassword": "ఇంకా పాస్‌వర్డ్ లేదా?",
+      "signInWithPhone": "ఫోన్‌తో లాగిన్ చేయండి",
+      "tagline": "ఫారాలు, షెడ్‌లు, వాటిని చూసుకునే సిబ్బంది — అన్నీ ఒకే చోట.",
+      "aboutLink": "PoultryOps గురించి",
+      "analyticsLink": "పబ్లిక్ అనలిటిక్స్ చూడండి",
+      "faceAiLink": "Face AI సాండ్‌బాక్స్ పరీక్షించండి"
+    },
+    "otpLogin": {
+      "title": "ఫోన్‌తో లాగిన్ చేయండి",
+      "subtitle": "పాస్‌వర్డ్‌తో లాగిన్ చేయండి లేదా మీ నంబర్ ఇచ్చి SMS కోడ్ పొందండి.",
+      "phoneNumber": "ఫోన్ నంబర్",
+      "phoneHint": "కంట్రీ కోడ్ ఎంచుకుని, రిజిస్టర్ చేసిన మొబైల్ నంబర్ ఇవ్వండి.",
+      "passwordOptional": "పాస్‌వర్డ్ (OTP వాడితే అవసరం లేదు)",
+      "passwordHint": "వెంటనే లాగిన్ కావాలంటే పాస్‌వర్డ్ ఇవ్వండి. లేకపోతే ఖాళీగా ఉంచి OTP పొందండి.",
+      "forgotPassword": "పాస్‌వర్డ్ మర్చిపోయారా?",
+      "signInWithPassword": "పాస్‌వర్డ్‌తో లాగిన్ చేయండి",
+      "sendOtpCode": "OTP కోడ్ పంపండి",
+      "sendOtpInstead": "బదులుగా OTP పంపండి",
+      "enterCodeTitle": "కోడ్ ఇవ్వండి",
+      "sentTo": "ఇక్కడికి పంపాం",
+      "sixDigitCode": "6 అంకెల కోడ్",
+      "verifyAndSignIn": "వెరిఫై చేసి లాగిన్ చేయండి",
+      "useDifferentNumber": "వేరే నంబర్ వాడండి",
+      "chooseAccount": "అకౌంట్ ఎంచుకోండి",
+      "multipleAccounts": "ఈ నంబర్‌కు ఒకటి కంటే ఎక్కువ అకౌంట్లు ఉన్నాయి.",
+      "signInWithEmail": "ఈమెయిల్, పాస్‌వర్డ్‌తో లాగిన్ చేయండి"
+    },
+    "forgotPassword": {
+      "resetTitle": "పాస్‌వర్డ్ రీసెట్ చేయండి",
+      "resetSubtitle": "మీ అకౌంట్‌కు రిజిస్టర్ చేసిన ఫోన్ నంబర్ ఇవ్వండి. OTP వస్తుంది.",
+      "registeredPhone": "రిజిస్టర్ చేసిన ఫోన్ నంబర్",
+      "phoneHint": "కంట్రీ కోడ్ ఎంచుకుని మీ మొబైల్ నంబర్ ఇవ్వండి.",
+      "sendOtp": "OTP కోడ్ పంపండి",
+      "rememberPassword": "పాస్‌వర్డ్ గుర్తుందా?",
+      "signIn": "లాగిన్ చేయండి",
+      "newPasswordTitle": "కొత్త పాస్‌వర్డ్ పెట్టండి",
+      "codeSentTo": "6 అంకెల వెరిఫికేషన్ కోడ్‌ను ఇక్కడికి పంపాం",
+      "sixDigitCode": "6 అంకెల కోడ్",
+      "workEmailOptional": "వర్క్ ఈమెయిల్ (ఐచ్ఛికం)",
+      "workEmailHint": "ఒకే ఫోన్ నంబర్‌ను పలువురు ఉద్యోగులు వాడితే మాత్రమే అవసరం.",
+      "newPassword": "కొత్త పాస్‌వర్డ్",
+      "newPasswordHint": "కనీసం 8 అక్షరాలు ఉండాలి.",
+      "confirmNewPassword": "కొత్త పాస్‌వర్డ్ మళ్లీ ఇవ్వండి",
+      "resetPasswordButton": "పాస్‌వర్డ్ రీసెట్ చేయండి",
+      "changePhoneNumber": "ఫోన్ నంబర్ మార్చండి",
+      "successTitle": "పాస్‌వర్డ్ రీసెట్ అయింది!",
+      "successSubtitle": "మీ పాస్‌వర్డ్ విజయవంతంగా మార్చబడింది. ఇప్పుడు కొత్త పాస్‌వర్డ్‌తో లాగిన్ చేయవచ్చు.",
+      "signInNow": "ఇప్పుడే లాగిన్ చేయండి",
+      "validationPhoneRequired": "ఫోన్ నంబర్ ఇవ్వండి",
+      "validationOtpIncomplete": "పూర్తి 6 అంకెల OTP ఇవ్వండి",
+      "validationPasswordTooShort": "పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి",
+      "validationPasswordMismatch": "రెండు పాస్‌వర్డ్‌లు ఒకేలా లేవు",
+      "errorSendingOtp": "వెరిఫికేషన్ కోడ్ పంపలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+      "errorResettingPassword": "పాస్‌వర్డ్ రీసెట్ కాలేదు. OTP చెక్ చేసి మళ్లీ ప్రయత్నించండి."
+    },
+    "setPassword": {
+      "title": "మీ పాస్‌వర్డ్ సెట్ చేయండి",
+      "subtitle": "స్వాగతం{{name}}. మీ అకౌంట్ సెటప్ పూర్తి చేయడానికి పాస్‌వర్డ్ ఎంచుకోండి. ఇక నుంచి దీన్ని ఫోన్ కోడ్‌తో వాడుతారు.",
+      "newPassword": "కొత్త పాస్‌వర్డ్",
+      "passwordHint": "కనీసం {{count}} అక్షరాలు.",
+      "confirmPassword": "పాస్‌వర్డ్ మళ్లీ ఇవ్వండి",
+      "mismatchError": "రెండు పాస్‌వర్డ్‌లు ఒకేలా లేవు.",
+      "submitButton": "పాస్‌వర్డ్ సెట్ చేసి కొనసాగండి"
+    }
+  },
+  "dashboard": {
+    "eyebrow": "ఓవerview",
+    "title": "శుభదినం, {{name}}",
+    "description": "ప్రస్తుతం ఫారాల్లో పరిస్థితి ఎలా ఉందో ఇక్కడ చూడండి.",
+    "noAccess": {
+      "title": "ఇంకా చూపించడానికి ఏమీ లేదు",
+      "description": "మీ రోల్‌లో ఉద్యోగులు, ఫారాలు లేదా షెడ్‌లకు యాక్సెస్ లేదు. అవసరమైతే మేనేజర్‌ను అడగండి."
+    },
+    "kpi": {
+      "activeEmployees": "యాక్టివ్ ఉద్యోగులు",
+      "activeEmployeesDetail": "ఈరోజు రిజిస్టర్‌లో ఉన్నవారు",
+      "activeFarms": "యాక్టివ్ ఫారాలు",
+      "activeFarmsDetail": "రికార్డులో ఉన్నవి",
+      "shedsAvailable": "అందుబాటులో ఉన్న షెడ్‌లు",
+      "shedsAvailableDetail": "మొత్తం {{total}} షెడ్‌లలో",
+      "birdCapacity": "పక్షుల సామర్థ్యం",
+      "birdCapacityDetail": "అన్ని షెడ్‌లు కలిపి"
+    },
+    "shedBoard": {
+      "eyebrow": "షెడ్ బోర్డ్",
+      "title": "ప్రతి ఫారం వారీగా షెడ్‌లు",
+      "noSheds": {
+        "title": "షెడ్‌లు నమోదు కాలేదు",
+        "description": "ఫారంలో షెడ్‌ను యాడ్ చేసిన వెంటనే ఇక్కడ కనిపిస్తుంది."
+      }
+    }
+  },
+  "workers": {
+    "pageEyebrow": "సిబ్బంది",
+    "pageTitle": "వర్కర్లు",
+    "pageDescription": "హాజరు కోసం నమోదు చేసిన ఫీల్డ్ సిబ్బంది. వర్కర్లు యాప్‌లో లాగిన్ చేయరు.",
+    "addWorker": "వర్కర్‌ను యాడ్ చేయండి",
+    "searchPlaceholder": "పేరు, వర్కర్ ID లేదా ఫోన్‌తో వెతకండి",
+    "searchAriaLabel": "వర్కర్లను వెతకండి",
+    "workerID": "వర్కర్ ID",
+    "sortByWorkerID": "వర్కర్ ID ప్రకారం",
+    "sortByName": "పేరు ప్రకారం",
+    "sortByStatus": "స్టేటస్ ప్రకారం",
+    "noMatches": {
+      "title": "ఏవి సరిపోలలేదు",
+      "description": "వేరే పేరు, స్టేటస్ లేదా ఫారం ప్రయత్నించండి."
+    },
+    "noWorkers": {
+      "title": "ఇంకా వర్కర్లు లేరు",
+      "description": "హాజరు నమోదు చేయడం మొదలుపెట్టడానికి మొదటి వర్కర్‌ను యాడ్ చేయండి."
+    },
+    "importCompleted": "వర్కర్ల ఇంపోర్ట్ పూర్తయింది.",
+    "detail": {
+      "title": "వర్కర్",
+      "allWorkers": "అందరు వర్కర్లు",
+      "recordPanel": "రికార్డు",
+      "appAccessPanel": "యాప్ యాక్సెస్",
+      "appAccessText": "వర్కర్లను హాజరు కోసం మాత్రమే నమోదు చేస్తారు. వారికి లాగిన్ ఉండదు, యాప్‌లో సైన్ ఇన్ చేయలేరు.",
+      "updateSuccess": "వర్కర్ వివరాలు అప్‌డేట్ అయ్యాయి.",
+      "deleteSuccess": "{{name}} తొలగించబడ్డారు.",
+      "deactivateTitle": "వర్కర్‌ను డీయాక్టివేట్ చేయాలా?",
+      "reactivateTitle": "వర్కర్‌ను మళ్లీ యాక్టివేట్ చేయాలా?",
+      "deactivateDescription": "{{name}} రికార్డులో ఉంటారు కానీ ఇన్‌యాక్టివ్‌గా మారి హాజరు నమోదు జాబితా నుంచి తొలగిపోతారు.",
+      "reactivateDescription": "{{name}} మళ్లీ యాక్టివ్ అవుతారు, తిరిగి హాజరు వేయవచ్చు.",
+      "deleteTitle": "{{name}}ను తొలగించాలా?",
+      "deleteDescription": "వర్కర్ రికార్డు మరియు సంబంధిత హాజరు రికార్డులు శాశ్వతంగా తొలగిపోతాయి. ఇది తిరిగి మార్చలేరు.",
+      "deleteConfirmLabel": "వర్కర్‌ను తొలగించండి",
+      "deactivatedSuccess": "{{name}} డీయాక్టివేట్ అయ్యారు.",
+      "reactivatedSuccess": "{{name}} మళ్లీ యాక్టివ్ అయ్యారు.",
+      "failedToDelete": "వర్కర్‌ను తొలగించలేకపోయాం."
+    }
+  },
+  "employees": {
+    "pageEyebrow": "సిబ్బంది",
+    "pageTitle": "ఉద్యోగులు",
+    "pageDescription": "రిజిస్టర్‌లో ఉన్న అందరి వివరాలు, వారు పనిచేసే హోదాతో సహా.",
+    "addEmployee": "ఉద్యోగిని యాడ్ చేయండి",
+    "searchPlaceholder": "పేరు, ఉద్యోగి ID లేదా ఫోన్‌తో వెతకండి",
+    "searchAriaLabel": "ఉద్యోగులను వెతకండి",
+    "employeeID": "ఉద్యోగి ID",
+    "designation": "హోదా",
+    "allDesignations": "అన్ని హోదాలు",
+    "joined": "చేరిన తేదీ",
+    "login": "లాగిన్",
+    "sortByEmployeeID": "ఉద్యోగి ID ప్రకారం",
+    "sortByName": "పేరు ప్రకారం",
+    "sortByLogin": "లాగిన్ యాక్సెస్ ప్రకారం",
+    "sortByStatus": "స్టేటస్ ప్రకారం",
+    "noMatches": {
+      "title": "ఏవి సరిపోలలేదు",
+      "description": "వేరే పేరు, స్టేటస్ లేదా హోదా ప్రయత్నించండి."
+    },
+    "noEmployees": {
+      "title": "ఇంకా ఉద్యోగులు లేరు",
+      "description": "రిజిస్టర్ తయారు చేయడం మొదలుపెట్టడానికి మొదటి ఉద్యోగిని యాడ్ చేయండి."
+    },
+    "importCompleted": "ఉద్యోగుల ఇంపోర్ట్ పూర్తయింది.",
+    "deleteTitle": "{{name}}ను తొలగించాలా?",
+    "deleteDescription": "ఉద్యోగి, లాగిన్ అకౌంట్, సంబంధిత హాజరు రికార్డులు శాశ్వతంగా తొలగిపోతాయి. ఇది తిరిగి మార్చలేరు.",
+    "deleteConfirmLabel": "ఉద్యోగిని తొలగించండి",
+    "failedToDelete": "ఉద్యోగిని తొలగించలేకపోయాం.",
+    "detail": {
+      "title": "ఉద్యోగి",
+      "allEmployees": "అందరు ఉద్యోగులు"
+    }
+  },
+  "farms": {
+    "pageEyebrow": "సైట్‌లు",
+    "pageTitle": "ఫారాలు",
+    "pageDescription": "ప్రతి ఫారం ఒక కంపెనీకి చెందుతుంది. అందులో దానికి సంబంధించిన షెడ్‌లు ఉంటాయి.",
+    "addFarm": "ఫారం యాడ్ చేయండి",
+    "code": "కోడ్",
+    "company": "కంపెనీ",
+    "noFarmsWithStatus": {
+      "title": "ఈ స్టేటస్‌లో ఫారాలు లేవు",
+      "description": "మిగతా ఫారాలు చూడడానికి స్టేటస్ ఫిల్టర్ మార్చండి."
+    },
+    "noFarms": {
+      "title": "ఇంకా ఫారాలు లేవు",
+      "description": "ముందు ఫారం యాడ్ చేసి, ఆ తర్వాత అందులో ఉన్న షెడ్‌లను యాడ్ చేయండి."
+    },
+    "detail": {
+      "title": "ఫారం",
+      "allFarms": "అన్ని ఫారాలు",
+      "recordPanel": "రికార్డు",
+      "farmCode": "ఫారం కోడ్",
+      "companyCode": "కంపెనీ కోడ్",
+      "capacityPanel": "సామర్థ్యం",
+      "sheds": "షెడ్‌లు",
+      "available": "అందుబాటులో ఉంది",
+      "birdCapacity": "పక్షుల సామర్థ్యం",
+      "shedBoardEyebrow": "షెడ్ బోర్డ్",
+      "shedBoardTitle": "ఈ ఫారంలోని షెడ్‌లు",
+      "manageSheds": "షెడ్‌లను నిర్వహించండి",
+      "noSheds": {
+        "title": "ఈ ఫారంలో షెడ్‌లు లేవు",
+        "description": "సామర్థ్యాన్ని ట్రాక్ చేయడానికి షెడ్ లిస్ట్ నుంచి షెడ్‌లను యాడ్ చేయండి."
+      },
+      "deactivateTitle": "ఫారాన్ని డీయాక్టివేట్ చేయాలా?",
+      "reactivateTitle": "ఫారాన్ని మళ్లీ యాక్టివేట్ చేయాలా?",
+      "deactivateDescription": "{{name}} ఇన్‌యాక్టివ్‌గా మార్క్ అవుతుంది. దాని షెడ్‌లు రికార్డులో ఉంటాయి.",
+      "reactivateDescription": "{{name}} మళ్లీ యాక్టివ్ అవుతుంది.",
+      "farmUpdated": "ఫారం అప్‌డేట్ అయింది.",
+      "deactivatedSuccess": "{{name}} డీయాక్టివేట్ అయింది.",
+      "reactivatedSuccess": "{{name}} మళ్లీ యాక్టివ్ అయింది."
+    }
+  },
+  "sheds": {
+    "pageEyebrow": "షెడ్‌లు",
+    "pageTitle": "షెడ్‌లు",
+    "pageDescription": "ప్రతి ఫారంలోని అన్ని షెడ్‌లు, వాటి సామర్థ్యంతో సహా.",
+    "addShed": "షెడ్ యాడ్ చేయండి",
+    "capacity": "సామర్థ్యం",
+    "available": "అందుబాటులో ఉంది",
+    "occupied": "వాడుకలో ఉంది",
+    "maintenance": "మెయింటెనెన్స్",
+    "noShedsMatch": {
+      "title": "షెడ్‌లు ఏవీ సరిపోలలేదు",
+      "description": "వేరే ఫారం లేదా స్టేటస్ ప్రయత్నించండి."
+    },
+    "noSheds": {
+      "title": "ఇంకా షెడ్‌లు లేవు",
+      "description": "సామర్థ్యాన్ని ట్రాక్ చేయడానికి ఫారంలో షెడ్ యాడ్ చేయండి."
+    },
+    "addedSuccess": "షెడ్ {{number}} యాడ్ అయింది.",
+    "detail": {
+      "title": "షెడ్",
+      "allSheds": "అన్ని షెడ్‌లు",
+      "recordPanel": "రికార్డు",
+      "shedNumber": "షెడ్ నంబర్",
+      "birdCapacity": "పక్షుల సామర్థ్యం",
+      "facilityType": "సదుపాయం రకం",
+      "climateControl": "క్లైమేట్ కంట్రోల్ & ఆపరేషన్స్ రూమ్",
+      "statusMeaningPanel": "స్టేటస్ అంటే ఏమిటి?",
+      "availableDesc": "కొత్త బ్యాచ్ పెట్టడానికి సిద్ధంగా ఉంది.",
+      "occupiedDesc": "పక్షులు ఉన్నాయి. బ్యాచ్ ప్లేస్‌మెంట్ ఆధారంగా స్టేటస్ సెట్ అవుతుంది.",
+      "maintenanceDesc": "పని జరుగుతున్నందున ప్రస్తుతం వాడటం లేదు.",
+      "inactiveDesc": "రికార్డులో ఉంది కానీ ప్రస్తుతం వాడటం లేదు.",
+      "setStatus": "స్టేటస్ సెట్ చేయండి",
+      "shedUpdated": "షెడ్ అప్‌డేట్ అయింది.",
+      "shedNowStatus": "షెడ్ {{number}} ఇప్పుడు {{status}}లో ఉంది."
+    }
+  },
+  "attendance": {
+    "pageEyebrow": "ఆపరేషన్స్",
+    "pageTitle": "హాజరు",
+    "pageDescriptionRoster": "రోజువారీ హాజరు జాబితా. ఎవరు వచ్చారు, రాలేదు, సెలవులో ఉన్నారో రంగులతో చూపిస్తుంది.",
+    "pageDescriptionPerson": "ఈ వ్యక్తికి సంబంధించిన అన్ని హాజరు రికార్డులు.",
+    "faceAttendance": "ఫేస్ అటెండెన్స్",
+    "bulkMark": "ఒకేసారి మార్క్ చేయండి",
+    "markUnmarkedAbsent": "మార్క్ చేయని వారిని గైర్హాజరుగా పెట్టండి",
+    "recordAttendance": "హాజరు నమోదు చేయండి",
+    "personHistory": "ఒక వ్యక్తి హాజరు చరిత్ర చూపిస్తోంది.",
+    "backToRoster": "హాజరు జాబితాకు తిరిగి వెళ్లండి",
+    "date": "తేదీ",
+    "person": "వ్యక్తి",
+    "shed": "షెడ్",
+    "shift": "షిఫ్ట్",
+    "allShifts": "అన్ని షిఫ్ట్‌లు",
+    "gpsLocation": "GPS లొకేషన్",
+    "approval": "ఆమోదం",
+    "employee": "ఉద్యోగి",
+    "worker": "వర్కర్",
+    "shedNumber": "షెడ్ {{number}}",
+    "recorded": "హాజరు నమోదు అయింది.",
+    "noRecordsYet": {
+      "title": "ఇంకా రికార్డులు లేవు",
+      "description": "ఈ వ్యక్తి హాజరు నమోదు చేసిన తర్వాత ఇక్కడ కనిపిస్తుంది."
+    },
+    "noOneWithStatus": {
+      "title": "ఈ స్టేటస్‌లో ఎవరూ లేరు",
+      "description": "మిగతా వారిని చూడడానికి స్టేటస్ ఫిల్టర్ క్లియర్ చేయండి."
+    },
+    "nothingForDay": {
+      "title": "ఈ రోజుకు ఏమీ నమోదు కాలేదు",
+      "description": "ఈ రోజుకు మొదటి వ్యక్తి హాజరు నమోదు చేయడానికి 'హాజరు నమోదు చేయండి' ఉపయోగించండి."
+    }
+  },
+  "profile": {
+    "noSession": {
+      "title": "సెషన్ లేదు",
+      "description": "మీ ప్రొఫైల్ చూడడానికి మళ్లీ లాగిన్ చేయండి."
+    },
+    "attendanceAnalyticsTitle": "హాజరు అనలిటిక్స్",
+    "attendanceAnalyticsSub": "గత 30 రోజుల హాజరు ఒక చూపులో",
+    "attendanceHistoryTitle": "హాజరు చరిత్ర",
+    "attendanceHistorySub": "మీ హాజరు నమోదుల పూర్తి రికార్డు",
+    "changePassword": "పాస్‌వర్డ్ మార్చండి",
+    "employeeID": "ఉద్యోగి ID",
+    "email": "ఈమెయిల్",
+    "phone": "ఫోన్",
+    "joined": "చేరిన తేదీ",
+    "scopeLabel": "{{scope}} పరిధి",
+    "permissions": {
+      "title": "అనుమతులు",
+      "total": "మొత్తం {{count}}",
+      "empty": "ఇంకా ఎలాంటి అనుమతులు ఇవ్వలేదు. రోల్ ఇవ్వమని మేనేజర్‌ను అడగండి."
+    },
+    "changePasswordDialog": {
+      "title": "పాస్‌వర్డ్ మార్చండి",
+      "description": "మీ ప్రస్తుత పాస్‌వర్డ్ ఇవ్వండి. కనీసం 8 అక్షరాల కొత్త పాస్‌వర్డ్ ఎంచుకోండి.",
+      "currentPassword": "ప్రస్తుత పాస్‌వర్డ్",
+      "newPassword": "కొత్త పాస్‌వర్డ్",
+      "newPasswordHint": "కనీసం 8 అక్షరాలు ఉండాలి.",
+      "confirmNewPassword": "కొత్త పాస్‌వర్డ్ మళ్లీ ఇవ్వండి",
+      "showPasswords": "పాస్‌వర్డ్ చూపించండి",
+      "hidePasswords": "పాస్‌వర్డ్ దాచండి",
+      "updateButton": "పాస్‌వర్డ్ అప్‌డేట్ చేయండి",
+      "changedSuccess": "పాస్‌వర్డ్ విజయవంతంగా మార్చబడింది.",
+      "validationTooShort": "కొత్త పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి",
+      "validationMismatch": "రెండు పాస్‌వర్డ్‌లు ఒకేలా లేవు"
+    }
+  },
+  "companies": {
+    "pageEyebrow": "అకౌంట్",
+    "pageTitle": "కంపెనీలు",
+    "pageDescription": "ఫారాలను నిర్వహించే సంస్థలు."
+  },
+  "auditLogs": {
+    "pageTitle": "ఆడిట్ లాగ్స్"
+  },
+  "notFound": {
+    "pageTitle": "పేజీ కనిపించలేదు",
+    "title": "ఈ స్క్రీన్ లేదు",
+    "description": "ఈ లింక్ పాతది అయి ఉండొచ్చు. ఓవerviewకి తిరిగి వెళ్లండి.",
+    "goToOverview": "ఓవerviewకి వెళ్లండి"
+  },
+  "language": {
+    "switcherLabel": "భాష",
+    "en": "EN",
+    "te": "తె",
+    "hi": "हि"
+  }
+}

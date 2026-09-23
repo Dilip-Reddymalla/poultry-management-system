@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { signIn } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { EggIcon } from "../../components/icons.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { InstallButton } from "../../pwa/InstallButton.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 
@@ -25,6 +27,7 @@ function ShedRowMotif(): React.ReactElement {
 }
 
 export function LoginPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { setSession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,7 +54,7 @@ export function LoginPage(): React.ReactElement {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "Something went wrong."),
+          : new ApiError(0, t("error.somethingWentWrong")),
       );
     } finally {
       setBusy(false);
@@ -68,25 +71,26 @@ export function LoginPage(): React.ReactElement {
           </span>
         </div>
         <p className="signin__lede">
-          Farms, sheds and the people who run them — in one register.
+          {t("auth.login.tagline")}
         </p>
         <ShedRowMotif />
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingTop: "1.5rem" }}>
           <Link to="/about" style={{ color: "#92d8a4", fontSize: "0.85rem", textDecoration: "none" }}>
-            ℹ️ <strong>About PoultryOps</strong>
+            ℹ️ <strong>{t("auth.login.aboutLink")}</strong>
           </Link>
           <Link to="/analytics" style={{ color: "var(--paper)", fontSize: "0.85rem", textDecoration: "none", opacity: 0.9 }}>
-            📊 <strong>View Public Analytics</strong>
+            📊 <strong>{t("auth.login.analyticsLink")}</strong>
           </Link>
           <Link to="/face-ai-demo" style={{ color: "#38bdf8", fontSize: "0.85rem", textDecoration: "none" }}>
-            ✨ <strong>Test Face AI Sandbox</strong>
+            ✨ <strong>{t("auth.login.faceAiLink")}</strong>
           </Link>
         </div>
-        <p className="signin__foot eyebrow" style={{ marginTop: "1rem" }}>Internal use only</p>
+        <p className="signin__foot eyebrow" style={{ marginTop: "1rem" }}>{t("common.internalUseOnly")}</p>
       </aside>
 
       <main className="signin__main">
-        <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", maxWidth: "360px", marginBottom: "0.75rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", maxWidth: "360px", marginBottom: "0.75rem" }}>
+          <LanguageSwitcher />
           <Link
             to="/about"
             style={{
@@ -103,14 +107,14 @@ export function LoginPage(): React.ReactElement {
               border: "1px solid var(--line)",
             }}
           >
-            <span>About PoultryOps</span>
+            <span>{t("auth.login.aboutLink")}</span>
             <span aria-hidden="true">→</span>
           </Link>
         </div>
         <form className="signin__form" onSubmit={handleSubmit} noValidate>
-          <h1 className="signin__title">Sign in</h1>
+          <h1 className="signin__title">{t("auth.login.title")}</h1>
           <p className="signin__subtitle">
-            Use the work email your manager set up for you.
+            {t("auth.login.subtitle")}
           </p>
 
           <OfflineNotice />
@@ -119,7 +123,7 @@ export function LoginPage(): React.ReactElement {
 
           <TextField
             id="email"
-            label="Email"
+            label={t("auth.login.email")}
             type="email"
             autoComplete="username"
             required
@@ -132,7 +136,7 @@ export function LoginPage(): React.ReactElement {
 
           <TextField
             id="password"
-            label="Password"
+            label={t("auth.login.password")}
             type="password"
             autoComplete="current-password"
             required
@@ -145,16 +149,17 @@ export function LoginPage(): React.ReactElement {
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.5rem" }}>
             <Link to="/forgot-password" style={{ fontSize: "0.85rem" }}>
-              Forgot password?
+              {t("auth.login.forgotPassword")}
             </Link>
           </div>
 
           <Button type="submit" variant="primary" busy={busy}>
-            Sign in
+            {t("auth.login.signInButton")}
           </Button>
 
           <p className="signin__alt">
-            No password yet? <Link to="/otp-login">Sign in with your phone</Link>
+            {t("auth.login.noPassword")}{" "}
+            <Link to="/otp-login">{t("auth.login.signInWithPhone")}</Link>
           </p>
         </form>
 

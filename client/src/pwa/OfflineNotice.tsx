@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { OfflineIcon } from "../components/icons.js";
 import { useOnlineStatus } from "./useOnlineStatus.js";
 
@@ -7,6 +8,7 @@ import { useOnlineStatus } from "./useOnlineStatus.js";
  * plainly that nothing on screen will refresh and nothing can be saved.
  */
 export function OfflineNotice(): React.ReactElement | null {
+  const { t } = useTranslation();
   const online = useOnlineStatus();
 
   if (online) {
@@ -16,10 +18,7 @@ export function OfflineNotice(): React.ReactElement | null {
   return (
     <div className="offline-notice" role="status">
       <OfflineIcon className="offline-notice__icon" />
-      <span>
-        No connection. Records will not load or refresh, and changes cannot be
-        saved until the network returns.
-      </span>
+      <span>{t("offline.notice")}</span>
     </div>
   );
 }

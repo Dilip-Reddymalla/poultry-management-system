@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../api/types.js";
 import { initials } from "../../lib/display.js";
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactElement {
+  const { t } = useTranslation();
   const { employee, email, employeeId, scope, roles } = user;
 
   return (
@@ -35,7 +37,7 @@ export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactE
             </span>
           )}
           {/* Online / active indicator */}
-          <span className="ph-hero__status-dot" title="Active" />
+          <span className="ph-hero__status-dot" title={t("common.active")} />
         </div>
 
         {/* Identity */}
@@ -58,28 +60,28 @@ export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactE
         {/* Right side meta */}
         <div className="ph-hero__meta">
           <span className={`ph-hero__scope-badge ph-hero__scope-badge--${scope.level.toLowerCase()}`}>
-            {SCOPE_LABEL[scope.level] ?? scope.level} scope
+            {t("profile.scopeLabel", { scope: SCOPE_LABEL[scope.level] ?? scope.level })}
           </span>
 
 
           <dl className="ph-hero__detail-list">
             <div className="ph-hero__detail">
-              <dt>Employee ID</dt>
+              <dt>{t("profile.employeeID")}</dt>
               <dd className="numeric">{employeeId ?? "—"}</dd>
             </div>
             <div className="ph-hero__detail">
-              <dt>Email</dt>
+              <dt>{t("profile.email")}</dt>
               <dd>{email}</dd>
             </div>
             {employee.phone && (
               <div className="ph-hero__detail">
-                <dt>Phone</dt>
+                <dt>{t("profile.phone")}</dt>
                 <dd>{employee.phone}</dd>
               </div>
             )}
             {employee.joiningDate && (
               <div className="ph-hero__detail">
-                <dt>Joined</dt>
+                <dt>{t("profile.joined")}</dt>
                 <dd>
                   {new Date(employee.joiningDate).toLocaleDateString(undefined, {
                     day: "2-digit",
@@ -107,7 +109,7 @@ export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactE
                   gap: "0.4rem",
                 }}
               >
-                Change password
+                {t("profile.changePassword")}
               </button>
             </div>
           )}

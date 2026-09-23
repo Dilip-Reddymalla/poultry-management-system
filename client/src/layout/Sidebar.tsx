@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../auth/use-auth.js";
 import {
@@ -15,7 +16,7 @@ import {
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   /** Permission that makes this section usable; undefined means always. */
   permission?: string;
   systemAdminOnly?: boolean;
@@ -23,52 +24,52 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "Overview", icon: DashboardIcon },
+  { to: "/dashboard", labelKey: "nav.dashboard", icon: DashboardIcon },
   {
     to: "/companies",
-    label: "Companies",
+    labelKey: "nav.companies",
     permission: "company:view",
     icon: CompanyIcon,
   },
-  { to: "/farms", label: "Farms", permission: "farm:view", icon: FarmIcon },
-  { to: "/sheds", label: "Sheds", permission: "shed:view", icon: ShedIcon },
+  { to: "/farms", labelKey: "nav.farms", permission: "farm:view", icon: FarmIcon },
+  { to: "/sheds", labelKey: "nav.sheds", permission: "shed:view", icon: ShedIcon },
   {
     to: "/employees",
-    label: "Employees",
+    labelKey: "nav.employees",
     permission: "employee:view",
     icon: PeopleIcon,
   },
   {
     to: "/workers",
-    label: "Workers",
+    labelKey: "nav.workers",
     permission: "worker:view",
     icon: WorkerIcon,
   },
   {
     to: "/attendance/dashboard",
-    label: "Att. Dashboard",
+    labelKey: "nav.attDashboard",
     permission: "attendance:view",
     icon: DashboardIcon,
   },
   {
     to: "/attendance",
-    label: "Attendance List",
+    labelKey: "nav.attendanceList",
     permission: "attendance:view",
     icon: CalendarIcon,
   },
   {
     to: "/attendance/face",
-    label: "Face Attendance",
+    labelKey: "nav.faceAttendance",
     permission: "attendance:create",
     icon: PeopleIcon,
   },
   {
     to: "/audit-logs",
-    label: "Audit Logs",
+    labelKey: "nav.auditLogs",
     systemAdminOnly: true,
     icon: CalendarIcon,
   },
-  { to: "/profile", label: "My profile", icon: ProfileIcon },
+  { to: "/profile", labelKey: "nav.myProfile", icon: ProfileIcon },
 ];
 
 export function Sidebar({
@@ -76,6 +77,7 @@ export function Sidebar({
 }: {
   onNavigate: () => void;
 }): React.ReactElement {
+  const { t } = useTranslation();
   const { user, can } = useAuth();
 
   // A section the user cannot read is not shown. The API enforces the same rule.
@@ -93,7 +95,7 @@ export function Sidebar({
         </span>
       </div>
 
-      <nav className="sidebar__nav" aria-label="Sections">
+      <nav className="sidebar__nav" aria-label={t("nav.sections")}>
         {items.map((item) => (
           <NavLink
             key={item.to}
@@ -104,13 +106,13 @@ export function Sidebar({
             onClick={onNavigate}
           >
             <item.icon className="navlink__icon" />
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>
 
       <div className="sidebar__foot">
-        <p className="eyebrow">Signed in as</p>
+        <p className="eyebrow">{t("common.signedInAs")}</p>
         <p className="sidebar__user">{user?.employee.name}</p>
         <p className="sidebar__role">{user?.employee.designation.name}</p>
       </div>

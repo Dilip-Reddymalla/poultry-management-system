@@ -73,3 +73,13 @@ prisma/*.db
 src/generated/
 **/generated/
 *.tsbuildinfo
+
+# Database backups & maintenance scripts
+backups/
+**/backups/
+*.sql
+*.sql.gz
+*.dump
+src/scripts/neon-backup.ts
+src/scripts/scheduled-jobs.ts
+

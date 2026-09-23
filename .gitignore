@@ -85,8 +85,20 @@ src/generated/
 **/generated/
 *.tsbuildinfo
 
+# Database backups & maintenance scripts
+backups/
+**/backups/
+*.sql
+*.sql.gz
+*.dump
+server/src/scripts/neon-backup.ts
+server/src/scripts/scheduled-jobs.ts
+.github/workflows/db-backup.yml
+.github/
+
 # docs
 EFFORT_ESTIMATION_AND_PRICING.md
 SRS.md
 SYSTEM_DESIGN.md
 PROJECT_AUDIT.md
+

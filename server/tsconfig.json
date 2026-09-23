@@ -18,5 +18,10 @@
     "exactOptionalPropertyTypes": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/scripts/neon-backup.ts",
+    "src/scripts/scheduled-jobs.ts"
+  ]
 }

@@ -1,32 +1,32 @@
 import app from "./app.js";
-import {env} from "./config/env.js"
-
+import { env } from "./config/env.js";
 import { prisma } from "./config/database.js";
+import { logger } from "./config/logger.js";
 
-const server = app.listen(env.PORT, ()=>{
-    console.log(`🚀 Server running on http://localhost:${env.PORT}`);
+const server = app.listen(env.PORT, () => {
+  logger.info(`🚀 Server running on http://localhost:${env.PORT}`);
 });
 
 const gracefulShutdown = async () => {
-    console.log("Shutting down gracefully...");
-    server.close(async () => {
-        console.log("Closed out remaining connections.");
-        await prisma.$disconnect();
-        process.exit(0);
-    });
+  logger.info("Shutting down gracefully...");
+  server.close(async () => {
+    logger.info("Closed out remaining connections.");
+    await prisma.$disconnect();
+    process.exit(0);
+  });
 
-    setTimeout(() => {
-        console.error("Could not close connections in time, forcefully shutting down");
-        process.exit(1);
-    }, 10000);
+  setTimeout(() => {
+    logger.error("Could not close connections in time, forcefully shutting down");
+    process.exit(1);
+  }, 10000);
 };
 
 process.on("unhandledRejection", (reason) => {
-  console.error("Unhandled Rejection:", reason);
+  logger.error({ reason }, "Unhandled Rejection");
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.error({ error }, "Uncaught Exception");
 });
 
 process.on("SIGTERM", gracefulShutdown);

@@ -68,7 +68,10 @@ export async function searchByEmbedding(
 
   if (hasPgVector) {
     const vectorLiteral = `[${embedding.join(",")}]`;
+    const maxCosineDistance = 1 - threshold;
 
+    // To activate PostgreSQL pgvector HNSW vector_cosine_ops index scan,
+    // the ORDER BY clause must order by the <=> operator directly (ASC).
     const employeeQuery = `
       SELECT
         e.id,
@@ -77,13 +80,13 @@ export async function searchByEmbedding(
         e.name,
         COALESCE(e."photoUrl", e.photo_url) AS "photoUrl",
         e."farmId" AS "farmId",
-        1 - (e.face_embedding <=> $1::vector) AS similarity
+        (1 - (e.face_embedding <=> $1::vector)) AS similarity
       FROM employees e
       WHERE e.face_embedding IS NOT NULL
         AND e.status = 'ACTIVE'
-        AND 1 - (e.face_embedding <=> $1::vector) >= $2
+        AND (e.face_embedding <=> $1::vector) <= $2
         ${options.farmId ? `AND e."farmId" = $4` : ""}
-      ORDER BY similarity DESC
+      ORDER BY e.face_embedding <=> $1::vector ASC
       LIMIT $3
     `;
 
@@ -95,19 +98,19 @@ export async function searchByEmbedding(
         w.name,
         COALESCE(w."photoUrl", w.photo_url) AS "photoUrl",
         w."farmId" AS "farmId",
-        1 - (w.face_embedding <=> $1::vector) AS similarity
+        (1 - (w.face_embedding <=> $1::vector)) AS similarity
       FROM workers w
       WHERE w.face_embedding IS NOT NULL
         AND w.status = 'ACTIVE'
-        AND 1 - (w.face_embedding <=> $1::vector) >= $2
+        AND (w.face_embedding <=> $1::vector) <= $2
         ${options.farmId ? `AND w."farmId" = $4` : ""}
-      ORDER BY similarity DESC
+      ORDER BY w.face_embedding <=> $1::vector ASC
       LIMIT $3
     `;
 
     const params: unknown[] = options.farmId
-      ? [vectorLiteral, threshold, limit, options.farmId]
-      : [vectorLiteral, threshold, limit];
+      ? [vectorLiteral, maxCosineDistance, limit, options.farmId]
+      : [vectorLiteral, maxCosineDistance, limit];
 
     const [employeeResults, workerResults] = await Promise.all([
       prisma.$queryRawUnsafe<CandidateMatch[]>(employeeQuery, ...params),
@@ -127,17 +130,26 @@ export async function searchByEmbedding(
   }
 
   // Fallback for local Postgres containers without pgvector extension
-  const employeeRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, 'EMPLOYEE' AS "personType", "employeeId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding FROM employees WHERE face_embedding IS NOT NULL AND status = 'ACTIVE' ${
-      options.farmId ? `AND "farmId" = '${options.farmId}'` : ""
-    }`,
-  );
+  const fallbackEmployeeQuery = `
+    SELECT id, 'EMPLOYEE' AS "personType", "employeeId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
+    FROM employees
+    WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
+    ${options.farmId ? `AND "farmId" = $1` : ""}
+  `;
 
-  const workerRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, 'WORKER' AS "personType", "workerId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding FROM workers WHERE face_embedding IS NOT NULL AND status = 'ACTIVE' ${
-      options.farmId ? `AND "farmId" = '${options.farmId}'` : ""
-    }`,
-  );
+  const fallbackWorkerQuery = `
+    SELECT id, 'WORKER' AS "personType", "workerId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
+    FROM workers
+    WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
+    ${options.farmId ? `AND "farmId" = $1` : ""}
+  `;
+
+  const fallbackParams = options.farmId ? [options.farmId] : [];
+
+  const [employeeRows, workerRows] = await Promise.all([
+    prisma.$queryRawUnsafe<any[]>(fallbackEmployeeQuery, ...fallbackParams),
+    prisma.$queryRawUnsafe<any[]>(fallbackWorkerQuery, ...fallbackParams),
+  ]);
 
   const candidates: CandidateMatch[] = [];
 

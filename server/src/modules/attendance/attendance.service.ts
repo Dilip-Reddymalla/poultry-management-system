@@ -444,7 +444,21 @@ export async function updateAttendance(
     select: attendanceSelect,
   });
 
-  return toSafeAttendance(record);
+  const safeRecord = toSafeAttendance(record);
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Attendance",
+    entityId: record.id,
+    summary: `Updated attendance for ${safeRecord.person.name} (${safeRecord.person.code}) on ${safeRecord.date} [${safeRecord.shift}]`,
+    changes: {
+      status: input.status,
+      notes: input.notes,
+    },
+  });
+
+  return safeRecord;
 }
 
 export async function approveAttendance(
@@ -467,7 +481,20 @@ export async function approveAttendance(
     select: attendanceSelect,
   });
 
-  return toSafeAttendance(record);
+  const safeRecord = toSafeAttendance(record);
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Attendance",
+    entityId: record.id,
+    summary: `Approved attendance for ${safeRecord.person.name} (${safeRecord.person.code}) on ${safeRecord.date} [${safeRecord.shift}]`,
+    changes: {
+      approvedAt: record.approvedAt,
+    },
+  });
+
+  return safeRecord;
 }
 
 export async function bulkCreateAttendance(
@@ -522,6 +549,21 @@ export async function bulkCreateAttendance(
         });
       }
     }
+  }
+
+  const fulfilledCount = results.filter((r) => r.status === "fulfilled").length;
+  if (fulfilledCount > 0) {
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Attendance",
+      summary: `Bulk marked attendance for ${fulfilledCount} person(s)`,
+      changes: {
+        total: input.records.length,
+        fulfilled: fulfilledCount,
+        rejected: results.length - fulfilledCount,
+      },
+    });
   }
 
   return results;

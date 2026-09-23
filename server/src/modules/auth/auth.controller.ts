@@ -5,10 +5,35 @@ import {
   authCookieOptions,
   clearAuthCookieOptions,
 } from "../../utils/auth-cookie.js";
-
-import { getCurrentUser, login, loginWithPhone, requestOtp, verifyPhoneOtp, selectPhoneUser, setPassword, changePassword, resetPasswordWithOtp } from "./auth.service.js";
-import { loginSchema, phoneLoginSchema, requestOtpSchema, verifyOtpSchema, selectPhoneUserSchema, setPasswordSchema, changePasswordSchema, resetPasswordSchema } from "./auth.schema.js";
-
+import {
+  REFRESH_COOKIE_NAME,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+} from "../../utils/refresh-cookie.js";
+import {
+  getCurrentUser,
+  login,
+  loginWithPhone,
+  requestOtp,
+  verifyPhoneOtp,
+  selectPhoneUser,
+  setPassword,
+  changePassword,
+  resetPasswordWithOtp,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserRefreshTokens,
+} from "./auth.service.js";
+import {
+  loginSchema,
+  phoneLoginSchema,
+  requestOtpSchema,
+  verifyOtpSchema,
+  selectPhoneUserSchema,
+  setPasswordSchema,
+  changePasswordSchema,
+  resetPasswordSchema,
+} from "./auth.schema.js";
 
 export async function loginController(
   req: Request,
@@ -19,6 +44,7 @@ export async function loginController(
   const result = await login(input);
 
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -47,6 +73,7 @@ export async function phoneLoginController(
   }
 
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -69,11 +96,18 @@ export async function getCurrentUserController(
     user,
   });
 }
+
 export async function logoutController(
-  _req: Request,
+  req: Request,
   res: Response,
 ): Promise<void> {
+  const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  if (typeof refreshToken === "string") {
+    await revokeRefreshToken(refreshToken);
+  }
+
   res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions);
+  clearRefreshTokenCookie(res);
 
   res.status(200).json({
     success: true,
@@ -81,6 +115,51 @@ export async function logoutController(
   });
 }
 
+export async function logoutAllController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+
+  await revokeAllUserRefreshTokens(authReq.userId);
+
+  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions);
+  clearRefreshTokenCookie(res);
+
+  res.status(200).json({
+    success: true,
+    message: "Logged out from all sessions successfully",
+  });
+}
+
+export async function refreshTokenController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const tokenFromCookie = req.cookies?.[REFRESH_COOKIE_NAME];
+  const tokenFromBody =
+    typeof req.body?.refreshToken === "string" ? req.body.refreshToken : undefined;
+  const refreshToken = tokenFromCookie || tokenFromBody;
+
+  if (!refreshToken || typeof refreshToken !== "string") {
+    res.status(401).json({
+      success: false,
+      message: "Refresh token is required",
+    });
+    return;
+  }
+
+  const result = await rotateRefreshToken(refreshToken);
+
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Token refreshed successfully",
+    user: result.user,
+  });
+}
 
 export async function requestOtpController(
   req: Request,
@@ -121,6 +200,7 @@ export async function verifyOtpController(
   }
 
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -142,6 +222,7 @@ export async function selectPhoneUserController(
   );
 
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -163,6 +244,7 @@ export async function setPasswordController(
   // Rotate the session so the account leaves the restricted first-login state
   // without needing to sign in again.
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -181,6 +263,7 @@ export async function changePasswordController(
   const result = await changePassword(authReq.userId, input);
 
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,

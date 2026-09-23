@@ -1,5 +1,9 @@
 import { env } from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
+import { logger } from "../config/logger.js";
+import { faceAiCircuitBreaker, CircuitBreakerOpenError } from "./circuit-breaker.js";
+
+export { faceAiCircuitBreaker, CircuitBreakerOpenError };
 
 // ---------------------------------------------------------------------------
 // Types mirroring the FastAPI response schemas
@@ -80,73 +84,101 @@ export async function analyzeImage(
   filename: string,
 ): Promise<FaceAIResponse> {
   const url = `${env.FASTAPI_AI_URL}/api/v1/recognition/analyze`;
-  const startTime = Date.now();
 
-  console.log(
-    `[Face-AI Client] 🔍 Sending image analysis request to ${url} (File: ${filename}, Size: ${(imageBuffer.length / 1024).toFixed(1)} KB)`,
-  );
+  return faceAiCircuitBreaker.execute(async (signal) => {
+    const startTime = Date.now();
+    logger.info(
+      { url, filename, sizeKb: (imageBuffer.length / 1024).toFixed(1) },
+      "[Face-AI Client] 🔍 Sending image analysis request",
+    );
 
-  try {
-    // Build multipart/form-data manually using standard FormData + Blob API
-    const formData = new FormData();
-    const arrayBuffer = imageBuffer.buffer.slice(
-      imageBuffer.byteOffset,
-      imageBuffer.byteOffset + imageBuffer.byteLength,
-    ) as ArrayBuffer;
-    const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
-    formData.append("file", blob, filename);
+    try {
+      const formData = new FormData();
+      const arrayBuffer = imageBuffer.buffer.slice(
+        imageBuffer.byteOffset,
+        imageBuffer.byteOffset + imageBuffer.byteLength,
+      ) as ArrayBuffer;
+      const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+      formData.append("file", blob, filename);
 
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
-    });
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        signal,
+      });
 
-    const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime;
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(
-        `[Face-AI Client] ❌ Target ${url} responded with HTTP ${response.status} in ${duration}ms: ${errorBody}`,
+      if (!response.ok) {
+        const errorBody = await response.text();
+        logger.error(
+          { url, status: response.status, durationMs: duration, errorBody },
+          "[Face-AI Client] ❌ Target responded with HTTP error",
+        );
+        throw new AppError(
+          `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+          response.status >= 500 ? 502 : response.status,
+          {
+            error: "FACE_AI_UNAVAILABLE",
+            fallbackMode: "MANUAL_ATTENDANCE",
+            manualAttendanceUrl: "/attendance",
+          },
+          "FACE_AI_HTTP_ERROR",
+        );
+      }
+
+      const data = (await response.json()) as FaceAIResponse;
+      logger.info(
+        { url, durationMs: duration, faceCount: data.face_count },
+        "[Face-AI Client] ✅ Analysis succeeded",
       );
+      return data;
+    } catch (err: any) {
+      const duration = Date.now() - startTime;
+      if (err instanceof AppError) throw err;
+
+      logger.error(
+        {
+          url,
+          durationMs: duration,
+          message: err?.message,
+          code: err?.code || err?.cause?.code,
+          syscall: err?.cause?.syscall || err?.syscall,
+          address: err?.cause?.address || err?.address,
+          port: err?.cause?.port || err?.port,
+          cause: err?.cause,
+        },
+        "[Face-AI Client] ❌ Connection failure",
+      );
+
+      if (
+        err?.cause?.code === "ECONNREFUSED" ||
+        err?.code === "ECONNREFUSED" ||
+        (err?.message && (err.message.includes("fetch failed") || err.message.includes("timed out")))
+      ) {
+        throw new AppError(
+          `Face AI service is unavailable (connecting to ${url}). Check target URL FASTAPI_AI_URL=${env.FASTAPI_AI_URL} and verify Python Face AI process is running.`,
+          503,
+          {
+            error: "FACE_AI_UNAVAILABLE",
+            fallbackMode: "MANUAL_ATTENDANCE",
+            manualAttendanceUrl: "/attendance",
+          },
+          "FACE_AI_UNAVAILABLE",
+        );
+      }
       throw new AppError(
-        `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
-        502,
+        `Failed to analyze image with Face AI service (${err?.message || "Unknown error"})`,
+        500,
+        {
+          error: "FACE_AI_ERROR",
+          fallbackMode: "MANUAL_ATTENDANCE",
+          manualAttendanceUrl: "/attendance",
+        },
+        "FACE_AI_ERROR",
       );
     }
-
-    const data = (await response.json()) as FaceAIResponse;
-    console.log(
-      `[Face-AI Client] ✅ Analysis succeeded in ${duration}ms. Detected ${data.face_count} face(s).`,
-    );
-    return data;
-  } catch (err: any) {
-    const duration = Date.now() - startTime;
-    if (err instanceof AppError) throw err;
-
-    console.error(`[Face-AI Client] ❌ Connection failure requesting ${url} (${duration}ms):`, {
-      message: err?.message,
-      code: err?.code || err?.cause?.code,
-      syscall: err?.cause?.syscall || err?.syscall,
-      address: err?.cause?.address || err?.address,
-      port: err?.cause?.port || err?.port,
-      cause: err?.cause,
-    });
-
-    if (
-      err?.cause?.code === "ECONNREFUSED" ||
-      err?.code === "ECONNREFUSED" ||
-      (err?.message && err.message.includes("fetch failed"))
-    ) {
-      throw new AppError(
-        `Face AI service is unavailable (ECONNREFUSED connecting to ${url}). Check target URL FASTAPI_AI_URL=${env.FASTAPI_AI_URL} and verify Python Face AI process is running.`,
-        503,
-      );
-    }
-    throw new AppError(
-      `Failed to analyze image with Face AI service (${err?.message || "Unknown error"})`,
-      500,
-    );
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -178,67 +210,96 @@ export async function analyzeProfilePhoto(
   filename: string,
 ): Promise<ProfileEnrollResponse> {
   const url = `${env.FASTAPI_AI_URL}/api/v1/recognition/profile-enroll`;
-  const startTime = Date.now();
 
-  console.log(
-    `[Face-AI Client] 🔍 Sending profile enrollment request to ${url} (File: ${filename}, Size: ${(imageBuffer.length / 1024).toFixed(1)} KB)`,
-  );
+  return faceAiCircuitBreaker.execute(async (signal) => {
+    const startTime = Date.now();
+    logger.info(
+      { url, filename, sizeKb: (imageBuffer.length / 1024).toFixed(1) },
+      "[Face-AI Client] 🔍 Sending profile enrollment request",
+    );
 
-  try {
-    const formData = new FormData();
-    const arrayBuffer = imageBuffer.buffer.slice(
-      imageBuffer.byteOffset,
-      imageBuffer.byteOffset + imageBuffer.byteLength,
-    ) as ArrayBuffer;
-    const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
-    formData.append("file", blob, filename);
+    try {
+      const formData = new FormData();
+      const arrayBuffer = imageBuffer.buffer.slice(
+        imageBuffer.byteOffset,
+        imageBuffer.byteOffset + imageBuffer.byteLength,
+      ) as ArrayBuffer;
+      const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+      formData.append("file", blob, filename);
 
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
-    });
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        signal,
+      });
 
-    const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime;
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(
-        `[Face-AI Client] ❌ Profile enrollment ${url} responded with HTTP ${response.status} in ${duration}ms: ${errorBody}`,
+      if (!response.ok) {
+        const errorBody = await response.text();
+        logger.error(
+          { url, status: response.status, durationMs: duration, errorBody },
+          "[Face-AI Client] ❌ Profile enrollment responded with HTTP error",
+        );
+        throw new AppError(
+          `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+          response.status >= 500 ? 502 : response.status,
+          {
+            error: "FACE_AI_UNAVAILABLE",
+            fallbackMode: "MANUAL_ATTENDANCE",
+          },
+          "FACE_AI_HTTP_ERROR",
+        );
+      }
+
+      const data = (await response.json()) as ProfileEnrollResponse;
+      logger.info(
+        {
+          url,
+          durationMs: duration,
+          totalFacesDetected: data.total_faces_detected,
+          selectedFace: data.selected_face ? `#${data.selected_face.face_index}` : "none",
+        },
+        "[Face-AI Client] ✅ Profile enrollment succeeded",
       );
+      return data;
+    } catch (err: any) {
+      const duration = Date.now() - startTime;
+      if (err instanceof AppError) throw err;
+
+      logger.error(
+        {
+          url,
+          durationMs: duration,
+          message: err?.message,
+          code: err?.code || err?.cause?.code,
+        },
+        "[Face-AI Client] ❌ Connection failure",
+      );
+
+      if (
+        err?.cause?.code === "ECONNREFUSED" ||
+        err?.code === "ECONNREFUSED" ||
+        (err?.message && (err.message.includes("fetch failed") || err.message.includes("timed out")))
+      ) {
+        throw new AppError(
+          `Face AI service is unavailable (connecting to ${url}). Check FASTAPI_AI_URL=${env.FASTAPI_AI_URL}.`,
+          503,
+          {
+            error: "FACE_AI_UNAVAILABLE",
+            fallbackMode: "MANUAL_ATTENDANCE",
+          },
+          "FACE_AI_UNAVAILABLE",
+        );
+      }
       throw new AppError(
-        `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
-        502,
+        `Failed to analyze profile photo with Face AI service (${err?.message || "Unknown error"})`,
+        500,
+        {
+          error: "FACE_AI_ERROR",
+        },
+        "FACE_AI_ERROR",
       );
     }
-
-    const data = (await response.json()) as ProfileEnrollResponse;
-    console.log(
-      `[Face-AI Client] ✅ Profile enrollment succeeded in ${duration}ms. ${data.total_faces_detected} face(s) detected, selected: ${data.selected_face ? `#${data.selected_face.face_index}` : "none"}.`,
-    );
-    return data;
-  } catch (err: any) {
-    const duration = Date.now() - startTime;
-    if (err instanceof AppError) throw err;
-
-    console.error(`[Face-AI Client] ❌ Connection failure requesting ${url} (${duration}ms):`, {
-      message: err?.message,
-      code: err?.code || err?.cause?.code,
-    });
-
-    if (
-      err?.cause?.code === "ECONNREFUSED" ||
-      err?.code === "ECONNREFUSED" ||
-      (err?.message && err.message.includes("fetch failed"))
-    ) {
-      throw new AppError(
-        `Face AI service is unavailable (ECONNREFUSED connecting to ${url}). Check FASTAPI_AI_URL=${env.FASTAPI_AI_URL}.`,
-        503,
-      );
-    }
-    throw new AppError(
-      `Failed to analyze profile photo with Face AI service (${err?.message || "Unknown error"})`,
-      500,
-    );
-  }
+  });
 }
-

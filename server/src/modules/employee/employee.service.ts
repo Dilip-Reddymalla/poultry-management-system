@@ -181,7 +181,7 @@ export async function listEmployees(
     ...(query.farmId !== undefined && { farmId: query.farmId }),
     ...(query.status !== undefined && { status: query.status }),
     ...(query.designationId !== undefined && {
-      desiginationId: query.designationId,
+      designationId: query.designationId,
     }),
     ...(query.search && query.search.trim() !== ""
       ? {
@@ -299,7 +299,7 @@ export async function createEmployee(
       data: {
         employeeId: employeeId,
         name: input.name,
-        desiginationId: input.designationId,
+        designationId: input.designationId,
         farmId: input.farmId,
         ...(input.phone !== undefined && {
           phone: normalizePhone(input.phone),
@@ -390,7 +390,7 @@ export async function updateEmployee(
       data: {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.designationId !== undefined && {
-          desiginationId: input.designationId,
+          designationId: input.designationId,
         }),
         ...(input.phone !== undefined && {
           phone: input.phone === null ? null : normalizePhone(input.phone),

@@ -207,7 +207,7 @@ export async function createActor(
     data: {
       employeeId: `${TEST_PREFIX}${suffix}`,
       name: `Test ${roleName}`,
-      desiginationId: designationId,
+      designationId: designationId,
       farmId: farm.id,
       status: "ACTIVE",
     },
@@ -273,7 +273,7 @@ export async function createTestEmployeeRecord(
     data: {
       employeeId: `${TEST_PREFIX}${uniqueSuffix()}`,
       name: "Test Employee",
-      desiginationId: designationId,
+      designationId: designationId,
       farmId,
       phone,
       status: "ACTIVE",

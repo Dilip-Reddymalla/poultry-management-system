@@ -22,11 +22,16 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { tieredRateLimiter } from "./middlewares/rate-limit.middleware.js";
 import { analyticsRouter } from "./modules/analytics/analytics.routes.js";
 import { faceAiProxyRouter } from "./modules/face-ai/face-ai-proxy.routes.js";
+import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
+import { logger } from "./config/logger.js";
 
 const app = express();
 
 // Trust reverse proxy headers (e.g. X-Forwarded-For)
 app.set("trust proxy", 1);
+
+// Correlation IDs on all incoming requests
+app.use(requestIdMiddleware);
 
 // CORS middleware: Echoes requesting origin to satisfy browser CORS & credential requirements
 app.use((req, res, next) => {
@@ -41,7 +46,7 @@ app.use((req, res, next) => {
     );
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With, Accept, Cookie, X-Demo-Session, x-demo-session",
+      "Content-Type, Authorization, X-Requested-With, Accept, Cookie, X-Demo-Session, x-demo-session, X-Request-Id",
     );
   }
 
@@ -53,7 +58,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request status & IP logger middleware
+// Request status & IP logger middleware with structured Pino logging & request IDs
 app.use((req, res, next) => {
   const start = Date.now();
   const clientIp =
@@ -67,10 +72,23 @@ app.use((req, res, next) => {
     const statusCode = res.statusCode;
     const method = req.method;
     const url = req.originalUrl || req.url;
+    const reqLogger = req.log || logger;
 
-    console.log(
-      `[${new Date().toISOString()}] ${method} ${url} -> Status: ${statusCode} (${duration}ms) | IP: ${clientIp}`
-    );
+    const logPayload = {
+      method,
+      url,
+      statusCode,
+      durationMs: duration,
+      clientIp,
+    };
+
+    if (statusCode >= 500) {
+      reqLogger.error(logPayload, `HTTP ${method} ${url} -> ${statusCode} (${duration}ms)`);
+    } else if (statusCode >= 400) {
+      reqLogger.warn(logPayload, `HTTP ${method} ${url} -> ${statusCode} (${duration}ms)`);
+    } else {
+      reqLogger.info(logPayload, `HTTP ${method} ${url} -> ${statusCode} (${duration}ms)`);
+    }
   });
 
   next();

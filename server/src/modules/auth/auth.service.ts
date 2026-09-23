@@ -31,11 +31,17 @@ import {
   OTP_RETENTION_MS,
 } from "../../utils/otp.js";
 import { normalizePhone } from "../../utils/phone.js";
+import {
+  generateRefreshToken,
+  hashToken,
+  verifyRefreshToken,
+} from "../../utils/refresh-token.js";
 
-type VerifyPhoneOtpResult =
+export type VerifyPhoneOtpResult =
   | {
       requiresUserSelection: false;
       token: string;
+      refreshToken: string;
       user: SafeUser;
     }
   | {
@@ -43,6 +49,22 @@ type VerifyPhoneOtpResult =
       selectionToken: string;
       users: PhoneLoginUser[];
     };
+
+export async function createAndStoreRefreshToken(options: {
+  userId?: string;
+  isSystemAdmin?: boolean;
+}): Promise<string> {
+  const { token, tokenHash, expiresAt } = generateRefreshToken(options);
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash,
+      ...(options.userId ? { userId: options.userId } : {}),
+      systemAdmin: options.isSystemAdmin === true,
+      expiresAt,
+    },
+  });
+  return token;
+}
 
 // Every path that returns a session user reads exactly these fields, so the
 // shape of a SafeUser cannot drift between login, OTP login and /me. Selecting
@@ -145,7 +167,7 @@ function toSafeUser(user: SessionUserRecord): SafeUser {
 
 export async function login(
   input: LoginInput,
-): Promise<{ token: string; user: SafeUser }> {
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
   // The System Admin authenticates against the environment, never the database.
   // It is checked first and by email so a company user can never shadow it.
   if (isSystemAdminEmail(input.email)) {
@@ -153,8 +175,11 @@ export async function login(
       throw new AppError("Invalid email or password", 401);
     }
 
+    const refreshToken = await createAndStoreRefreshToken({ isSystemAdmin: true });
+
     return {
       token: generateAccessToken(SYSTEM_ADMIN_USER_ID),
+      refreshToken,
       user: await buildSystemAdminSafeUser(),
     };
   }
@@ -193,9 +218,11 @@ export async function login(
   }
 
   const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
 
   return {
-    token: token,
+    token,
+    refreshToken,
     user: toSafeUser(user),
   };
 }
@@ -225,7 +252,7 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
 export async function setPassword(
   userId: string,
   password: string,
-): Promise<{ token: string; user: SafeUser }> {
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
   if (isSystemAdminId(userId)) {
     // The System Admin password lives in the environment and is never set here.
     throw new AppError("Password setup is not available for this account", 403);
@@ -261,8 +288,11 @@ export async function setPassword(
     select: sessionUserSelect,
   });
 
+  const refreshToken = await createAndStoreRefreshToken({ userId: updated.id });
+
   return {
     token: generateAccessToken(updated.id),
+    refreshToken,
     user: toSafeUser(updated),
   };
 }
@@ -270,7 +300,7 @@ export async function setPassword(
 export async function changePassword(
   userId: string,
   input: ChangePasswordInput,
-): Promise<{ token: string; user: SafeUser }> {
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
   if (isSystemAdminId(userId)) {
     throw new AppError("System Admin password lives in the environment and cannot be changed here", 403);
   }
@@ -291,7 +321,7 @@ export async function changePassword(
   }
 
   if (user.passwordHash) {
-    const valid = await verifyPassword(user.passwordHash, input.currentPassword);
+    const valid = await verifyPassword(input.currentPassword, user.passwordHash);
     if (!valid) {
       throw new AppError("Incorrect current password", 400);
     }
@@ -315,8 +345,11 @@ export async function changePassword(
     summary: `User ${user.email} changed their password`,
   });
 
+  const refreshToken = await createAndStoreRefreshToken({ userId: updated.id });
+
   return {
     token: generateAccessToken(updated.id),
+    refreshToken,
     user: toSafeUser(updated),
   };
 }
@@ -585,6 +618,7 @@ export async function verifyPhoneOtp(
   }
 
   const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
 
   const fullUser = await prisma.user.findUnique({
     where: {
@@ -600,6 +634,7 @@ export async function verifyPhoneOtp(
   return {
     requiresUserSelection: false,
     token,
+    refreshToken,
     user: toSafeUser(fullUser),
   };
 }
@@ -650,7 +685,7 @@ export async function findUsersByPhone(
 export async function selectPhoneUser(
   selectionToken: string,
   userId: string,
-): Promise<{ token: string; user: SafeUser }> {
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
   const selection = verifyPhoneSelectionToken(selectionToken);
 
   if (!selection.userIds.includes(userId)) {
@@ -676,9 +711,11 @@ export async function selectPhoneUser(
   }
 
   const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
 
   return {
     token,
+    refreshToken,
     user: toSafeUser(user),
   };
 }
@@ -748,10 +785,12 @@ export async function loginWithPhone(
 
   const user = validUsers[0]!;
   const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
 
   return {
     requiresUserSelection: false,
     token,
+    refreshToken,
     user: toSafeUser(user),
   };
 }
@@ -789,3 +828,127 @@ export async function purgeExpiredOtpChallenges(): Promise<{ deleted: number }> 
     deleted: result.count,
   };
 }
+
+export async function rotateRefreshToken(
+  rawRefreshToken: string,
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
+  let payload;
+  try {
+    payload = verifyRefreshToken(rawRefreshToken);
+  } catch {
+    throw new AppError("Invalid or expired refresh token", 401);
+  }
+
+  const tokenHash = hashToken(rawRefreshToken);
+
+  const existingToken = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+    include: {
+      user: {
+        select: sessionUserSelect,
+      },
+    },
+  });
+
+  if (!existingToken) {
+    throw new AppError("Invalid refresh token", 401);
+  }
+
+  // Automatic reuse detection: If a revoked token is used, assume breach and revoke all tokens for this user
+  if (existingToken.revokedAt !== null) {
+    if (existingToken.userId) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: existingToken.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    } else if (existingToken.systemAdmin) {
+      await prisma.refreshToken.updateMany({
+        where: { systemAdmin: true, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+    throw new AppError("Refresh token revoked. Please log in again.", 401);
+  }
+
+  if (existingToken.expiresAt.getTime() <= Date.now()) {
+    throw new AppError("Refresh token expired. Please log in again.", 401);
+  }
+
+  // Check account status for standard user
+  if (!existingToken.systemAdmin) {
+    if (
+      !existingToken.user ||
+      !existingToken.user.isActive ||
+      existingToken.user.employee.status !== "ACTIVE"
+    ) {
+      throw new AppError("User account is inactive", 401);
+    }
+  }
+
+  // Revoke the old refresh token
+  await prisma.refreshToken.update({
+    where: { id: existingToken.id },
+    data: { revokedAt: new Date() },
+  });
+
+  // Issue new access token + new refresh token
+  if (existingToken.systemAdmin) {
+    const token = generateAccessToken(SYSTEM_ADMIN_USER_ID);
+    const newRefreshToken = await createAndStoreRefreshToken({ isSystemAdmin: true });
+    const user = await buildSystemAdminSafeUser();
+    return { token, refreshToken: newRefreshToken, user };
+  } else {
+    const token = generateAccessToken(existingToken.userId!);
+    const newRefreshToken = await createAndStoreRefreshToken({
+      userId: existingToken.userId!,
+    });
+    return {
+      token,
+      refreshToken: newRefreshToken,
+      user: toSafeUser(existingToken.user!),
+    };
+  }
+}
+
+export async function revokeRefreshToken(rawRefreshToken: string): Promise<void> {
+  try {
+    const tokenHash = hashToken(rawRefreshToken);
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  } catch {
+    // Non-blocking
+  }
+}
+
+export async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
+  if (isSystemAdminId(userId)) {
+    await prisma.refreshToken.updateMany({
+      where: { systemAdmin: true, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  } else {
+    await prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+}
+
+export async function purgeExpiredRefreshTokens(): Promise<{ deleted: number }> {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const result = await prisma.refreshToken.deleteMany({
+    where: {
+      OR: [
+        { expiresAt: { lte: now } },
+        { revokedAt: { lte: cutoff } },
+      ],
+    },
+  });
+
+  return { deleted: result.count };
+}
+

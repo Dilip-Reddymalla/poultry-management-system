@@ -11,6 +11,8 @@ import {
   setPasswordController,
   changePasswordController,
   resetPasswordController,
+  refreshTokenController,
+  logoutAllController,
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
@@ -20,8 +22,10 @@ const router = Router();
 
 router.post("/login", authEndpointRateLimiter, loginController);
 router.post("/phone/login", authEndpointRateLimiter, phoneLoginController);
+router.post("/refresh", authEndpointRateLimiter, refreshTokenController);
 router.get("/me", requireAuth, getCurrentUserController);
 router.post("/logout", logoutController);
+router.post("/logout-all", requireAuth, logoutAllController);
 router.post("/phone/request-otp", authEndpointRateLimiter, requestOtpController);
 router.post("/phone/verify-otp", authEndpointRateLimiter, verifyOtpController);
 router.post("/phone/select-user", authEndpointRateLimiter, selectPhoneUserController);

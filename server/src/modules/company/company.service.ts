@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import {
   assertCompanyWritable,
@@ -104,7 +105,21 @@ export async function createCompany(
       select: companySelect,
     });
 
-    return toSafeCompany(company);
+    const safeCompany = toSafeCompany(company);
+
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Company",
+      entityId: company.id,
+      summary: `Created company ${company.name} (${company.code})`,
+      changes: {
+        code: company.code,
+        name: company.name,
+      },
+    });
+
+    return safeCompany;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -143,7 +158,21 @@ export async function updateCompany(
       select: companySelect,
     });
 
-    return toSafeCompany(company);
+    const safeCompany = toSafeCompany(company);
+
+    void recordAuditLog({
+      scope,
+      action: "UPDATE",
+      entity: "Company",
+      entityId: company.id,
+      summary: `Updated company ${company.name} (${company.code})`,
+      changes: {
+        code: input.code,
+        name: input.name,
+      },
+    });
+
+    return safeCompany;
   } catch (error) {
     throw toWriteError(error);
   }

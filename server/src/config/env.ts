@@ -40,6 +40,17 @@ const envSchema = z
       .min(12, "SYSTEM_ADMIN_PASSWORD must be at least 12 characters long")
       .optional(),
 
+    // Logging level for Pino structured logger
+    LOG_LEVEL: z
+      .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+      .optional(),
+
+    // Refresh token signing secret. If not set, falls back to JWT_SECRET.
+    REFRESH_TOKEN_SECRET: z
+      .string()
+      .min(32, "REFRESH_TOKEN_SECRET must be at least 32 characters long")
+      .optional(),
+
     // Cloudinary cloud image storage — required for Face AI enrollment.
     CLOUDINARY_CLOUD_NAME: z.string().trim().min(1).optional(),
     CLOUDINARY_API_KEY: z.string().trim().min(1).optional(),
@@ -52,6 +63,11 @@ const envSchema = z
       .url("FASTAPI_AI_URL must be a valid URL")
       .optional()
       .default("http://127.0.0.1:8000"),
+
+    // Neon Database Backups (automated branching API)
+    // NEON_API_KEY: z.string().trim().min(1).optional(),
+    // NEON_PROJECT_ID: z.string().trim().min(1).optional(),
+    // NEON_BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().optional().default(7),
   })
   .refine(
     (value) =>
@@ -94,3 +110,9 @@ export const env = parsedEnv.data;
 
 // Resolved once so callers never re-implement the development fallback.
 export const clientOrigin = env.CLIENT_ORIGIN ?? DEV_CLIENT_ORIGIN;
+
+export const logLevel =
+  env.LOG_LEVEL ?? (env.NODE_ENV === "production" ? "warn" : "info");
+
+export const refreshTokenSecret =
+  env.REFRESH_TOKEN_SECRET ?? env.JWT_SECRET;

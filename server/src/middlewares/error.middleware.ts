@@ -3,6 +3,7 @@ import type { ErrorRequestHandler } from "express";
 import { z } from "zod";
 
 import { AppError } from "../utils/app-error.js";
+import { logger } from "../config/logger.js";
 
 // Prisma error codes that represent an expected client-caused outcome. Modules
 // normally translate their own constraint violations into a domain message; this
@@ -18,10 +19,12 @@ const PRISMA_ERROR_MAP: Record<string, { status: number; message: string }> = {
 
 export const errorMiddleware: ErrorRequestHandler = (
   err,
-  _req,
+  req,
   res,
   _next,
 ) => {
+  const reqLogger = req?.log || logger;
+
   if (err instanceof z.ZodError) {
     // fieldErrors stays under `errors` (unchanged contract); formErrors carries
     // object-level issues that belong to no single field.
@@ -38,20 +41,23 @@ export const errorMiddleware: ErrorRequestHandler = (
   }
 
   if (err instanceof AppError) {
+    const errorPayload = {
+      path: req?.originalUrl || req?.url,
+      statusCode: err.statusCode,
+      err,
+    };
+
     if (err.statusCode >= 500) {
-      console.error(
-        `[Express AppError ${err.statusCode}] Path: ${res.req.originalUrl || res.req.url} — ${err.message}`,
-        err.stack || "",
-      );
+      reqLogger.error(errorPayload, `[AppError ${err.statusCode}] ${err.message}`);
     } else {
-      console.warn(
-        `[Express AppError ${err.statusCode}] Path: ${res.req.originalUrl || res.req.url} — ${err.message}`,
-      );
+      reqLogger.warn(errorPayload, `[AppError ${err.statusCode}] ${err.message}`);
     }
 
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
+      ...(err.code ? { code: err.code } : {}),
+      ...(err.details ? err.details : {}),
     });
 
     return;
@@ -72,7 +78,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 
   // Only genuinely unexpected failures are logged, so the log stays a signal of
   // real defects rather than a stream of ordinary validation/permission noise.
-  console.error(err);
+  reqLogger.error({ err, path: req?.originalUrl || req?.url }, "Unhandled internal server error");
 
   res.status(500).json({
     success: false,

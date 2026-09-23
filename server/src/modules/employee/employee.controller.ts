@@ -1,9 +1,10 @@
 import type { Request, Response } from "express";
 
 import { getScope } from "../../middlewares/authorize.middleware.js";
-import { analyzeProfilePhoto } from "../../services/face-ai.service.js";
+import { analyzeProfilePhoto, faceAiCircuitBreaker } from "../../services/face-ai.service.js";
 import { uploadImage as cloudinaryUpload } from "../../services/cloudinary.service.js";
 import { AppError } from "../../utils/app-error.js";
+import { logger } from "../../config/logger.js";
 
 import {
   createEmployee,
@@ -35,45 +36,55 @@ async function processFacePhoto(
   let embedding: number[] | undefined;
 
   try {
-    // Use the dedicated profile enrollment pipeline which automatically
-    // selects the most centered, highest-confidence face from the image.
-    const enrollResult = await analyzeProfilePhoto(file.buffer, file.originalname);
-    const face = enrollResult.selected_face;
+    if (faceAiCircuitBreaker.isOpen()) {
+      logger.warn(
+        "[Face-AI] Circuit breaker is OPEN. Skipping face embedding extraction for employee photo upload.",
+      );
+    } else {
+      // Use the dedicated profile enrollment pipeline which automatically
+      // selects the most centered, highest-confidence face from the image.
+      const enrollResult = await analyzeProfilePhoto(file.buffer, file.originalname);
+      const face = enrollResult.selected_face;
 
-    if (!face) {
-      throw new AppError(
-        enrollResult.selection_reason || "No usable face detected in the uploaded photo",
-        400,
+      if (!face) {
+        throw new AppError(
+          enrollResult.selection_reason || "No usable face detected in the uploaded photo",
+          400,
+        );
+      }
+
+      if (!face.quality.usable) {
+        const reasons = face.quality.reasons.join(", ");
+        throw new AppError(
+          `Face rejected: Low quality — ${reasons || "does not meet quality threshold"}`,
+          400,
+        );
+      }
+
+      if (!face.liveness || face.liveness.decision !== "LIVE") {
+        throw new AppError(
+          "Face rejected: Photo spoof detected. Please use a live camera image.",
+          400,
+        );
+      }
+
+      if (face.embedding) {
+        embedding = face.embedding;
+      }
+
+      logger.info(
+        { selectionReason: enrollResult.selection_reason },
+        "[Face-AI] Profile enrollment succeeded",
       );
     }
-
-    if (!face.quality.usable) {
-      const reasons = face.quality.reasons.join(", ");
-      throw new AppError(
-        `Face rejected: Low quality — ${reasons || "does not meet quality threshold"}`,
-        400,
-      );
-    }
-
-    if (!face.liveness || face.liveness.decision !== "LIVE") {
-      throw new AppError(
-        "Face rejected: Photo spoof detected. Please use a live camera image.",
-        400,
-      );
-    }
-
-    if (face.embedding) {
-      embedding = face.embedding;
-    }
-
-    console.log(
-      `[Face-AI] Profile enrollment: ${enrollResult.selection_reason}`,
-    );
   } catch (err: any) {
     if (err instanceof AppError && err.statusCode === 400) {
       throw err;
     }
-    console.warn(`[Face-AI] Warning: ${err?.message || "Service offline"}. Bypassing face embedding extraction.`);
+    logger.warn(
+      { err: err?.message || "Service offline" },
+      "[Face-AI] Warning: Bypassing face embedding extraction",
+    );
   }
 
   const { url } = await cloudinaryUpload(file.buffer, folder);

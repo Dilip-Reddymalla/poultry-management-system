@@ -1,18 +1,18 @@
 import { prisma } from "../config/database.js";
 import { purgeExpiredOtpChallenges } from "../modules/auth/auth.service.js";
+import { logger } from "../config/logger.js";
 
 async function main(): Promise<void> {
-  console.log("🧹 Purging expired OTP challenges...");
+  logger.info("🧹 Purging expired OTP challenges...");
 
   const { deleted } = await purgeExpiredOtpChallenges();
 
-  console.log(`🧹 Removed ${deleted} expired OTP challenge(s).`);
+  logger.info(`🧹 Removed ${deleted} expired OTP challenge(s).`);
 }
 
 main()
   .catch((error) => {
-    console.error("❌ OTP cleanup failed:");
-    console.error(error);
+    logger.error({ error }, "❌ OTP cleanup failed");
 
     process.exit(1);
   })

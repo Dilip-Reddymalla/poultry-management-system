@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
 import { AppError } from "../../utils/app-error.js";
+import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import {
   assertFarmWritable,
@@ -167,7 +168,22 @@ export async function createShed(
       select: shedSelect,
     });
 
-    return toSafeShed(shed);
+    const safeShed = toSafeShed(shed);
+
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Shed",
+      entityId: shed.id,
+      summary: `Created shed ${shed.number} (Capacity: ${shed.capacity}) on farm ${shed.farm.name}`,
+      changes: {
+        number: shed.number,
+        capacity: shed.capacity,
+        farmId: shed.farmId,
+      },
+    });
+
+    return safeShed;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -210,7 +226,21 @@ export async function updateShed(
       select: shedSelect,
     });
 
-    return toSafeShed(shed);
+    const safeShed = toSafeShed(shed);
+
+    void recordAuditLog({
+      scope,
+      action: "UPDATE",
+      entity: "Shed",
+      entityId: shed.id,
+      summary: `Updated shed ${shed.number} on farm ${shed.farm.name}`,
+      changes: {
+        number: input.number,
+        capacity: input.capacity,
+      },
+    });
+
+    return safeShed;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -262,5 +292,19 @@ export async function updateShedStatus(
     select: shedSelect,
   });
 
-  return toSafeShed(shed);
+  const safeShed = toSafeShed(shed);
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Shed",
+    entityId: shed.id,
+    summary: `Updated status of shed ${shed.number} on farm ${shed.farm.name} to ${input.status}`,
+    changes: {
+      status: input.status,
+      previousStatus: existingShed.status,
+    },
+  });
+
+  return safeShed;
 }

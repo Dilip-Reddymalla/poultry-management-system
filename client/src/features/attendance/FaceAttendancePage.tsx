@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Farm, Shed, Shift } from "../../api/types.js";
 import { SHIFTS } from "../../api/types.js";
 import { apiClient } from "../../api/client.js";
@@ -208,6 +209,16 @@ interface FaceSelection {
 
 export function FaceAttendancePage(): React.ReactElement {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Face AI Circuit Breaker & Health state
+  const [faceAiStatus, setFaceAiStatus] = useState<{
+    online: boolean;
+    circuitBreakerState?: "CLOSED" | "OPEN" | "HALF_OPEN";
+    message?: string;
+    fallbackMode?: "MANUAL_ATTENDANCE" | null;
+  } | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   // Farm & Shed selection
   const [farms, setFarms] = useState<Farm[]>([]);
@@ -275,6 +286,46 @@ export function FaceAttendancePage(): React.ReactElement {
   useEffect(() => {
     requestGpsLocation();
   }, [requestGpsLocation]);
+
+  // Health-aware Circuit Breaker Check
+  const checkFaceAiHealth = useCallback(async () => {
+    setCheckingHealth(true);
+    try {
+      const res = await fetch("/api/face-ai/health");
+      const data = await res.json().catch(() => null);
+      if (
+        data?.circuitBreaker?.state === "OPEN" ||
+        data?.serviceStatus === "offline" ||
+        data?.fallbackMode === "MANUAL_ATTENDANCE"
+      ) {
+        setFaceAiStatus({
+          online: false,
+          circuitBreakerState: data?.circuitBreaker?.state ?? "OPEN",
+          message: data?.message || "Face AI biometric service is unavailable.",
+          fallbackMode: "MANUAL_ATTENDANCE",
+        });
+      } else {
+        setFaceAiStatus({
+          online: true,
+          circuitBreakerState: data?.circuitBreaker?.state ?? "CLOSED",
+          fallbackMode: null,
+        });
+      }
+    } catch {
+      setFaceAiStatus({
+        online: false,
+        circuitBreakerState: "OPEN",
+        message: "Unable to connect to Face AI service.",
+        fallbackMode: "MANUAL_ATTENDANCE",
+      });
+    } finally {
+      setCheckingHealth(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkFaceAiHealth();
+  }, [checkFaceAiHealth]);
 
   // 2. Load farms once
   if (!farmsLoaded) {
@@ -516,6 +567,21 @@ export function FaceAttendancePage(): React.ReactElement {
       });
       setSelections(sels);
     } catch (err: any) {
+      if (
+        err?.code === "FACE_AI_CIRCUIT_OPEN" ||
+        err?.message?.includes("circuit breaker") ||
+        err?.message?.includes("manual attendance") ||
+        err?.message?.includes("ECONNREFUSED") ||
+        err?.status === 503 ||
+        err?.status === 502
+      ) {
+        setFaceAiStatus({
+          online: false,
+          circuitBreakerState: "OPEN",
+          message: err.message,
+          fallbackMode: "MANUAL_ATTENDANCE",
+        });
+      }
       setError(err.message || "Failed to process face frame");
     } finally {
       setProcessing(false);
@@ -551,6 +617,21 @@ export function FaceAttendancePage(): React.ReactElement {
       });
       setSelections(sels);
     } catch (err: any) {
+      if (
+        err?.code === "FACE_AI_CIRCUIT_OPEN" ||
+        err?.message?.includes("circuit breaker") ||
+        err?.message?.includes("manual attendance") ||
+        err?.message?.includes("ECONNREFUSED") ||
+        err?.status === 503 ||
+        err?.status === 502
+      ) {
+        setFaceAiStatus({
+          online: false,
+          circuitBreakerState: "OPEN",
+          message: err.message,
+          fallbackMode: "MANUAL_ATTENDANCE",
+        });
+      }
       setError(err.message || "Failed to process image");
     } finally {
       setProcessing(false);
@@ -656,6 +737,74 @@ export function FaceAttendancePage(): React.ReactElement {
           Capture live camera faces, verify shift window & GPS location, and mark attendance
         </p>
       </div>
+
+      {/* Circuit Breaker Fail-Open Alert Banner */}
+      {faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: 12,
+            padding: "16px 20px",
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 14,
+            boxShadow: "0 2px 8px rgba(245, 158, 11, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 260, flex: 1 }}>
+            <span style={{ fontSize: 28, lineHeight: 1 }}>⚡</span>
+            <div>
+              <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15 }}>
+                Face AI Biometric Service Unavailable (Circuit Breaker: OPEN)
+              </div>
+              <div style={{ color: "#b45309", fontSize: 13, marginTop: 3 }}>
+                The biometric model is offline or has encountered high error rates. Operations continue seamlessly:
+                the system has failed open to manual attendance mode.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              style={{
+                background: "#d97706",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 18px",
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(217, 119, 6, 0.3)",
+              }}
+              onClick={() => navigate("/attendance")}
+            >
+              📋 Switch to Manual Attendance &rarr;
+            </button>
+            <button
+              type="button"
+              style={{
+                background: "#ffffff",
+                color: "#78350f",
+                border: "1px solid #fcd34d",
+                borderRadius: 8,
+                padding: "10px 14px",
+                fontWeight: 500,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+              disabled={checkingHealth}
+              onClick={checkFaceAiHealth}
+            >
+              {checkingHealth ? "Probing..." : "🔄 Retry Connection"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Controls Header */}
       <div style={styles.controls} className="face-controls">
@@ -1085,7 +1234,42 @@ export function FaceAttendancePage(): React.ReactElement {
       )}
 
       {/* Error */}
-      {error && <div style={styles.error}>⚠️ {error}</div>}
+      {error && (
+        <div
+          style={{
+            ...styles.error,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <span>⚠️ {error}</span>
+          {(error.toLowerCase().includes("manual attendance") ||
+            error.toLowerCase().includes("circuit breaker") ||
+            error.toLowerCase().includes("unavailable") ||
+            error.toLowerCase().includes("offline")) && (
+            <button
+              type="button"
+              style={{
+                background: "#b91c1c",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 6,
+                padding: "6px 14px",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(185, 28, 28, 0.25)",
+              }}
+              onClick={() => navigate("/attendance")}
+            >
+              📋 Open Manual Attendance &rarr;
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Submit result */}
       {submitResult && (

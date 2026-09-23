@@ -655,8 +655,7 @@ Populate every designation, role and company selector from these endpoints.
 Hardcoded option lists drift from the seed and break as soon as a row is added.
 
 Relations are always returned as small nested objects with the fields a UI
-actually renders. Prisma internals, join rows and the misspelled database column
-`desiginationId` are never exposed — the API only ever uses `designation` /
+actually renders. Prisma internals and join rows are never exposed — the API only ever uses `designation` /
 `designationId`.
 
 ### Permission-based UI
@@ -714,7 +713,7 @@ Core entities and relationships (see [`prisma/schema.prisma`](prisma/schema.pris
 Indexes are deliberately minimal — one per genuine access path, avoiding
 low-value or redundant entries:
 
-- `Employee(desiginationId)` — foreign key (Postgres does not auto-index FKs);
+- `Employee(designationId)` — foreign key (Postgres does not auto-index FKs);
   also backs the `designationId` list filter.
 - `Employee(phone)` — backs the phone-login lookup on a growing table.
 - `OtpChallenge(phone, createdAt)` — the active-challenge lookup filters `phone`
@@ -729,15 +728,11 @@ low-value or redundant entries:
 
 ### Known naming issues
 
-- The `Designation` model maps to the misspelled table `desgination`, and
-  `Employee.desiginationId` is likewise misspelled. These names are baked into
-  existing migrations. Renaming would require a data-preserving table/column
-  migration plus code changes for a purely cosmetic gain, so the misspellings are
-  **left intact by design**. Application code and Prisma field names use these
-  exact spellings.
 - `Permission` has `createdAt` but no `updatedAt` (all other models have both).
   Permissions are immutable seeded reference data with no update path, so this is
   left as-is.
+- Note: The legacy database typos (`desgination` table and `Employee.desiginationId`)
+  were migrated to `designations` and `designationId` via migration `20260923010000_fix_designation_typo`.
 
 ## Testing
 

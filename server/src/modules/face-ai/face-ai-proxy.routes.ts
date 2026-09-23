@@ -3,6 +3,7 @@ import multer from "multer";
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/app-error.js";
 import { analyzeImage } from "../../services/face-ai.service.js";
+import { faceAiCircuitBreaker } from "../../services/circuit-breaker.js";
 import { faceAiRateLimiter } from "../../middlewares/face-ai-rate-limit.middleware.js";
 import { getClientIp, getAuthenticatedUserId } from "../../middlewares/rate-limit.middleware.js";
 import { demoEmbeddingStore } from "./demo-embedding-store.js";
@@ -53,6 +54,8 @@ function resolveDemoSessionId(req: Request): string {
  * Returns pipeline status, busy state, and active concurrency count.
  */
 router.get("/health", async (_req: Request, res: Response) => {
+  const cbMetrics = faceAiCircuitBreaker.getMetrics();
+
   try {
     const response = await fetch(`${env.FASTAPI_AI_URL}/health`, {
       signal: AbortSignal.timeout(3500),
@@ -60,29 +63,45 @@ router.get("/health", async (_req: Request, res: Response) => {
 
     if (response.ok) {
       const data = (await response.json()) as Record<string, any>;
+      // If FastAPI is responding healthy, reset circuit breaker if it was tripped
+      if (faceAiCircuitBreaker.getState() !== "CLOSED") {
+        faceAiCircuitBreaker.reset();
+      }
+
       return res.status(200).json({
         success: true,
         serviceStatus: "online",
         busy: inFlightCount >= 1,
         inFlightCount,
+        circuitBreaker: faceAiCircuitBreaker.getMetrics(),
         details: data,
       });
     }
 
-    return res.status(200).json({
-      success: true,
+    faceAiCircuitBreaker.tripOpen(`Face AI service returned HTTP ${response.status}`);
+
+    return res.status(503).json({
+      success: false,
       serviceStatus: "degraded",
       busy: inFlightCount >= 1,
       inFlightCount,
+      circuitBreaker: faceAiCircuitBreaker.getMetrics(),
+      fallbackMode: "MANUAL_ATTENDANCE",
       message: `Face AI service returned HTTP ${response.status}`,
     });
-  } catch (_err) {
-    return res.status(200).json({
-      success: true,
+  } catch (err: any) {
+    faceAiCircuitBreaker.tripOpen(
+      `Face AI engine is unreachable: ${err?.message || "ECONNREFUSED"}`,
+    );
+
+    return res.status(503).json({
+      success: false,
       serviceStatus: "offline",
       busy: inFlightCount >= 1,
       inFlightCount,
-      message: "Face AI engine is currently offline or warming up. Local ML models might not be started yet.",
+      circuitBreaker: faceAiCircuitBreaker.getMetrics(),
+      fallbackMode: "MANUAL_ATTENDANCE",
+      message: "Face AI engine is currently offline or warming up. Circuit breaker fail-open mode is active.",
     });
   }
 });
@@ -132,6 +151,23 @@ router.post(
   "/analyze",
   faceAiRateLimiter,
   (req, res, next) => {
+    // Fail-fast circuit breaker check
+    if (faceAiCircuitBreaker.isOpen()) {
+      const metrics = faceAiCircuitBreaker.getMetrics();
+      return res.status(503).json({
+        success: false,
+        error: "FACE_AI_UNAVAILABLE",
+        code: "FACE_AI_CIRCUIT_OPEN",
+        fallbackMode: "MANUAL_ATTENDANCE",
+        message: "The Face AI service is currently offline or unhealthy (circuit breaker OPEN). Please use manual attendance mode.",
+        circuitBreaker: {
+          state: metrics.state,
+          consecutiveFailures: metrics.consecutiveFailures,
+          nextAttemptInMs: metrics.nextAttemptInMs,
+        },
+      });
+    }
+
     // Busy check: reject immediately if another frame is already in flight
     if (inFlightCount >= 1) {
       return res.status(503).json({

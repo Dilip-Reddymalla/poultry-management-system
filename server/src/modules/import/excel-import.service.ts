@@ -293,7 +293,7 @@ export async function importEmployeesFromExcel(
         data: {
           employeeId: finalEmpId,
           name: rawName,
-          desiginationId: matchedDesignationId!,
+          designationId: matchedDesignationId!,
           farmId: matchedFarmId!,
           phone: rawPhone ? normalizePhone(rawPhone) : null,
           joiningDate: parsedJoiningDate,

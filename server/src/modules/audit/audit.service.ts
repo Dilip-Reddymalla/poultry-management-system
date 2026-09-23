@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { type AuditAction, Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
+import { logger } from "../../config/logger.js";
 import type { AuthScope } from "../auth/scope.js";
 import type {
   ListAuditLogsQueryInput,
@@ -86,8 +87,8 @@ export async function recordAuditLog({
       },
     });
   } catch (error) {
-    // Non-blocking: log errors to console so business operations never fail due to audit logging
-    console.error("Failed to write audit log:", error);
+    // Non-blocking: log errors via logger so business operations never fail due to audit logging
+    logger.error({ error }, "Failed to write audit log");
   }
 }
 

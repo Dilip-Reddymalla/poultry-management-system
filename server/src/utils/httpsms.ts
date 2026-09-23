@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
 
 const HTTPSMS_API_URL = "https://api.httpsms.com/v1/messages/send";
 
@@ -43,11 +44,14 @@ export async function sendSms(
   }
 
   if (!response.ok) {
-    console.error("❌ HTTPSMS API error:", {
-      status: response.status,
-      statusText: response.statusText,
-      response: data,
-    });
+    logger.error(
+      {
+        status: response.status,
+        statusText: response.statusText,
+        response: data,
+      },
+      "HTTPSMS API error",
+    );
 
     throw new Error(
       `HTTPSMS SMS request failed with status ${response.status}`,

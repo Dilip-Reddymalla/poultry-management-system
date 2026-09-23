@@ -250,7 +250,23 @@ export async function createWorker(
       }
     }
 
-    return toSafeWorker(worker);
+    const safe = toSafeWorker(worker);
+
+    void recordAuditLog({
+      scope,
+      action: "CREATE",
+      entity: "Worker",
+      entityId: worker.id,
+      summary: `Created worker ${worker.name} (${worker.workerId})`,
+      changes: {
+        workerId: worker.workerId,
+        name: worker.name,
+        farmId: worker.farmId,
+        phone: worker.phone,
+      },
+    });
+
+    return safe;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -315,7 +331,21 @@ export async function updateWorker(
       }
     }
 
-    return toSafeWorker(worker);
+    const safe = toSafeWorker(worker);
+
+    void recordAuditLog({
+      scope,
+      action: "UPDATE",
+      entity: "Worker",
+      entityId: worker.id,
+      summary: `Updated worker ${worker.name} (${worker.workerId})`,
+      changes: {
+        name: input.name,
+        phone: input.phone,
+      },
+    });
+
+    return safe;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -366,7 +396,21 @@ async function setWorkerStatus(
     select: workerSelect,
   });
 
-  return toSafeWorker(worker);
+  const safe = toSafeWorker(worker);
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Worker",
+    entityId: worker.id,
+    summary: `${status === "ACTIVE" ? "Reactivated" : "Deactivated"} worker ${worker.name} (${worker.workerId})`,
+    changes: {
+      status,
+      previousStatus: existingWorker.status,
+    },
+  });
+
+  return safe;
 }
 
 export async function deactivateWorker(

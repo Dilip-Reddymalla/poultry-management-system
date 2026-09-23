@@ -202,7 +202,21 @@ export async function updateFarm(
       select: farmSelect,
     });
 
-    return toSafeFarm(farm);
+    const safeFarm = toSafeFarm(farm);
+
+    void recordAuditLog({
+      scope,
+      action: "UPDATE",
+      entity: "Farm",
+      entityId: farm.id,
+      summary: `Updated farm ${farm.name} (${farm.code})`,
+      changes: {
+        code: input.code,
+        name: input.name,
+      },
+    });
+
+    return safeFarm;
   } catch (error) {
     throw toWriteError(error);
   }
@@ -252,7 +266,21 @@ async function setFarmStatus(
     select: farmSelect,
   });
 
-  return toSafeFarm(farm);
+  const safeFarm = toSafeFarm(farm);
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Farm",
+    entityId: farm.id,
+    summary: `${status === "ACTIVE" ? "Reactivated" : "Deactivated"} farm ${farm.name} (${farm.code})`,
+    changes: {
+      status,
+      previousStatus: existingFarm.status,
+    },
+  });
+
+  return safeFarm;
 }
 
 export async function deactivateFarm(

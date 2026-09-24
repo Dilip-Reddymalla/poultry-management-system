@@ -323,9 +323,21 @@ export async function cleanupTestData(): Promise<void> {
 
   await prisma.user.deleteMany({
     where: {
-      email: {
-        endsWith: TEST_EMAIL_DOMAIN,
-      },
+      OR: [
+        {
+          email: {
+            endsWith: TEST_EMAIL_DOMAIN,
+          },
+        },
+        {
+          employee: {
+            OR: [
+              { employeeId: { startsWith: TEST_PREFIX } },
+              { farm: { code: { startsWith: TEST_PREFIX } } },
+            ],
+          },
+        },
+      ],
     },
   });
 

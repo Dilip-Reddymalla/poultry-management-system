@@ -13,10 +13,13 @@ import {
 import type {
   CreateWorkerInput,
   ListWorkersQueryInput,
+  PromoteWorkerInput,
   UpdateWorkerInput,
 } from "./worker.schema.js";
 
 import { getFarmById } from "../farm/farm.service.js";
+import { createEmployeeId, getEmployeeById } from "../employee/employee.service.js";
+import type { SafeEmployee } from "../employee/employee.types.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 
 import type { SafeWorker, WorkerPagination } from "./worker.types.js";
@@ -29,6 +32,15 @@ const workerSelect = {
   photoUrl: true,
   status: true,
   farmId: true,
+  promotedToEmployeeId: true,
+  promotedAt: true,
+  promotedToEmployee: {
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+    },
+  },
   farm: {
     select: {
       id: true,
@@ -44,7 +56,7 @@ type WorkerRecord = Prisma.WorkerGetPayload<{
 }>;
 
 function toSafeWorker(worker: WorkerRecord): SafeWorker {
-  return {
+  const safe: SafeWorker = {
     id: worker.id,
     workerId: worker.workerId,
     name: worker.name,
@@ -57,6 +69,20 @@ function toSafeWorker(worker: WorkerRecord): SafeWorker {
       name: worker.farm.name,
     },
   };
+
+  if (worker.status === "PROMOTED" || worker.promotedToEmployeeId) {
+    safe.promotedToEmployeeId = worker.promotedToEmployeeId;
+    safe.promotedAt = worker.promotedAt;
+    safe.promotedToEmployee = worker.promotedToEmployee
+      ? {
+          id: worker.promotedToEmployee.id,
+          employeeId: worker.promotedToEmployee.employeeId,
+          name: worker.promotedToEmployee.name,
+        }
+      : null;
+  }
+
+  return safe;
 }
 
 function toWriteError(error: unknown): unknown {
@@ -481,4 +507,144 @@ export async function deleteWorker(
     message: `Worker ${existingWorker.name} deleted successfully`,
   };
 }
+
+export async function promoteWorker(
+  scope: AuthScope,
+  id: string,
+  input: PromoteWorkerInput,
+): Promise<SafeEmployee> {
+  const existingWorker = await prisma.worker.findUnique({
+    where: { id },
+    include: {
+      farm: { select: { id: true, companyId: true, name: true } },
+    },
+  });
+
+  if (!existingWorker) {
+    throw new AppError("Worker not found", 404);
+  }
+
+  assertFarmWritable(scope, {
+    companyId: existingWorker.farm.companyId,
+    id: existingWorker.farmId,
+  });
+
+  if (existingWorker.status === "PROMOTED") {
+    throw new AppError("Worker has already been promoted to an employee", 409);
+  }
+
+  if (existingWorker.status === "INACTIVE") {
+    throw new AppError(
+      "Cannot promote an inactive worker. Reactivate the worker first.",
+      409,
+    );
+  }
+
+  const designation = await prisma.designation.findUnique({
+    where: { id: input.designationId },
+    select: { id: true, name: true },
+  });
+
+  if (!designation) {
+    throw new AppError("Designation not found", 404);
+  }
+
+  const resolvedEmployeeId = input.employeeId?.trim()
+    ? input.employeeId.trim()
+    : await createEmployeeId(scope, {
+        farmId: existingWorker.farmId,
+        name: input.name ?? existingWorker.name,
+        designationId: input.designationId,
+      });
+
+  const duplicateEmployee = await prisma.employee.findUnique({
+    where: { employeeId: resolvedEmployeeId },
+    select: { id: true },
+  });
+
+  if (duplicateEmployee) {
+    throw new AppError("Employee ID already exists", 409);
+  }
+
+  const createdEmployeeId = await prisma.$transaction(async (tx) => {
+    // 1. Create the Employee record
+    const employee = await tx.employee.create({
+      data: {
+        employeeId: resolvedEmployeeId,
+        name: input.name ?? existingWorker.name,
+        designationId: input.designationId,
+        farmId: existingWorker.farmId,
+        phone:
+          input.phone !== undefined
+            ? input.phone === null || input.phone === ""
+              ? null
+              : normalizePhone(input.phone)
+            : existingWorker.phone,
+        photoUrl: existingWorker.photoUrl,
+        joiningDate: input.joiningDate ?? new Date(),
+        status: "ACTIVE",
+      },
+    });
+
+    // 2. Transfer face embedding from worker to employee, and nullify on worker
+    // to prevent duplicate biometrics in Postgres.
+    try {
+      await tx.$executeRawUnsafe(
+        `UPDATE employees SET face_embedding = (SELECT face_embedding FROM workers WHERE id = $1::uuid) WHERE id = $2::uuid`,
+        existingWorker.id,
+        employee.id,
+      );
+      await tx.$executeRawUnsafe(
+        `UPDATE workers SET face_embedding = NULL WHERE id = $1::uuid`,
+        existingWorker.id,
+      );
+    } catch {
+      // In environments where pgvector extension is not enabled or vector type is simulated
+    }
+
+    // 3. Update Worker status to PROMOTED and link to new Employee
+    await tx.worker.update({
+      where: { id: existingWorker.id },
+      data: {
+        status: "PROMOTED",
+        promotedToEmployeeId: employee.id,
+        promotedAt: new Date(),
+      },
+    });
+
+    return employee.id;
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Worker",
+    entityId: existingWorker.id,
+    summary: `Worker ${existingWorker.name} (${existingWorker.workerId}) promoted to Employee (${resolvedEmployeeId})`,
+    changes: {
+      workerId: existingWorker.workerId,
+      status: "PROMOTED",
+      promotedToEmployeeId: createdEmployeeId,
+      designationId: input.designationId,
+      designationName: designation.name,
+    },
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "CREATE",
+    entity: "Employee",
+    entityId: createdEmployeeId,
+    summary: `Created employee ${input.name ?? existingWorker.name} (${resolvedEmployeeId}) via promotion from worker ${existingWorker.workerId}`,
+    changes: {
+      employeeId: resolvedEmployeeId,
+      name: input.name ?? existingWorker.name,
+      farmId: existingWorker.farmId,
+      promotedFromWorkerId: existingWorker.id,
+    },
+  });
+
+  return getEmployeeById(scope, createdEmployeeId);
+}
+
 

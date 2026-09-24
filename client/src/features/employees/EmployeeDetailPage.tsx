@@ -227,6 +227,41 @@ export function EmployeeDetailPage(): React.ReactElement {
         }
       />
 
+      {record.promotedFromWorker ? (
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(139, 92, 246, 0.08)",
+            border: "1px solid rgba(139, 92, 246, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "1.2rem" }}>⭐</span>
+            <div>
+              <span style={{ fontWeight: 600, color: "#6d28d9" }}>
+                {t("employees.detail.promotedFromTitle", "Promoted from Farm Worker")}
+              </span>
+              <span style={{ color: "#6b7280", marginLeft: "8px", fontSize: "0.9rem" }}>
+                ({record.promotedFromWorker.workerId})
+              </span>
+            </div>
+          </div>
+          <Link
+            to={`/workers/${record.promotedFromWorker.id}`}
+            className="button button--secondary"
+            style={{ fontSize: "0.85rem", padding: "4px 10px" }}
+          >
+            {t("employees.detail.viewWorkerRecord", "View Historical Worker Record →")}
+          </Link>
+        </div>
+      ) : null}
+
       <div className="split">
         <Panel title="Record">
           {record.photoUrl ? (
@@ -271,6 +306,18 @@ export function EmployeeDetailPage(): React.ReactElement {
                   </span>
                 ),
               },
+              ...(record.promotedFromWorker
+                ? [
+                    {
+                      label: t("employees.detail.careerOrigin", "Origin"),
+                      value: (
+                        <Link to={`/workers/${record.promotedFromWorker.id}`}>
+                          {t("employees.detail.promotedFrom", "Promoted from")} {record.promotedFromWorker.workerId}
+                        </Link>
+                      ),
+                    },
+                  ]
+                : []),
               { label: t("common.status"), value: <StatusTag status={record.status} /> },
             ]}
           />

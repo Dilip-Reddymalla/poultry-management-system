@@ -10,6 +10,7 @@ import {
   updateWorkerController,
   importWorkersExcelController,
   downloadWorkerExcelTemplateController,
+  promoteWorkerController,
 } from "./worker.controller.js";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
@@ -43,6 +44,12 @@ router.delete(
   "/:id",
   requirePermission("worker:delete"),
   deleteWorkerController,
+);
+router.post(
+  "/:id/promote",
+  requirePermission("worker:update"),
+  requirePermission("employee:create"),
+  promoteWorkerController,
 );
 
 export default router;

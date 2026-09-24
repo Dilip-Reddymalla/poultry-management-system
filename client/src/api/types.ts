@@ -2,7 +2,7 @@ export type ScopeLevel = "FARM" | "COMPANY" | "GLOBAL";
 export type FarmStatus = "ACTIVE" | "INACTIVE";
 export type ShedStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "INACTIVE";
 export type EmployeeStatus = "ACTIVE" | "INACTIVE";
-export type WorkerStatus = "ACTIVE" | "INACTIVE";
+export type WorkerStatus = "ACTIVE" | "INACTIVE" | "PROMOTED";
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE";
 export type Shift = "MORNING_SHIFT" | "AFTERNOON_SHIFT" | "NIGHT_SHIFT" | "OVERTIME";
 export type PersonType = "EMPLOYEE" | "WORKER";
@@ -124,6 +124,12 @@ export interface Employee {
   } | null;
   photoUrl?: string;
   joiningDate?: string;
+  promotedFromWorker?: {
+    id: string;
+    workerId: string;
+    name: string;
+    promotedAt?: string | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,6 +143,13 @@ export interface Worker {
   farmId: string;
   farm: any;
   status: WorkerStatus;
+  promotedToEmployeeId?: string | null;
+  promotedAt?: string | null;
+  promotedToEmployee?: {
+    id: string;
+    employeeId: string;
+    name: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }

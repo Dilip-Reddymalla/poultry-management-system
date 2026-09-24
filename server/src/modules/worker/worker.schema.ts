@@ -8,7 +8,7 @@ const phoneSchema = z.string().trim().min(1, "Phone number is required");
 
 const farmIdSchema = z.uuid("Invalid farm ID");
 
-const statusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+const statusSchema = z.enum(["ACTIVE", "INACTIVE", "PROMOTED"]);
 
 export const workerIdParamSchema = z.object({
   id: z.uuid("Invalid worker ID"),
@@ -55,3 +55,13 @@ export type ListWorkersQueryInput = z.infer<typeof listWorkersQuerySchema>;
 export type CreateWorkerInput = z.infer<typeof createWorkerSchema>;
 
 export type UpdateWorkerInput = z.infer<typeof updateWorkerSchema>;
+
+export const promoteWorkerSchema = z.object({
+  designationId: z.uuid("Invalid designation ID"),
+  employeeId: z.string().trim().min(1, "Employee ID cannot be empty").optional(),
+  joiningDate: z.coerce.date().optional(),
+  name: nameSchema.optional(),
+  phone: phoneSchema.optional(),
+});
+
+export type PromoteWorkerInput = z.infer<typeof promoteWorkerSchema>;

@@ -12,12 +12,14 @@ import {
   deleteWorker,
   getWorkerById,
   listWorkers,
+  promoteWorker,
   reactivateWorker,
   updateWorker,
 } from "./worker.service.js";
 import {
   createWorkerSchema,
   listWorkersQuerySchema,
+  promoteWorkerSchema,
   updateWorkerSchema,
   workerIdParamSchema,
 } from "./worker.schema.js";
@@ -257,4 +259,21 @@ export async function downloadWorkerExcelTemplateController(
   );
   res.send(buffer);
 }
+
+export async function promoteWorkerController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = workerIdParamSchema.parse(req.params);
+  const input = promoteWorkerSchema.parse(req.body);
+
+  const employee = await promoteWorker(getScope(req), params.id, input);
+
+  res.status(201).json({
+    success: true,
+    message: "Worker promoted to employee successfully",
+    employee,
+  });
+}
+
 

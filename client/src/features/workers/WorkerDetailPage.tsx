@@ -19,6 +19,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
+import { PromoteWorkerDialog } from "./PromoteWorkerDialog.js";
 
 export function WorkerDetailPage(): React.ReactElement {
   const { t } = useTranslation();
@@ -30,15 +31,18 @@ export function WorkerDetailPage(): React.ReactElement {
   const worker = useResource<Worker>(`worker:${id}`, () => fetchWorker(id));
 
   const [editing, setEditing] = useState(false);
+  const [promoting, setPromoting] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
   const record = worker.data;
+  const isPromoted = record?.status === "PROMOTED";
   const active = record?.status === "ACTIVE";
 
-  const canToggle = can("worker:update");
+  const canToggle = can("worker:update") && !isPromoted;
+  const canPromote = active && can("employee:create") && can("worker:update");
 
   async function handleDelete(): Promise<void> {
     if (!record) {
@@ -136,7 +140,7 @@ export function WorkerDetailPage(): React.ReactElement {
                 {t("common.attendance")}
               </Link>
             ) : null}
-            {can("worker:update") ? (
+            {can("worker:update") && !isPromoted ? (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -144,6 +148,16 @@ export function WorkerDetailPage(): React.ReactElement {
                 }}
               >
                 {t("common.edit")}
+              </Button>
+            ) : null}
+            {canPromote ? (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setPromoting(true);
+                }}
+              >
+                ⭐ {t("workers.promoteWorker", "Promote to Employee")}
               </Button>
             ) : null}
             {canToggle ? (
@@ -169,6 +183,38 @@ export function WorkerDetailPage(): React.ReactElement {
           </>
         }
       />
+
+      {isPromoted && record.promotedToEmployee ? (
+        <div
+          style={{
+            padding: "16px 20px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(139, 92, 246, 0.08)",
+            border: "1px solid rgba(139, 92, 246, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, color: "#6d28d9", fontSize: "1rem" }}>
+              🎉 {t("workers.detail.promotedBannerTitle", "This worker has been promoted to an Employee")}
+            </div>
+            <div style={{ color: "#4b5563", fontSize: "0.9rem", marginTop: "2px" }}>
+              {t("workers.detail.promotedBannerSubtitle", "Active Staff Record")}: <strong>{record.promotedToEmployee.name}</strong> ({record.promotedToEmployee.employeeId})
+            </div>
+          </div>
+          <Link
+            to={`/employees/${record.promotedToEmployee.id}`}
+            className="button button--primary"
+            style={{ backgroundColor: "#7c3aed", borderColor: "#7c3aed" }}
+          >
+            {t("workers.detail.viewEmployeeProfile", "View Employee Profile →")}
+          </Link>
+        </div>
+      ) : null}
 
       <div className="split">
         <Panel title={t("workers.detail.recordPanel")}>
@@ -212,10 +258,28 @@ export function WorkerDetailPage(): React.ReactElement {
 
         <Panel title={t("workers.detail.appAccessPanel")}>
           <p className="panel__text">
-            {t("workers.detail.appAccessText")}
+            {isPromoted && record.promotedToEmployee
+              ? t("workers.detail.promotedAccessText", {
+                  name: record.promotedToEmployee.name,
+                  id: record.promotedToEmployee.employeeId,
+                  defaultValue: `This worker was promoted to employee ${record.promotedToEmployee.name} (${record.promotedToEmployee.employeeId}). Manage system access, roles, and attendance on their employee profile.`
+                })
+              : t("workers.detail.appAccessText")}
           </p>
         </Panel>
       </div>
+
+      {promoting && record ? (
+        <PromoteWorkerDialog
+          worker={record}
+          onClose={() => setPromoting(false)}
+          onPromoted={(promotedEmployee) => {
+            setPromoting(false);
+            notify("success", t("workers.detail.promoteSuccess", "Worker promoted to employee successfully!"));
+            navigate(`/employees/${promotedEmployee.id}`);
+          }}
+        />
+      ) : null}
 
       {editing ? (
         <WorkerFormDialog

@@ -320,13 +320,32 @@ export async function listAttendance(
           }
         : undefined;
 
+  let personFilter: Prisma.AttendanceWhereInput = {};
+  if (query.employeeId !== undefined) {
+    const linkedWorker = await prisma.worker.findUnique({
+      where: { promotedToEmployeeId: query.employeeId },
+      select: { id: true },
+    });
+    if (linkedWorker) {
+      personFilter = {
+        OR: [
+          { employeeId: query.employeeId },
+          { workerId: linkedWorker.id },
+        ],
+      };
+    } else {
+      personFilter = { employeeId: query.employeeId };
+    }
+  } else if (query.workerId !== undefined) {
+    personFilter = { workerId: query.workerId };
+  }
+
   const where: Prisma.AttendanceWhereInput = {
     // Attendance is always scoped to the caller's permitted farm/company.
     ...farmScopedWhere(scope),
     ...(query.farmId !== undefined && { farmId: query.farmId }),
     ...(query.shedId !== undefined && { shedId: query.shedId }),
-    ...(query.employeeId !== undefined && { employeeId: query.employeeId }),
-    ...(query.workerId !== undefined && { workerId: query.workerId }),
+    ...personFilter,
     ...(query.status !== undefined && { status: query.status }),
     ...(query.shift !== undefined && { shift: query.shift }),
     ...(query.recordedById !== undefined && { recordedById: query.recordedById }),

@@ -107,6 +107,7 @@ model Employee {
   farm        Farm         @relation(fields: [farmId], references: [id])
   user        User?
   attendances Attendance[]
+  promotedFromWorker Worker? @relation("WorkerPromotionLink")
 
   // FK is not auto-indexed by Postgres; used as the designation join target and
   // as the designation filter in listEmployees.
@@ -141,11 +142,16 @@ model Worker {
 
   status WorkerStatus @default(ACTIVE)
 
+  // Promotion reference: set when worker is promoted to employee
+  promotedToEmployeeId String?   @unique @db.Uuid
+  promotedAt           DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  farm        Farm         @relation(fields: [farmId], references: [id])
-  attendances Attendance[]
+  farm               Farm         @relation(fields: [farmId], references: [id])
+  attendances        Attendance[]
+  promotedToEmployee Employee?    @relation("WorkerPromotionLink", fields: [promotedToEmployeeId], references: [id])
 
   @@index([farmId])
   @@map("workers")
@@ -334,6 +340,7 @@ enum EmployeeStatus {
 enum WorkerStatus {
   ACTIVE
   INACTIVE
+  PROMOTED
 }
 
 enum AttendanceStatus {

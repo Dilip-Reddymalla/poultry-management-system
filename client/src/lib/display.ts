@@ -5,7 +5,7 @@ import type {
   ShedStatus,
 } from "../api/types.js";
 
-export type StatusTone = "running" | "busy" | "attention" | "idle";
+export type StatusTone = "running" | "busy" | "attention" | "idle" | "promoted";
 
 export type AnyStatus =
   | EmployeeStatus
@@ -30,6 +30,8 @@ export function statusTone(status: AnyStatus | string): StatusTone {
     case "MAINTENANCE":
     case "ABSENT":
       return "attention";
+    case "PROMOTED":
+      return "promoted";
     default:
       return "idle";
   }
@@ -38,6 +40,7 @@ export function statusTone(status: AnyStatus | string): StatusTone {
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Active",
   INACTIVE: "Inactive",
+  PROMOTED: "Promoted",
   AVAILABLE: "Available",
   OCCUPIED: "Occupied",
   MAINTENANCE: "Maintenance",

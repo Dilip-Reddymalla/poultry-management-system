@@ -141,6 +141,7 @@ export function WorkersPage(): React.ReactElement {
               <option value="">{t("common.allStatuses")}</option>
               <option value="ACTIVE">{t("common.active")}</option>
               <option value="INACTIVE">{t("common.inactive")}</option>
+              <option value="PROMOTED">{t("common.promoted", "Promoted")}</option>
             </select>
           </label>
 

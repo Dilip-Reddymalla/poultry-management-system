@@ -9,8 +9,10 @@ import {
   createTestCompany,
   createTestFarm,
   createTestWorker,
+  getDesignationId,
   loginSystemAdmin,
   prisma,
+  TEST_EMAIL_DOMAIN,
   TEST_PREFIX,
   uniqueSuffix,
   type TestActor,
@@ -393,5 +395,56 @@ describe("worker module", () => {
       .set("Cookie", dgm.cookie);
 
     expect(response.status).toBe(404);
+  });
+
+  describe("promotion to employee", () => {
+    it("promotes a worker to a regular employee without directly creating a user login account", async () => {
+      const designationId = await getDesignationId();
+      const worker = await createTestWorker(farmA1Id);
+
+      const response = await request(app)
+        .post(`/api/workers/${worker.id}/promote`)
+        .set("Cookie", dgm.cookie)
+        .send({
+          designationId,
+          phone: "+919876543210",
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.employee).toBeDefined();
+      expect(response.body.employee.status).toBe("ACTIVE");
+      expect(response.body.employee.hasUser).toBe(false);
+      expect(response.body.employee.promotedFromWorker).toBeDefined();
+      expect(response.body.employee.promotedFromWorker.id).toBe(worker.id);
+
+      // Verify the worker in DB is now PROMOTED with link to employee
+      const updatedWorker = await prisma.worker.findUnique({
+        where: { id: worker.id },
+      });
+      expect(updatedWorker?.status).toBe("PROMOTED");
+      expect(updatedWorker?.promotedToEmployeeId).toBe(response.body.employee.id);
+
+      // Cannot promote again
+      const duplicatePromotion = await request(app)
+        .post(`/api/workers/${worker.id}/promote`)
+        .set("Cookie", dgm.cookie)
+        .send({ designationId });
+
+      expect(duplicatePromotion.status).toBe(409);
+
+      // The promoted individual is a standard employee: a login can now be provisioned via the employee user endpoint
+      const role = await prisma.role.findFirst({ select: { id: true } });
+      const provisionResponse = await request(app)
+        .post(`/api/employees/${response.body.employee.id}/user`)
+        .set("Cookie", dgm.cookie)
+        .send({
+          email: `${TEST_PREFIX}${uniqueSuffix()}${TEST_EMAIL_DOMAIN}`,
+          roleId: role!.id,
+        });
+
+      expect(provisionResponse.status).toBe(201);
+      expect(provisionResponse.body.user.employee.id).toBe(response.body.employee.id);
+    });
   });
 });

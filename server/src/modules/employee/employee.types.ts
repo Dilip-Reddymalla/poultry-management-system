@@ -23,6 +23,12 @@ export interface SafeEmployee {
     email: string;
     roles: Array<{ id: string; name: string }>;
   } | null;
+  promotedFromWorker?: {
+    id: string;
+    workerId: string;
+    name: string;
+    promotedAt: Date | null;
+  } | null;
 }
 
 export interface EmployeePagination {

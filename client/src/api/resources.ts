@@ -129,6 +129,14 @@ export interface WorkerInput {
   status?: WorkerStatus | undefined;
 }
 
+export interface PromoteWorkerInput {
+  designationId: string;
+  employeeId?: string | undefined;
+  joiningDate?: string | undefined;
+  name?: string | undefined;
+  phone?: string | undefined;
+}
+
 // -- Attendance --
 export interface AttendanceListQuery {
   page?: number;
@@ -390,6 +398,9 @@ export function updateWorker(id: string, data: Partial<WorkerInput>, photo?: Fil
 }
 export function deleteWorker(id: string): Promise<{ success: boolean; message: string }> {
   return apiClient.delete(`/workers/${id}`);
+}
+export function promoteWorker(id: string, data: PromoteWorkerInput): Promise<{ success: boolean; message: string; employee: Employee }> {
+  return apiClient.post(`/workers/${id}/promote`, data);
 }
 
 // -- Attendance --

@@ -1,4 +1,4 @@
-﻿{
+{
   "_meta": {
     "language": "English",
     "code": "en",
@@ -41,6 +41,7 @@
     "deactivate": "Deactivate",
     "reactivate": "Reactivate",
     "attendance": "Attendance",
+    "promoted": "Promoted",
     "pending": "Pending",
     "approved": "Approved",
     "of": "of"
@@ -187,6 +188,7 @@
     "pageTitle": "Workers",
     "pageDescription": "Field staff recorded for attendance. Workers never sign in.",
     "addWorker": "Add worker",
+    "promoteWorker": "Promote to Employee",
     "searchPlaceholder": "Search name, worker ID or phone",
     "searchAriaLabel": "Search workers",
     "workerID": "Worker ID",
@@ -219,7 +221,21 @@
       "deleteConfirmLabel": "Delete worker",
       "deactivatedSuccess": "{{name}} deactivated.",
       "reactivatedSuccess": "{{name}} reactivated.",
-      "failedToDelete": "Failed to delete worker."
+      "failedToDelete": "Failed to delete worker.",
+      "promotedBannerTitle": "This worker has been promoted to an Employee",
+      "promotedBannerSubtitle": "Active Staff Record",
+      "viewEmployeeProfile": "View Employee Profile →",
+      "promotedAccessText": "This worker was promoted to employee {{name}} ({{id}}). Manage system access, roles, and attendance on their employee profile.",
+      "promoteSuccess": "Worker promoted to employee successfully."
+    },
+    "promoteDialog": {
+      "title": "Promote to Employee",
+      "description": "Advance this worker to regular staff. Their historical attendance and biometrics will be safely preserved and transferred.",
+      "designationHint": "The formal position held as an employee (e.g. Supervisor, Shed Incharge).",
+      "autoIdPlaceholder": "Auto-generated (e.g. FARM-E1)",
+      "idHint": "Leave blank to automatically assign the next sequential Employee ID.",
+      "loginNotice": "Promotion creates a standard employee record. Login credentials and system roles can be created afterwards directly from their new employee profile.",
+      "submitButton": "Promote to Employee"
     }
   },
 
@@ -254,7 +270,11 @@
     "failedToDelete": "Failed to delete employee.",
     "detail": {
       "title": "Employee",
-      "allEmployees": "All employees"
+      "allEmployees": "All employees",
+      "promotedFromTitle": "Promoted from Farm Worker",
+      "viewWorkerRecord": "View Historical Worker Record →",
+      "careerOrigin": "Origin",
+      "promotedFrom": "Promoted from"
     }
   },
 

@@ -9,6 +9,13 @@ export interface SafeWorker {
   phone: string | null;
   photoUrl: string | null;
   status: WorkerStatus;
+  promotedToEmployeeId?: string | null;
+  promotedAt?: Date | null;
+  promotedToEmployee?: {
+    id: string;
+    employeeId: string;
+    name: string;
+  } | null;
   farm: {
     id: string;
     code: string;

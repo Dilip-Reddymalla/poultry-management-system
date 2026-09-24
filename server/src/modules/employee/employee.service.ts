@@ -68,6 +68,14 @@ const employeeSelect = {
       },
     },
   },
+  promotedFromWorker: {
+    select: {
+      id: true,
+      workerId: true,
+      name: true,
+      promotedAt: true,
+    },
+  },
 };
 
 type EmployeeRecord = Prisma.EmployeeGetPayload<{
@@ -101,6 +109,14 @@ function toSafeEmployee(employee: EmployeeRecord): SafeEmployee {
             id: ur.role.id,
             name: ur.role.name,
           })),
+        }
+      : null,
+    promotedFromWorker: employee.promotedFromWorker
+      ? {
+          id: employee.promotedFromWorker.id,
+          workerId: employee.promotedFromWorker.workerId,
+          name: employee.promotedFromWorker.name,
+          promotedAt: employee.promotedFromWorker.promotedAt,
         }
       : null,
   };

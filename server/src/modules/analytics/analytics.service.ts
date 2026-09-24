@@ -8,6 +8,7 @@ export interface AnalyticsSummary {
     totalWorkers: number;
     activeWorkers: number;
     inactiveWorkers: number;
+    promotedWorkers: number;
     totalStaff: number;
     activeStaff: number;
   };
@@ -191,9 +192,11 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
   // Transform workers
   let activeWorkers = 0;
   let inactiveWorkers = 0;
+  let promotedWorkers = 0;
   for (const item of workerStats) {
     if (item.status === "ACTIVE") activeWorkers = item._count.id;
     else if (item.status === "INACTIVE") inactiveWorkers = item._count.id;
+    else if (item.status === "PROMOTED") promotedWorkers = item._count.id;
   }
   const totalWorkers = activeWorkers + inactiveWorkers;
 
@@ -305,6 +308,7 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
       totalWorkers,
       activeWorkers,
       inactiveWorkers,
+      promotedWorkers,
       totalStaff: totalEmployees + totalWorkers,
       activeStaff: activeEmployees + activeWorkers,
     },

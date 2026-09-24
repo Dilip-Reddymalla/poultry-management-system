@@ -433,6 +433,7 @@ async function main() {
         "worker:view",
         "worker:create",
         "worker:update",
+        "user:create",
         "attendance:view",
         "attendance:create",
         "attendance:update",

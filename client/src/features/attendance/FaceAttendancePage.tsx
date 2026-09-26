@@ -567,22 +567,38 @@ export function FaceAttendancePage(): React.ReactElement {
       });
       setSelections(sels);
     } catch (err: any) {
-      if (
+      const errMsg = err?.message || "";
+      const isConnectionError =
         err?.code === "FACE_AI_CIRCUIT_OPEN" ||
-        err?.message?.includes("circuit breaker") ||
-        err?.message?.includes("manual attendance") ||
-        err?.message?.includes("ECONNREFUSED") ||
+        errMsg.includes("circuit breaker") ||
+        (errMsg.includes("Face AI service is unavailable") && (err?.status === 503 || err?.status === 502)) ||
+        errMsg.includes("ECONNREFUSED") ||
         err?.status === 503 ||
-        err?.status === 502
-      ) {
+        err?.status === 502;
+
+      if (isConnectionError) {
         setFaceAiStatus({
           online: false,
           circuitBreakerState: "OPEN",
-          message: err.message,
+          message: errMsg,
           fallbackMode: "MANUAL_ATTENDANCE",
         });
+        setError(errMsg || "Face AI biometric service is temporarily unavailable.");
+      } else {
+        // Image decoding, validation, or recognition error — guide user to cleaner image
+        if (
+          errMsg.includes("decode") ||
+          errMsg.includes("corrupt") ||
+          errMsg.includes("format") ||
+          errMsg.includes("Image processing") ||
+          err?.status === 400 ||
+          err?.status === 422
+        ) {
+          setError("Unable to process this image. Please upload or capture a clearer, standard photo (JPG, PNG, or WEBP) with good lighting.");
+        } else {
+          setError(errMsg || "Failed to process face frame. Please try taking another photo.");
+        }
       }
-      setError(err.message || "Failed to process face frame");
     } finally {
       setProcessing(false);
     }
@@ -617,22 +633,38 @@ export function FaceAttendancePage(): React.ReactElement {
       });
       setSelections(sels);
     } catch (err: any) {
-      if (
+      const errMsg = err?.message || "";
+      const isConnectionError =
         err?.code === "FACE_AI_CIRCUIT_OPEN" ||
-        err?.message?.includes("circuit breaker") ||
-        err?.message?.includes("manual attendance") ||
-        err?.message?.includes("ECONNREFUSED") ||
+        errMsg.includes("circuit breaker") ||
+        (errMsg.includes("Face AI service is unavailable") && (err?.status === 503 || err?.status === 502)) ||
+        errMsg.includes("ECONNREFUSED") ||
         err?.status === 503 ||
-        err?.status === 502
-      ) {
+        err?.status === 502;
+
+      if (isConnectionError) {
         setFaceAiStatus({
           online: false,
           circuitBreakerState: "OPEN",
-          message: err.message,
+          message: errMsg,
           fallbackMode: "MANUAL_ATTENDANCE",
         });
+        setError(errMsg || "Face AI biometric service is temporarily unavailable.");
+      } else {
+        // Image decoding, validation, or recognition error — guide user to cleaner image
+        if (
+          errMsg.includes("decode") ||
+          errMsg.includes("corrupt") ||
+          errMsg.includes("format") ||
+          errMsg.includes("Image processing") ||
+          err?.status === 400 ||
+          err?.status === 422
+        ) {
+          setError("Unable to process this image. Please upload or capture a clearer, standard photo (JPG, PNG, or WEBP) with good lighting.");
+        } else {
+          setError(errMsg || "Failed to process image. Please try uploading a cleaner photo.");
+        }
       }
-      setError(err.message || "Failed to process image");
     } finally {
       setProcessing(false);
     }
@@ -1280,6 +1312,48 @@ export function FaceAttendancePage(): React.ReactElement {
             {submitResult.duplicateCount > 0 &&
               ` • ${submitResult.duplicateCount} already recorded`}
           </p>
+        </div>
+      )}
+
+      {/* No faces detected notice */}
+      {result && result.faceCount === 0 && (
+        <div
+          style={{
+            ...styles.card,
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            padding: "20px 24px",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+          <div style={{ fontWeight: 700, color: "#92400e", fontSize: 16 }}>
+            No Faces Detected in Image
+          </div>
+          <div style={{ color: "#b45309", fontSize: 14, marginTop: 6, maxWidth: 600, margin: "6px auto 0" }}>
+            We could not detect any faces in this photo. Please upload or capture a clearer, front-facing photo with adequate lighting and visible faces.
+          </div>
+        </div>
+      )}
+
+      {/* Faces detected but none usable (low quality / blur / extreme angle / spoof) */}
+      {result && result.faceCount > 0 && liveFaces.length === 0 && (
+        <div
+          style={{
+            ...styles.card,
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            padding: "20px 24px",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+          <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 16 }}>
+            Faces Detected but Cannot Be Verified
+          </div>
+          <div style={{ color: "#b91c1c", fontSize: 14, marginTop: 6, maxWidth: 600, margin: "6px auto 0" }}>
+            The detected face(s) did not meet the sharpness or quality requirements. Please take or upload a cleaner, well-lit image with personnel looking directly at the camera.
+          </div>
         </div>
       )}
 

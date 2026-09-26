@@ -1,19 +1,24 @@
 import type { Shift } from "../../api/types.js";
 import { Panel } from "../../components/ui.js";
 import { SHIFT_CONFIG, type ShiftSummaryData } from "./attendance-dashboard-types.js";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
 
 export function ShiftPerformanceTable({
   shiftSummaries,
   dashboardShift,
   onShiftSelect,
+  isMobile: isMobileProp,
 }: {
   shiftSummaries: ShiftSummaryData[];
   dashboardShift: Shift | "";
   onShiftSelect: (shift: Shift | "") => void;
+  isMobile?: boolean;
 }): React.ReactElement {
+  const isMobile = isMobileProp ?? useIsMobile();
+
   return (
     <Panel
-      title="Shift Performance Breakdown"
+      title="Shift Turnout Breakdown"
       eyebrow="Turnout by Shift"
       actions={
         dashboardShift !== "" ? (
@@ -28,6 +33,61 @@ export function ShiftPerformanceTable({
         ) : null
       }
     >
+      {isMobile ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
+          {shiftSummaries.map((s) => {
+            const meta = SHIFT_CONFIG[s.shift];
+            const isSelected = dashboardShift === s.shift;
+            const hasData = s.total > 0;
+            const rate = hasData ? Math.round(((s.present + s.halfDay) / s.total) * 100) : 0;
+
+            return (
+              <div
+                key={s.shift}
+                onClick={() => onShiftSelect(isSelected ? "" : s.shift)}
+                style={{
+                  padding: "0.5rem",
+                  borderRadius: "var(--radius)",
+                  border: `1px solid ${isSelected ? meta.color : "var(--line)"}`,
+                  borderLeft: `4px solid ${meta.color}`,
+                  background: isSelected ? "var(--moss-soft)" : "var(--surface)",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.2rem",
+                  boxShadow: isSelected ? "var(--shadow-sm)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.8rem", color: meta.color }}>
+                    {meta.icon} {meta.label}
+                  </span>
+                  {isSelected && (
+                    <span style={{ fontSize: "0.62rem", background: meta.color, color: "#fff", padding: "1px 4px", borderRadius: "4px" }}>
+                      Active
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: "2px" }}>
+                  <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--ink)" }}>
+                    {s.present + s.halfDay} <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)", fontWeight: "normal" }}>/ {s.total}</span>
+                  </span>
+                  {hasData && (
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: rate >= 75 ? "var(--moss)" : rate >= 50 ? "var(--clay)" : "var(--rust)" }}>
+                      {rate}%
+                    </span>
+                  )}
+                </div>
+                {s.absent > 0 && (
+                  <span style={{ fontSize: "0.68rem", color: "var(--rust)", fontWeight: 600 }}>
+                    {s.absent} absent
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div className="table-scroll" style={{ margin: "-0.5rem -1rem" }}>
         <table className="table" style={{ fontSize: "0.85rem" }}>
           <thead>
@@ -127,6 +187,7 @@ export function ShiftPerformanceTable({
           </tbody>
         </table>
       </div>
+      )}
     </Panel>
   );
 }

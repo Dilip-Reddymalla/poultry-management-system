@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Shift } from "../../api/types.js";
 import { SHIFTS } from "../../api/types.js";
 import { formatNumber } from "../../lib/display.js";
@@ -8,6 +9,7 @@ import {
   type ShiftSummaryData,
   type AttendanceMetrics,
 } from "./attendance-dashboard-types.js";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
 
 export function ShiftShedMatrixTable({
   shiftShedMatrix,
@@ -19,6 +21,7 @@ export function ShiftShedMatrixTable({
   onSelectShift,
   onResetFilters,
   metrics,
+  isMobile: isMobileProp,
 }: {
   shiftShedMatrix: ShiftShedRow[];
   shiftSummaries: ShiftSummaryData[];
@@ -29,24 +32,64 @@ export function ShiftShedMatrixTable({
   onSelectShift: (shift: Shift) => void;
   onResetFilters: () => void;
   metrics: AttendanceMetrics;
+  isMobile?: boolean;
 }): React.ReactElement {
+  const isMobile = isMobileProp ?? useIsMobile();
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+
   return (
     <Panel
       title="Shift × Shed Cross-Tab Matrix"
       eyebrow="Station vs Shift Deployment"
       actions={
-        selectedShedId || dashboardShift ? (
-          <button
-            type="button"
-            className="button button--ghost"
-            style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}
-            onClick={onResetFilters}
-          >
-            Reset Filters ✕
-          </button>
-        ) : null
+        <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          {isMobile && (
+            <button
+              type="button"
+              className="button button--secondary"
+              style={{ fontSize: "0.75rem", padding: "0.2rem 0.55rem", minHeight: "26px" }}
+              onClick={() => setMobileExpanded(!mobileExpanded)}
+            >
+              {mobileExpanded ? "Collapse ▴" : "Expand Matrix ▾"}
+            </button>
+          )}
+          {(selectedShedId || dashboardShift) && (
+            <button
+              type="button"
+              className="button button--ghost"
+              style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}
+              onClick={onResetFilters}
+            >
+              Reset Filters ✕
+            </button>
+          )}
+        </div>
       }
     >
+      {isMobile && !mobileExpanded ? (
+        <div
+          onClick={() => setMobileExpanded(true)}
+          style={{
+            cursor: "pointer",
+            padding: "0.85rem 1rem",
+            background: "var(--surface-sunk)",
+            borderRadius: "var(--radius)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: "0.82rem",
+            color: "var(--ink)",
+          }}
+        >
+          <div>
+            <strong>Tap to expand 2D cross-tab matrix</strong>
+            <div className="muted" style={{ fontSize: "0.74rem", marginTop: "2px" }}>
+              {shiftShedMatrix.length} sheds across 4 shifts ({metrics.totalPresent + metrics.halfDayCount}/{metrics.totalMarked} on duty)
+            </div>
+          </div>
+          <span style={{ fontSize: "1rem", color: "var(--moss)", fontWeight: 700 }}>+</span>
+        </div>
+      ) : (
       <div className="table-scroll">
         <table className="table" style={{ fontSize: "0.85rem" }}>
           <thead>
@@ -279,6 +322,7 @@ export function ShiftShedMatrixTable({
           )}
         </table>
       </div>
+      )}
     </Panel>
   );
 }

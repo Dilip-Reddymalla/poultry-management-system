@@ -1,5 +1,6 @@
 import type { Shift } from "../../api/types.js";
 import { SHIFT_CONFIG, type AttendanceMetrics } from "./attendance-dashboard-types.js";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
 
 export function AttendanceKpiGrid({
   metrics,
@@ -10,6 +11,7 @@ export function AttendanceKpiGrid({
   bulkApproving,
   onApproveAllPending,
   onResetShift,
+  isMobile: isMobileProp,
 }: {
   metrics: AttendanceMetrics;
   dashboardShift: Shift | "";
@@ -19,49 +21,260 @@ export function AttendanceKpiGrid({
   bulkApproving: boolean;
   onApproveAllPending: () => void;
   onResetShift: () => void;
+  isMobile?: boolean;
 }): React.ReactElement {
+  const isMobile = isMobileProp ?? useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {/* Compact Shift Scope Chip for Mobile */}
+        {dashboardShift && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.35rem 0.75rem",
+              background: "var(--surface)",
+              border: `1px solid ${SHIFT_CONFIG[dashboardShift].color}`,
+              borderLeft: `4px solid ${SHIFT_CONFIG[dashboardShift].color}`,
+              borderRadius: "var(--radius)",
+              fontSize: "0.8rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span>{SHIFT_CONFIG[dashboardShift].icon}</span>
+              <strong>{SHIFT_CONFIG[dashboardShift].label} Shift</strong>
+              <span className="muted">({scopedRecordsCount} records)</span>
+            </div>
+            <button
+              type="button"
+              className="button button--ghost"
+              style={{ fontSize: "0.75rem", padding: "0.15rem 0.4rem", minHeight: "22px" }}
+              onClick={onResetShift}
+            >
+              Reset ✕
+            </button>
+          </div>
+        )}
+
+        {/* Horizontal Scrolling KPI Chips */}
+        <div
+          style={{
+            display: "flex",
+            overflowX: "auto",
+            gap: "0.5rem",
+            paddingBottom: "0.35rem",
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {/* Chip 1: Attendance Rate */}
+          <div
+            style={{
+              flex: "0 0 130px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderTop: "3px solid var(--moss)",
+              borderRadius: "var(--radius)",
+              padding: "0.5rem 0.65rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ fontSize: "0.68rem" }}>Rate</span>
+              <span style={{ fontSize: "0.9rem" }}>📈</span>
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--moss)", lineHeight: 1.1 }}>
+              {metrics.attendanceRate}%
+            </div>
+            <div style={{ height: "4px", background: "var(--slate-soft)", borderRadius: "2px", overflow: "hidden" }}>
+              <div
+                style={{
+                  width: `${metrics.attendanceRate}%`,
+                  height: "100%",
+                  background: "var(--moss)",
+                }}
+              />
+            </div>
+            <span className="muted" style={{ fontSize: "0.68rem" }}>
+              {metrics.totalPresent + metrics.halfDayCount}/{dashboardShift ? metrics.totalMarked : (totalActiveWorkforce || metrics.totalMarked)} marked
+            </span>
+          </div>
+
+          {/* Chip 2: Present Today */}
+          <div
+            style={{
+              flex: "0 0 130px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderTop: "3px solid var(--moss)",
+              borderRadius: "var(--radius)",
+              padding: "0.5rem 0.65rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ fontSize: "0.68rem" }}>Present</span>
+              <span style={{ fontSize: "0.9rem" }}>🟢</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
+              <span style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--ink)", lineHeight: 1.1 }}>
+                {metrics.totalPresent}
+              </span>
+              {metrics.halfDayCount > 0 && (
+                <span style={{ fontSize: "0.72rem", color: "var(--clay)", fontWeight: 600 }}>
+                  +{metrics.halfDayCount}H
+                </span>
+              )}
+            </div>
+            <span className="muted" style={{ fontSize: "0.68rem" }}>
+              👔 {metrics.presentEmployees} · 🚜 {metrics.presentWorkers}
+            </span>
+          </div>
+
+          {/* Chip 3: Absences & Leaves */}
+          <div
+            style={{
+              flex: "0 0 130px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderTop: "3px solid var(--rust)",
+              borderRadius: "var(--radius)",
+              padding: "0.5rem 0.65rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ fontSize: "0.68rem" }}>Absences</span>
+              <span style={{ fontSize: "0.9rem" }}>🔴</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
+              <span style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--rust)", lineHeight: 1.1 }}>
+                {metrics.absentCount}
+              </span>
+              {metrics.leaveCount > 0 && (
+                <span style={{ fontSize: "0.72rem", color: "var(--clay)", fontWeight: 600 }}>
+                  · {metrics.leaveCount}L
+                </span>
+              )}
+            </div>
+            <span className="muted" style={{ fontSize: "0.68rem" }}>
+              {metrics.absentCount + metrics.leaveCount} unplanned
+            </span>
+          </div>
+
+          {/* Chip 4: Face AI */}
+          <div
+            style={{
+              flex: "0 0 130px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderTop: "3px solid #1f4d8f",
+              borderRadius: "var(--radius)",
+              padding: "0.5rem 0.65rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ fontSize: "0.68rem" }}>Face AI</span>
+              <span style={{ fontSize: "0.9rem" }}>📸</span>
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#1f4d8f", lineHeight: 1.1 }}>
+              {metrics.faceAiCount}
+            </div>
+            <span className="muted" style={{ fontSize: "0.68rem" }}>
+              {metrics.avgConfidence ? `${metrics.avgConfidence}% avg match` : "Manual / GPS"}
+            </span>
+          </div>
+
+          {/* Chip 5: Pending Signoffs */}
+          <div
+            style={{
+              flex: "0 0 135px",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderTop: `3px solid ${metrics.pendingApprovalCount > 0 ? "var(--clay)" : "var(--moss)"}`,
+              borderRadius: "var(--radius)",
+              padding: "0.5rem 0.65rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ fontSize: "0.68rem" }}>Pending</span>
+              <span style={{ fontSize: "0.9rem" }}>✍️</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "1.4rem", fontWeight: 700, color: metrics.pendingApprovalCount > 0 ? "var(--clay)" : "var(--moss)", lineHeight: 1.1 }}>
+                {metrics.pendingApprovalCount}
+              </span>
+              {metrics.pendingApprovalCount > 0 && canApprove && (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem", minHeight: "22px" }}
+                  onClick={onApproveAllPending}
+                  disabled={bulkApproving}
+                >
+                  {bulkApproving ? "..." : "Approve"}
+                </button>
+              )}
+            </div>
+            <span className="muted" style={{ fontSize: "0.68rem" }}>
+              {metrics.pendingApprovalCount === 0 ? "All signed off" : "Awaiting review"}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="stack" style={{ gap: "1rem" }}>
-      {/* Shift Scope Banner Indicator */}
+      {/* Shift Scope Banner */}
       {dashboardShift && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-            padding: "0.75rem 1.25rem",
+            padding: "0.6rem 1rem",
             background: "var(--surface)",
             border: `1px solid ${SHIFT_CONFIG[dashboardShift].color}`,
             borderLeft: `5px solid ${SHIFT_CONFIG[dashboardShift].color}`,
-            borderRadius: "var(--radius-lg)",
-            boxShadow: "var(--shadow-sm)",
+            borderRadius: "var(--radius)",
+            fontSize: "0.88rem",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-            <span style={{ fontSize: "1.4rem" }}>{SHIFT_CONFIG[dashboardShift].icon}</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--ink)" }}>
-                Viewing {SHIFT_CONFIG[dashboardShift].label} Shift ({SHIFT_CONFIG[dashboardShift].timeRange})
-              </div>
-              <div className="muted" style={{ fontSize: "0.8rem" }}>
-                All KPI cards, shed counts, and roster records below are scoped to this shift ({scopedRecordsCount} records marked).
-              </div>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <span style={{ fontSize: "1.2rem" }}>{SHIFT_CONFIG[dashboardShift].icon}</span>
+            <span>
+              Viewing <strong>{SHIFT_CONFIG[dashboardShift].label} Shift</strong> ({SHIFT_CONFIG[dashboardShift].timeRange}) —{" "}
+              <strong>{scopedRecordsCount}</strong> records marked
+            </span>
           </div>
           <button
             type="button"
-            className="button button--secondary"
-            style={{ fontSize: "0.8rem", padding: "0.25rem 0.75rem", minHeight: "28px" }}
+            className="button button--ghost"
+            style={{ fontSize: "0.8rem", padding: "0.2rem 0.6rem" }}
             onClick={onResetShift}
           >
-            Reset to All Shifts ✕
+            Show All Shifts ✕
           </button>
         </div>
       )}
 
-      {/* KPI Overview Cards Grid */}
       <div
         style={{
           display: "grid",

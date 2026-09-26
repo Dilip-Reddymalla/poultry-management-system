@@ -19,6 +19,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { useToast } from "../../components/use-toast.js";
 import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button } from "../../components/ui.js";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
 
 // Extracted Subcomponents & Types
 import { AttendanceAvatar } from "./AttendanceAvatar.js";
@@ -93,15 +94,15 @@ export function AttendanceDashboardPage(): React.ReactElement {
   // Fetch Total Active Workforce
   const employees = useResource<EmployeeListResponse>(
     `employees:dashboard-count:${selectedFarmId}`,
-    (signal) => fetchEmployees({ status: "ACTIVE", limit: 1000, ...(selectedFarmId ? { farmId: selectedFarmId } : {}) }, signal)
+    (signal) => fetchEmployees({ status: "ACTIVE", limit: 100, ...(selectedFarmId ? { farmId: selectedFarmId } : {}) }, signal)
   );
   const workers = useResource<WorkerListResponse>(
     `workers:dashboard-count:${selectedFarmId}`,
-    (signal) => fetchWorkers({ status: "ACTIVE", limit: 1000, ...(selectedFarmId ? { farmId: selectedFarmId } : {}) }, signal)
+    (signal) => fetchWorkers({ status: "ACTIVE", limit: 100, ...(selectedFarmId ? { farmId: selectedFarmId } : {}) }, signal)
   );
 
-  const totalActiveEmployees = employees.data?.employees?.length ?? 0;
-  const totalActiveWorkers = workers.data?.workers?.length ?? 0;
+  const totalActiveEmployees = employees.data?.pagination?.total ?? employees.data?.employees?.length ?? 0;
+  const totalActiveWorkers = workers.data?.pagination?.total ?? workers.data?.workers?.length ?? 0;
   const totalActiveWorkforce = totalActiveEmployees + totalActiveWorkers;
 
   // Attendance Query for selected date
@@ -446,51 +447,138 @@ export function AttendanceDashboardPage(): React.ReactElement {
     setSearchQuery("");
   };
 
+  const isMobile = useIsMobile();
+
   return (
-    <div className="stack" style={{ gap: "1.75rem" }}>
+    <div className="stack" style={{ gap: isMobile ? "0.85rem" : "1.75rem" }}>
       {/* Header & Primary Controls */}
-      <PageHeader
-        eyebrow="Workforce Operations"
-        title="Attendance Command Center"
-        description="Real-time shift rosters, face AI verification status, and shed allocations."
-        actions={
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-            <Button
-              variant="primary"
+      {isMobile ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <h1 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "var(--ink)" }}>Attendance Command</h1>
+              <p className="muted" style={{ fontSize: "0.75rem", margin: 0 }}>Shift rosters, face AI & shed deployment</p>
+            </div>
+          </div>
+          {/* Quick Actions Horizontal Strip */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.35rem",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+              paddingBottom: "2px",
+            }}
+          >
+            <button
+              type="button"
+              className="button button--primary"
               onClick={() => navigate("/attendance/face")}
-              style={{ backgroundColor: "var(--moss)", borderColor: "var(--moss)", color: "#ffffff" }}
+              style={{
+                padding: "0.25rem 0.55rem",
+                fontSize: "0.75rem",
+                minHeight: "28px",
+                flex: "0 0 auto",
+                backgroundColor: "var(--moss)",
+                borderColor: "var(--moss)",
+                color: "#ffffff",
+                whiteSpace: "nowrap",
+              }}
             >
-              🤖 Face AI Scanner
-            </Button>
+              🤖 Face AI
+            </button>
             {can("attendance:create") && (
               <>
-                <Button variant="secondary" onClick={() => setShowBulkDialog(true)}>
-                  📋 Bulk Mark
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowUnmarkedAbsentDialog(true)}
-                  style={{ color: "var(--rust, #b91c1c)" }}
-                  title="Mark all unmarked personnel as absent for this shift"
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setShowBulkDialog(true)}
+                  style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", whiteSpace: "nowrap" }}
                 >
-                  ⚠️ Mark Unmarked Absent
-                </Button>
-                <Button variant="secondary" onClick={() => setShowEntryDialog(true)}>
-                  ➕ Mark Single
-                </Button>
+                  📋 Bulk
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setShowUnmarkedAbsentDialog(true)}
+                  style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", color: "var(--rust, #b91c1c)", whiteSpace: "nowrap" }}
+                >
+                  ⚠️ Mark Absent
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setShowEntryDialog(true)}
+                  style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", whiteSpace: "nowrap" }}
+                >
+                  ➕ Single
+                </button>
               </>
             )}
             {can("report:export") && (
-              <Button variant="secondary" onClick={() => setShowExportDialog(true)}>
-                📊 Export Excel
-              </Button>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setShowExportDialog(true)}
+                style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", whiteSpace: "nowrap" }}
+              >
+                📊 Export
+              </button>
             )}
-            <Link to="/attendance" className="button button--ghost" title="Detailed Roster Search">
+            <Link
+              to="/attendance"
+              className="button button--ghost"
+              style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", whiteSpace: "nowrap" }}
+            >
               Full Log ↗
             </Link>
           </div>
-        }
-      />
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow="Workforce Operations"
+          title="Attendance Command Center"
+          description="Real-time shift rosters, face AI verification status, and shed allocations."
+          actions={
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <Button
+                variant="primary"
+                onClick={() => navigate("/attendance/face")}
+                style={{ backgroundColor: "var(--moss)", borderColor: "var(--moss)", color: "#ffffff" }}
+              >
+                🤖 Face AI Scanner
+              </Button>
+              {can("attendance:create") && (
+                <>
+                  <Button variant="secondary" onClick={() => setShowBulkDialog(true)}>
+                    📋 Bulk Mark
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowUnmarkedAbsentDialog(true)}
+                    style={{ color: "var(--rust, #b91c1c)" }}
+                    title="Mark all unmarked personnel as absent for this shift"
+                  >
+                    ⚠️ Mark Unmarked Absent
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowEntryDialog(true)}>
+                    ➕ Mark Single
+                  </Button>
+                </>
+              )}
+              {can("report:export") && (
+                <Button variant="secondary" onClick={() => setShowExportDialog(true)}>
+                  📊 Export Excel
+                </Button>
+              )}
+              <Link to="/attendance" className="button button--ghost" title="Detailed Roster Search">
+                Full Log ↗
+              </Link>
+            </div>
+          }
+        />
+      )}
 
       {/* Date Navigation, Shift Control & Command Bar */}
       <AttendanceCommandBar
@@ -509,6 +597,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
           setSelectedShedId("");
         }}
         onRefresh={() => attendanceResource.reload()}
+        isMobile={isMobile}
       />
 
       {/* KPI Overview Cards Grid */}
@@ -521,14 +610,16 @@ export function AttendanceDashboardPage(): React.ReactElement {
         bulkApproving={bulkApproving}
         onApproveAllPending={handleApproveAllPending}
         onResetShift={() => setDashboardShift("")}
+        isMobile={isMobile}
       />
 
       {/* Shift Overview Table & Station Breakdown */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+      <div style={{ display: isMobile ? "flex" : "grid", flexDirection: isMobile ? "column" : undefined, gridTemplateColumns: isMobile ? undefined : "repeat(auto-fit, minmax(360px, 1fr))", gap: isMobile ? "0.75rem" : "1.5rem" }}>
         <ShiftPerformanceTable
           shiftSummaries={shiftSummaries}
           dashboardShift={dashboardShift}
           onShiftSelect={setDashboardShift}
+          isMobile={isMobile}
         />
 
         <ShedWorkforceCards
@@ -536,6 +627,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
           selectedShedId={selectedShedId}
           onShedSelect={setSelectedShedId}
           dashboardShift={dashboardShift}
+          isMobile={isMobile}
         />
       </div>
 
@@ -556,6 +648,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
           setDashboardShift("");
         }}
         metrics={metrics}
+        isMobile={isMobile}
       />
 
       {/* Smart Roster Table & Inspection Area */}
@@ -578,6 +671,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
         approvingId={approvingId}
         onApproveSingle={handleApproveSingle}
         onSnapshotPreview={setSnapshotPreview}
+        isMobile={isMobile}
       />
 
       {/* Snapshot Preview Modal */}

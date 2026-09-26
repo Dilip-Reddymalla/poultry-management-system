@@ -111,12 +111,30 @@ export async function analyzeImage(
 
       if (!response.ok) {
         const errorBody = await response.text();
+        let parsedDetail = "";
+        try {
+          const json = JSON.parse(errorBody);
+          parsedDetail = json.detail || json.message || errorBody;
+        } catch {
+          parsedDetail = errorBody;
+        }
+
         logger.error(
           { url, status: response.status, durationMs: duration, errorBody },
           "[Face-AI Client] ❌ Target responded with HTTP error",
         );
+
+        if (response.status < 500) {
+          throw new AppError(
+            `Image processing failed: ${parsedDetail || "Unable to process the image. Please upload a clearer, well-lit photo."}`,
+            response.status,
+            { error: "INVALID_IMAGE_INPUT", detail: parsedDetail },
+            "INVALID_IMAGE_INPUT",
+          );
+        }
+
         throw new AppError(
-          `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+          `FastAPI Face AI service returned ${response.status}: ${parsedDetail}`,
           response.status >= 500 ? 502 : response.status,
           {
             error: "FACE_AI_UNAVAILABLE",
@@ -237,12 +255,30 @@ export async function analyzeProfilePhoto(
 
       if (!response.ok) {
         const errorBody = await response.text();
+        let parsedDetail = "";
+        try {
+          const json = JSON.parse(errorBody);
+          parsedDetail = json.detail || json.message || errorBody;
+        } catch {
+          parsedDetail = errorBody;
+        }
+
         logger.error(
           { url, status: response.status, durationMs: duration, errorBody },
           "[Face-AI Client] ❌ Profile enrollment responded with HTTP error",
         );
+
+        if (response.status < 500) {
+          throw new AppError(
+            `Profile photo processing failed: ${parsedDetail || "Unable to process photo. Please upload a clearer photo."}`,
+            response.status,
+            { error: "INVALID_IMAGE_INPUT", detail: parsedDetail },
+            "INVALID_IMAGE_INPUT",
+          );
+        }
+
         throw new AppError(
-          `FastAPI Face AI service returned ${response.status}: ${errorBody}`,
+          `FastAPI Face AI service returned ${response.status}: ${parsedDetail}`,
           response.status >= 500 ? 502 : response.status,
           {
             error: "FACE_AI_UNAVAILABLE",

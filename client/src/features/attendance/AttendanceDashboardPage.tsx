@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo, useCallback } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/use-auth.js";
 import {
   fetchAttendance,
@@ -54,15 +54,40 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const { notify } = useToast();
   const navigate = useNavigate();
 
-  // Primary State
-  const [date, setDate] = useState(todayInputValue());
-  const [selectedFarmId, setSelectedFarmId] = useState<string>("");
-  const [selectedShedId, setSelectedShedId] = useState<string>("");
-  const [dashboardShift, setDashboardShift] = useState<Shift | "">("");
-  const [activeTab, setActiveTab] = useState<
-    "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING"
-  >("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  // URL-synced filter state — enables shareable links, back/forward, and refresh persistence
+  const [params, setParams] = useSearchParams();
+
+  const setParam = useCallback((key: string, value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  const date = params.get("date") || todayInputValue();
+  const setDate = useCallback((v: string) => setParam("date", v === todayInputValue() ? "" : v), [setParam]);
+
+  const selectedFarmId = params.get("farmId") || "";
+
+  const selectedShedId = params.get("shedId") || "";
+  const setSelectedShedId = useCallback((v: string) => setParam("shedId", v), [setParam]);
+
+  const dashboardShift = (params.get("shift") || "") as Shift | "";
+  const setDashboardShift = useCallback((v: Shift | "") => setParam("shift", v), [setParam]);
+
+  type TabKey = "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING";
+  const activeTab = (params.get("tab") || "ALL") as TabKey;
+  const setActiveTab = useCallback((v: TabKey) => setParam("tab", v === "ALL" ? "" : v), [setParam]);
+
+  const searchQuery = params.get("q") || "";
+  const setSearchQuery = useCallback((v: string) => setParam("q", v), [setParam]);
+
+  // Non-URL local state (transient UI concerns)
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
   const [snapshotPreview, setSnapshotPreview] = useState<SnapshotPreviewData | null>(null);
@@ -122,7 +147,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const records: Attendance[] = attendanceResource.data?.attendance ?? [];
 
   // Date Navigation Helpers
-  const shiftDate = (offsetDays: number) => {
+  const shiftDate = useCallback((offsetDays: number) => {
     const current = new Date(date);
     if (isNaN(current.getTime())) return;
     current.setDate(current.getDate() + offsetDays);
@@ -130,7 +155,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
     const mm = String(current.getMonth() + 1).padStart(2, "0");
     const dd = String(current.getDate()).padStart(2, "0");
     setDate(`${yyyy}-${mm}-${dd}`);
-  };
+  }, [date, setDate]);
 
   // Records Scoped to Selected Shift
   const scopedRecords = useMemo(() => {
@@ -440,12 +465,16 @@ export function AttendanceDashboardPage(): React.ReactElement {
     attendanceResource.reload();
   };
 
-  const resetAllFilters = () => {
-    setActiveTab("ALL");
-    setSelectedShedId("");
-    setDashboardShift("");
-    setSearchQuery("");
-  };
+  const resetAllFilters = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("tab");
+      next.delete("shedId");
+      next.delete("shift");
+      next.delete("q");
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   const isMobile = useIsMobile();
 
@@ -593,8 +622,12 @@ export function AttendanceDashboardPage(): React.ReactElement {
         farmList={farmList}
         selectedFarmId={selectedFarmId}
         onFarmChange={(id) => {
-          setSelectedFarmId(id);
-          setSelectedShedId("");
+          setParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (id) { next.set("farmId", id); } else { next.delete("farmId"); }
+            next.delete("shedId");
+            return next;
+          }, { replace: true });
         }}
         onRefresh={() => attendanceResource.reload()}
         isMobile={isMobile}

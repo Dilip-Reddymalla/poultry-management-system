@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth/use-auth.js";
 import { fetchAuditLogs, exportAuditLogsUrl } from "../../api/resources.js";
@@ -8,6 +8,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { useResource } from "../../hooks/useResource.js";
 import { Dialog } from "../../components/Dialog.js";
 import { EmptyState, Panel, Button } from "../../components/ui.js";
+import { useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 25;
 const ENTITIES = ["Employee", "Farm", "Shed", "Attendance", "Company", "Worker", "User"];
@@ -15,19 +16,40 @@ const ENTITIES = ["Employee", "Farm", "Shed", "Attendance", "Company", "Worker",
 export function AuditLogsPage(): React.ReactElement {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [entity, setEntity] = useState("");
-  const [action, setAction] = useState<AuditAction | "">("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [page, setPage] = useState(1);
+
+  // URL-synced filter state
+  const [params, setParams] = useSearchParams();
+  const setParam = useCallback((key: string, value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) { next.set(key, value); } else { next.delete(key); }
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  const search = params.get("q") || "";
+  const entity = params.get("entity") || "";
+  const action = (params.get("action") || "") as AuditAction | "";
+  const from = params.get("from") || "";
+  const to = params.get("to") || "";
+  const page = Number(params.get("page")) || 1;
+  const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+
+  // Local debounced search input
+  const [searchInput, setSearchInput] = useState(search);
   const [selectedChanges, setSelectedChanges] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
+      const trimmed = searchInput.trim();
+      if (trimmed !== search) {
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
+          if (trimmed) { next.set("q", trimmed); } else { next.delete("q"); }
+          next.delete("page");
+          return next;
+        }, { replace: true });
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -107,7 +129,7 @@ export function AuditLogsPage(): React.ReactElement {
             <select
               className="input select"
               value={entity}
-              onChange={(e) => { setEntity(e.target.value); setPage(1); }}
+              onChange={(e) => { setParam("entity", e.target.value); setPage(1); }}
             >
               <option value="">All Entities</option>
               {ENTITIES.map((item) => (
@@ -121,7 +143,7 @@ export function AuditLogsPage(): React.ReactElement {
             <select
               className="input select"
               value={action}
-              onChange={(e) => { setAction(e.target.value as AuditAction | ""); setPage(1); }}
+              onChange={(e) => { setParam("action", e.target.value); setPage(1); }}
             >
               <option value="">All Actions</option>
               <option value="CREATE">CREATE</option>
@@ -136,7 +158,7 @@ export function AuditLogsPage(): React.ReactElement {
               type="date"
               className="input"
               value={from}
-              onChange={(e) => { setFrom(e.target.value); setPage(1); }}
+              onChange={(e) => { setParam("from", e.target.value); setPage(1); }}
             />
           </label>
 
@@ -146,7 +168,7 @@ export function AuditLogsPage(): React.ReactElement {
               type="date"
               className="input"
               value={to}
-              onChange={(e) => { setTo(e.target.value); setPage(1); }}
+              onChange={(e) => { setParam("to", e.target.value); setPage(1); }}
             />
           </label>
         </div>

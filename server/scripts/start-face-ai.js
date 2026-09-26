@@ -8,18 +8,28 @@ const __dirname = path.dirname(__filename);
 const faceAiDir = path.join(__dirname, "..", "face-ai");
 
 function setupSystemAndVenv() {
-  console.log(`[Face-AI Setup] 🚀 Running automatic environment setup...`);
-
-  // 1. On Linux / Docker containers, attempt apt-get install for system dependencies
+  // 1. On Linux / Docker containers, only run apt-get if python3 or libgl1 is missing
   if (process.platform === "linux") {
+    let hasSystemPackages = false;
     try {
-      console.log(`[Face-AI Setup] 📦 Installing Linux system packages (python3, python3-pip, python3-venv, libgl1, libglib2.0-0)...`);
-      execSync(
-        `apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv libgl1 libglib2.0-0`,
-        { stdio: "inherit" }
-      );
-    } catch (err) {
-      console.warn(`[Face-AI Setup] ⚠️ apt-get notice (non-root or already installed): ${err.message}`);
+      execSync("which python3 && ldconfig -p | grep -q libGL", { stdio: "ignore" });
+      hasSystemPackages = true;
+    } catch {
+      hasSystemPackages = false;
+    }
+
+    if (!hasSystemPackages) {
+      try {
+        console.log(`[Face-AI Setup] 📦 Installing Linux system packages (python3, python3-pip, python3-venv, libgl1, libglib2.0-0)...`);
+        execSync(
+          `apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv libgl1 libglib2.0-0`,
+          { stdio: "inherit" }
+        );
+      } catch (err) {
+        console.warn(`[Face-AI Setup] ⚠️ apt-get notice (non-root or already installed): ${err.message}`);
+      }
+    } else {
+      console.log(`[Face-AI Setup] ✓ Linux system packages already present, skipping apt-get.`);
     }
   }
 
@@ -51,19 +61,34 @@ function setupSystemAndVenv() {
     }
   }
 
-  // 3. Install requirements.txt into .venv
+  // 3. Check if python dependencies are already installed in .venv
   const venvPip = process.platform === "win32"
     ? path.join(faceAiDir, ".venv", "Scripts", "pip.exe")
     : path.join(faceAiDir, ".venv", "bin", "pip");
 
   const reqFile = path.join(faceAiDir, "requirements.txt");
-  if (fs.existsSync(reqFile) && fs.existsSync(venvPip)) {
+  let packagesInstalled = false;
+  if (fs.existsSync(venvPython)) {
+    try {
+      execSync(`"${venvPython}" -c "import fastapi, uvicorn, cv2, onnxruntime, numpy"`, {
+        cwd: faceAiDir,
+        stdio: "ignore",
+      });
+      packagesInstalled = true;
+    } catch {
+      packagesInstalled = false;
+    }
+  }
+
+  if (!packagesInstalled && fs.existsSync(reqFile) && fs.existsSync(venvPip)) {
     try {
       console.log(`[Face-AI Setup] 📥 Installing python packages from requirements.txt into .venv...`);
-      execSync(`"${venvPip}" install --no-cache-dir -r "${reqFile}"`, { cwd: faceAiDir, stdio: "inherit" });
+      execSync(`"${venvPip}" install -r "${reqFile}"`, { cwd: faceAiDir, stdio: "inherit" });
     } catch (err) {
       console.error(`[Face-AI Setup] ⚠️ Pip install notice: ${err.message}`);
     }
+  } else if (packagesInstalled) {
+    console.log(`[Face-AI Setup] ✓ Virtualenv packages already installed, skipping pip install.`);
   }
 
   return fs.existsSync(venvPython) ? venvPython : sysPython;
@@ -82,6 +107,14 @@ const child = spawn(pythonExecutable, uvicornArgs, {
   cwd: faceAiDir,
   stdio: "inherit",
   shell: false,
+  env: {
+    ...process.env,
+    // Limit CPU threads so Face-AI doesn't monopolize container cores and starve Node.js
+    OMP_NUM_THREADS: "1",
+    OPENBLAS_NUM_THREADS: "1",
+    MKL_NUM_THREADS: "1",
+    ONNX_NUM_THREADS: "1",
+  },
 });
 
 child.on("error", (err) => {

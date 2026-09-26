@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -37,37 +37,61 @@ export function WorkersPage(): React.ReactElement {
   const showFarm =
     user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<WorkerStatus | "">("");
-  const [farmId, setFarmId] = useState("");
-  const [page, setPage] = useState(1);
+  // URL-synced filter state
+  const [params, setParams] = useSearchParams();
+  const setParam = useCallback((key: string, value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) { next.set(key, value); } else { next.delete(key); }
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  const search = params.get("q") || "";
+  const status = (params.get("status") || "") as WorkerStatus | "";
+  const farmId = params.get("farmId") || "";
+  const page = Number(params.get("page")) || 1;
+  const sortBy = (params.get("sortBy") || "workerId") as "workerId" | "name" | "status";
+  const sortOrder = (params.get("sortOrder") || "asc") as "asc" | "desc";
+
+  const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+
+  // Local input for debounced search
+  const [searchInput, setSearchInput] = useState(search);
+
+  // Transient UI state
   const [creating, setCreating] = useState(false);
   const [importingExcel, setImportingExcel] = useState(false);
   const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-  const [sortBy, setSortBy] = useState<"workerId" | "name" | "status">("workerId");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   function handleSort(field: "workerId" | "name" | "status") {
-    if (sortBy === field) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-    setPage(1);
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (prev.get("sortBy") === field) {
+        next.set("sortOrder", prev.get("sortOrder") === "asc" ? "desc" : "asc");
+      } else {
+        next.set("sortBy", field);
+        next.set("sortOrder", "asc");
+      }
+      next.delete("page");
+      return next;
+    }, { replace: true });
   }
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
+      const trimmed = searchInput.trim();
+      if (trimmed !== search) {
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
+          if (trimmed) { next.set("q", trimmed); } else { next.delete("q"); }
+          next.delete("page");
+          return next;
+        }, { replace: true });
+      }
     }, 300);
-
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
@@ -134,7 +158,7 @@ export function WorkersPage(): React.ReactElement {
               className="input select"
               value={status}
               onChange={(event) => {
-                setStatus(event.target.value as WorkerStatus | "");
+                setParam("status", event.target.value);
                 setPage(1);
               }}
             >
@@ -152,7 +176,7 @@ export function WorkersPage(): React.ReactElement {
                 className="input select"
                 value={farmId}
                 onChange={(event) => {
-                  setFarmId(event.target.value);
+                  setParam("farmId", event.target.value);
                   setPage(1);
                 }}
               >
@@ -191,8 +215,14 @@ export function WorkersPage(): React.ReactElement {
                         variant="secondary"
                         onClick={() => {
                           setSearchInput("");
-                          setStatus("");
-                          setFarmId("");
+                          setParams((prev) => {
+                            const next = new URLSearchParams(prev);
+                            next.delete("q");
+                            next.delete("status");
+                            next.delete("farmId");
+                            next.delete("page");
+                            return next;
+                          }, { replace: true });
                         }}
                       >
                         {t("common.clearFilters")}

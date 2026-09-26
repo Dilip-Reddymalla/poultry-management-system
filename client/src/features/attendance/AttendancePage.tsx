@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -47,7 +47,15 @@ export function AttendancePage({
   const { can, user } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+
+  const setParam = useCallback((key: string, value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) { next.set(key, value); } else { next.delete(key); }
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   const employeeId = propEmployeeId ?? params.get("employeeId") ?? "";
   const workerId = propWorkerId ?? params.get("workerId") ?? "";
@@ -58,12 +66,17 @@ export function AttendancePage({
   const showFarm =
     user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
 
-  const [date, setDate] = useState(todayInputValue());
-  const [farmId, setFarmId] = useState("");
-  const [shift, setShift] = useState<Shift | "">("");
-  const [status, setStatus] = useState<AttendanceStatus | "">("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  // URL-synced filter state
+  const date = params.get("date") || todayInputValue();
+  const setDate = useCallback((v: string) => setParam("date", v === todayInputValue() ? "" : v), [setParam]);
+  const farmId = params.get("farmId") || "";
+  const shift = (params.get("shift") || "") as Shift | "";
+  const status = (params.get("status") || "") as AttendanceStatus | "";
+  const search = params.get("q") || "";
+  const page = Number(params.get("page")) || 1;
+  const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+
+  // Transient UI state
   const [creating, setCreating] = useState(false);
   const [bulkCreating, setBulkCreating] = useState(false);
   const [markingUnmarkedAbsent, setMarkingUnmarkedAbsent] = useState(false);
@@ -220,7 +233,7 @@ export function AttendancePage({
                   className="input select"
                   value={farmId}
                   onChange={(event) => {
-                    setFarmId(event.target.value);
+                    setParam("farmId", event.target.value);
                     setPage(1);
                   }}
                 >
@@ -240,7 +253,7 @@ export function AttendancePage({
                 className="input select"
                 value={shift}
                 onChange={(event) => {
-                  setShift(event.target.value as Shift | "");
+                  setParam("shift", event.target.value);
                   setPage(1);
                 }}
               >
@@ -259,7 +272,7 @@ export function AttendancePage({
                 className="input select"
                 value={status}
                 onChange={(event) => {
-                  setStatus(event.target.value as AttendanceStatus | "");
+                  setParam("status", event.target.value);
                   setPage(1);
                 }}
               >
@@ -279,7 +292,7 @@ export function AttendancePage({
                 placeholder={`${t("common.search")}...`}
                 value={search}
                 onChange={(event) => {
-                  setSearch(event.target.value);
+                  setParam("q", event.target.value);
                   setPage(1);
                 }}
               />

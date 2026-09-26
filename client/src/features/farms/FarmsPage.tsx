@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { fetchFarms } from "../../api/resources.js";
@@ -24,7 +24,13 @@ export function FarmsPage(): React.ReactElement {
   const { can } = useAuth();
   const { notify } = useToast();
 
-  const [status, setStatus] = useState<FarmStatus | "">("");
+  const [params, setParams] = useSearchParams();
+  const status = (params.get("status") ?? "") as FarmStatus | "";
+  const setStatus = (v: FarmStatus | "") => {
+    const next = new URLSearchParams(params);
+    if (v) { next.set("status", v); } else { next.delete("status"); }
+    setParams(next, { replace: true });
+  };
   const [creating, setCreating] = useState(false);
 
   const farms = useResource<Farm[]>(`farms:${status}`, (signal) =>

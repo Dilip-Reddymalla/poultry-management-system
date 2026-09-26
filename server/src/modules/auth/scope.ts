@@ -92,6 +92,22 @@ const scopeUserSelect = {
   },
 } satisfies Prisma.UserSelect;
 
+interface CachedScope {
+  scope: AuthScope;
+  expiresAt: number;
+}
+
+const scopeCache = new Map<string, CachedScope>();
+const SCOPE_CACHE_TTL_MS = 20_000; // 20s TTL to prevent repeating expensive scope joins on every API request
+
+export function invalidateScopeCache(userId?: string): void {
+  if (userId) {
+    scopeCache.delete(userId);
+  } else {
+    scopeCache.clear();
+  }
+}
+
 // Resolves the full authority of a caller. The System Admin sentinel short-
 // circuits to a global scope with no database read.
 export async function resolveScope(userId: string): Promise<AuthScope> {
@@ -109,12 +125,19 @@ export async function resolveScope(userId: string): Promise<AuthScope> {
     };
   }
 
+  const now = Date.now();
+  const cached = scopeCache.get(userId);
+  if (cached && cached.expiresAt > now) {
+    return cached.scope;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: scopeUserSelect,
   });
 
   if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
+    scopeCache.delete(userId);
     throw new AppError("Authentication required", 401);
   }
 
@@ -131,7 +154,7 @@ export async function resolveScope(userId: string): Promise<AuthScope> {
     }
   }
 
-  return {
+  const resolved: AuthScope = {
     isSystemAdmin: false,
     userId: user.id,
     employeeId: user.employee.id,
@@ -142,6 +165,13 @@ export async function resolveScope(userId: string): Promise<AuthScope> {
     roles,
     permissions: Array.from(permissions),
   };
+
+  if (scopeCache.size > 2000) {
+    scopeCache.clear();
+  }
+  scopeCache.set(userId, { scope: resolved, expiresAt: now + SCOPE_CACHE_TTL_MS });
+
+  return resolved;
 }
 
 export function hasPermission(scope: AuthScope, ...permissions: string[]): boolean {

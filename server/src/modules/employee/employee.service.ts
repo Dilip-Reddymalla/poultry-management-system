@@ -10,6 +10,7 @@ import {
   broadestScopeLevel,
   farmScopedWhere,
   isFarmInScope,
+  invalidateScopeCache,
 } from "../auth/scope.js";
 
 import type {
@@ -219,7 +220,7 @@ export async function listEmployees(
       ? { user: { id: sortOrder } }
       : { [sortField]: sortOrder };
 
-  const [employees, total] = await prisma.$transaction([
+  const [employees, total] = await Promise.all([
     prisma.employee.findMany({
       where,
       orderBy,
@@ -844,6 +845,8 @@ export async function updateEmployeeUserRole(
       },
     });
   });
+
+  invalidateScopeCache(employee.user.id);
 
   void recordAuditLog({
     scope,

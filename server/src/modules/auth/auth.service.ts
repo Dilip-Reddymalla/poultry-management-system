@@ -8,7 +8,7 @@ import { AppError } from "../../utils/app-error.js";
 import type { ChangePasswordInput, LoginInput, PhoneLoginInput, ResetPasswordInput } from "./auth.schema.js";
 import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
 import { recordAuditLog } from "../audit/audit.service.js";
-import { broadestScopeLevel } from "./scope.js";
+import { broadestScopeLevel, invalidateScopeCache } from "./scope.js";
 import {
   SYSTEM_ADMIN_USER_ID,
   buildSystemAdminSafeUser,
@@ -287,6 +287,8 @@ export async function setPassword(
     },
     select: sessionUserSelect,
   });
+
+  invalidateScopeCache(updated.id);
 
   const refreshToken = await createAndStoreRefreshToken({ userId: updated.id });
 

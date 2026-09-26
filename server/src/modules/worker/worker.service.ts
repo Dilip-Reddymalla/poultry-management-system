@@ -157,7 +157,7 @@ export async function listWorkers(
   const sortField = query.sortBy ?? "workerId";
   const sortOrder = query.sortOrder ?? "asc";
 
-  const [workers, total] = await prisma.$transaction([
+  const [workers, total] = await Promise.all([
     prisma.worker.findMany({
       where,
       orderBy: {

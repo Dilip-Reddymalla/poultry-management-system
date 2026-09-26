@@ -119,7 +119,7 @@ export async function listAuditLogs(
     ];
   }
 
-  const [records, total] = await prisma.$transaction([
+  const [records, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },

@@ -363,7 +363,7 @@ export async function listAttendance(
     ];
   }
 
-  const [records, total] = await prisma.$transaction([
+  const [records, total] = await Promise.all([
     prisma.attendance.findMany({
       where,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],

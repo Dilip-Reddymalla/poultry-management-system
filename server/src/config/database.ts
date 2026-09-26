@@ -15,8 +15,8 @@ const isSslDisabled = connectionString.includes("sslmode=disable") || connection
 const pool = new Pool({
   connectionString,
   max: 20,
-  min: 2,
-  idleTimeoutMillis: 30000,
+  min: 4,
+  idleTimeoutMillis: 300000, // 5 minutes to keep pool connections warm
   connectionTimeoutMillis: 10000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,

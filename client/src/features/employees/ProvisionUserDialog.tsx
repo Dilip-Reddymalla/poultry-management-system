@@ -101,7 +101,7 @@ export function ProvisionUserDialog({
             {(roles.data ?? []).map((role) => (
               <option key={role.id} value={role.id}>
                 {role.name}
-                {role.description ? ` — ${role.description}` : ""}
+                {/*role.description ? ` — ${role.description}` : ""}*/}
               </option>
             ))}
           </SelectField>

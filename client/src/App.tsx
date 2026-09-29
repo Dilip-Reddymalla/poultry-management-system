@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import { AttendanceDashboardPage } from "./features/attendance/AttendanceDashboardPage.js";
 import { AttendanceDetailPage } from "./features/attendance/AttendanceDetailPage.js";
@@ -41,156 +42,159 @@ import {
  */
 export default function App(): React.ReactElement {
   return (
-    <Routes>
-      <Route element={<PublicOnlyRoute />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/otp-login" element={<OtpLoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      </Route>
+    <>
+      <Routes>
+        <Route element={<PublicOnlyRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/otp-login" element={<OtpLoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        </Route>
 
-      {/* Publicly accessible analytics, Face AI interactive demo, and project about page */}
-      <Route path="/about" element={<AboutPage />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
-      <Route path="/face-ai-demo" element={<FaceAiDemoPage />} />
+        {/* Publicly accessible analytics, Face AI interactive demo, and project about page */}
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/face-ai-demo" element={<FaceAiDemoPage />} />
 
-      <Route element={<ProtectedRoute />}>
-        {/* Set-password stands alone, full screen: a provisioned account owes a
+        <Route element={<ProtectedRoute />}>
+          {/* Set-password stands alone, full screen: a provisioned account owes a
             password before it may reach any app route, and this screen is the
             only place it is let in. */}
-        <Route element={<RequirePasswordPending />}>
-          <Route path="/set-password" element={<SetPasswordPage />} />
-        </Route>
+          <Route element={<RequirePasswordPending />}>
+            <Route path="/set-password" element={<SetPasswordPage />} />
+          </Route>
 
-        {/* Everything else is blocked until that password is set. */}
-        <Route element={<RequirePasswordSet />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+          {/* Everything else is blocked until that password is set. */}
+          <Route element={<RequirePasswordSet />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
 
-            <Route
-              path="/companies"
-              element={
-                <RequirePermission permission="company:view">
-                  <CompaniesPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/companies/:id"
-              element={
-                <RequirePermission permission="company:view">
-                  <CompanyDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/companies"
+                element={
+                  <RequirePermission permission="company:view">
+                    <CompaniesPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/companies/:id"
+                element={
+                  <RequirePermission permission="company:view">
+                    <CompanyDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route
-              path="/farms"
-              element={
-                <RequirePermission permission="farm:view">
-                  <FarmsPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/farms/:id"
-              element={
-                <RequirePermission permission="farm:view">
-                  <FarmDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/farms"
+                element={
+                  <RequirePermission permission="farm:view">
+                    <FarmsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/farms/:id"
+                element={
+                  <RequirePermission permission="farm:view">
+                    <FarmDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route
-              path="/sheds"
-              element={
-                <RequirePermission permission="shed:view">
-                  <ShedsPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/sheds/:id"
-              element={
-                <RequirePermission permission="shed:view">
-                  <ShedDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/sheds"
+                element={
+                  <RequirePermission permission="shed:view">
+                    <ShedsPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/sheds/:id"
+                element={
+                  <RequirePermission permission="shed:view">
+                    <ShedDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route
-              path="/employees"
-              element={
-                <RequirePermission permission="employee:view">
-                  <EmployeesPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/employees/:id"
-              element={
-                <RequirePermission permission="employee:view">
-                  <EmployeeDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/employees"
+                element={
+                  <RequirePermission permission="employee:view">
+                    <EmployeesPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/employees/:id"
+                element={
+                  <RequirePermission permission="employee:view">
+                    <EmployeeDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route
-              path="/workers"
-              element={
-                <RequirePermission permission="worker:view">
-                  <WorkersPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/workers/:id"
-              element={
-                <RequirePermission permission="worker:view">
-                  <WorkerDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/workers"
+                element={
+                  <RequirePermission permission="worker:view">
+                    <WorkersPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/workers/:id"
+                element={
+                  <RequirePermission permission="worker:view">
+                    <WorkerDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route
-              path="/attendance/dashboard"
-              element={
-                <RequirePermission permission="attendance:view">
-                  <AttendanceDashboardPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/attendance"
-              element={
-                <RequirePermission permission="attendance:view">
-                  <AttendancePage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/attendance/face"
-              element={
-                <RequirePermission permission="attendance:create">
-                  <FaceAttendancePage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="/attendance/:id"
-              element={
-                <RequirePermission permission="attendance:view">
-                  <AttendanceDetailPage />
-                </RequirePermission>
-              }
-            />
+              <Route
+                path="/attendance/dashboard"
+                element={
+                  <RequirePermission permission="attendance:view">
+                    <AttendanceDashboardPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/attendance"
+                element={
+                  <RequirePermission permission="attendance:view">
+                    <AttendancePage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/attendance/face"
+                element={
+                  <RequirePermission permission="attendance:create">
+                    <FaceAttendancePage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/attendance/:id"
+                element={
+                  <RequirePermission permission="attendance:view">
+                    <AttendanceDetailPage />
+                  </RequirePermission>
+                }
+              />
 
-            <Route path="/audit-logs" element={<AuditLogsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="*" element={<NotFoundPage />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
           </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+      <Analytics />
+    </>
   );
 }

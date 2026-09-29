@@ -55,8 +55,10 @@ export interface ApiRequestOptions {
 }
 
 type SessionExpiredHandler = () => void;
+type SessionRefreshedHandler = (user: unknown) => void;
 
 let sessionExpiredHandler: SessionExpiredHandler | null = null;
+let sessionRefreshedHandler: SessionRefreshedHandler | null = null;
 
 /** AuthProvider registers here so any 401 drops the app back to sign-in. */
 export function setSessionExpiredHandler(
@@ -64,6 +66,63 @@ export function setSessionExpiredHandler(
 ): void {
   sessionExpiredHandler = handler;
 }
+
+/**
+ * AuthProvider registers here to receive the new user object after a silent
+ * token refresh, so the in-memory session stays current without a page reload.
+ */
+export function setSessionRefreshedHandler(
+  handler: SessionRefreshedHandler | null,
+): void {
+  sessionRefreshedHandler = handler;
+}
+
+// ---------------------------------------------------------------------------
+// Silent token refresh (single-flight)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single-flight promise for the in-progress token refresh.
+ * All concurrent requests that hit 401 share one refresh call.
+ */
+let refreshingPromise: Promise<boolean> | null = null;
+
+/**
+ * Attempt to silently refresh the access token using the httpOnly refresh cookie.
+ * Returns true if the refresh succeeded (new access token cookie is set),
+ * false if the refresh token is also expired / revoked / missing.
+ */
+async function tryRefreshToken(): Promise<boolean> {
+  // If a refresh is already in progress, wait for it rather than making a second call.
+  if (refreshingPromise) return refreshingPromise;
+
+  refreshingPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include", // Must send the refresh cookie
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) return false;
+
+      // Update in-memory session with the refreshed user data
+      const data = await response.json().catch(() => null);
+      if (data?.user && sessionRefreshedHandler) {
+        sessionRefreshedHandler(data.user);
+      }
+
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshingPromise = null;
+    }
+  })();
+
+  return refreshingPromise;
+}
+
 
 function buildUrl(
   path: string,
@@ -160,6 +219,17 @@ export async function apiRequest<T>(
         : (FALLBACK_MESSAGES[response.status] ?? "Something went wrong.");
 
     if (response.status === 401 && !options.keepSessionOnUnauthorized) {
+      // ---------------------------------------------------------------
+      // Silent refresh: attempt to renew the access token using the
+      // httpOnly refresh cookie before kicking the user to sign-in.
+      // ---------------------------------------------------------------
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        // Token renewed — retry the original request once.
+        return apiRequest<T>(path, options);
+      }
+
+      // Refresh also failed — session is truly gone.
       sessionExpiredHandler?.();
     }
 

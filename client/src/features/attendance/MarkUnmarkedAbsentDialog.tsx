@@ -85,11 +85,11 @@ export function MarkUnmarkedAbsentDialog({
       return;
     }
 
-    if (latitude === null || longitude === null) {
+    if (latitude === null || longitude === null || (latitude === 0 && longitude === 0)) {
       setError(
         new ApiError(
           0,
-          "Location is required to mark attendance records. Please enable GPS location."
+          "⛔ Attendance Blocked: Valid GPS location is required to mark attendance records. Please enable device GPS."
         )
       );
       return;
@@ -307,6 +307,7 @@ export function MarkUnmarkedAbsentDialog({
               farmId === "" ||
               latitude === null ||
               longitude === null ||
+              (latitude === 0 && longitude === 0) ||
               locationLoading
             }
             style={{

@@ -7,6 +7,7 @@ import { faceAiCircuitBreaker } from "../../services/circuit-breaker.js";
 import { faceAiRateLimiter } from "../../middlewares/face-ai-rate-limit.middleware.js";
 import { getClientIp, getAuthenticatedUserId } from "../../middlewares/rate-limit.middleware.js";
 import { demoEmbeddingStore } from "./demo-embedding-store.js";
+import { triggerFaceAiRestart, isFaceAiRestarting, getLastRestartTime } from "../../services/face-ai-process.js";
 
 const router = Router();
 
@@ -107,8 +108,51 @@ router.get("/health", async (_req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/face-ai/restart
+ * Triggers a graceful restart of the Python Face-AI process.
+ * - Returns 202 immediately (fire-and-forget restart in background).
+ * - Also resets the circuit breaker so requests flow once the service recovers.
+ * - Has a 15-second cooldown to prevent restart storms.
+ */
+router.post("/restart", async (_req: Request, res: Response) => {
+  if (isFaceAiRestarting()) {
+    return res.status(202).json({
+      success: true,
+      status: "already_restarting",
+      message: "Face AI service restart is already in progress. Please wait 15–30 seconds for the service to come back online.",
+    });
+  }
+
+  const lastRestart = getLastRestartTime();
+  const cooldownRemaining = lastRestart ? Math.max(0, 15000 - (Date.now() - lastRestart)) : 0;
+  if (cooldownRemaining > 0) {
+    return res.status(202).json({
+      success: true,
+      status: "cooldown",
+      cooldownRemainingMs: cooldownRemaining,
+      message: `Face AI service was recently restarted. Please wait ${Math.ceil(cooldownRemaining / 1000)} more seconds before retrying.`,
+    });
+  }
+
+  // Reset circuit breaker first so future health probes can succeed
+  faceAiCircuitBreaker.reset();
+
+  // Fire the restart asynchronously — respond immediately so the browser doesn't hang
+  void triggerFaceAiRestart().catch((err: any) => {
+    // Logged inside the manager; no action needed here
+    void err;
+  });
+
+  return res.status(202).json({
+    success: true,
+    status: "restarting",
+    message: "Face AI service is restarting. The system will automatically detect when it is ready (usually 15–30 seconds). You can continue using Manual Attendance in the meantime.",
+    estimatedReadyInSeconds: 20,
+  });
+});
+
+/**
  * GET /api/face-ai/demo-session
- * Retrieves current active enrolled faces for the session (stored strictly in memory, 10 min TTL).
  */
 router.get("/demo-session", (req: Request, res: Response) => {
   const sessionId = resolveDemoSessionId(req);

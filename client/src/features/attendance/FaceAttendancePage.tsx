@@ -109,6 +109,8 @@ const styles = {
     maxHeight: 500,
     borderRadius: 8,
     display: "block",
+    transform: "none",
+    WebkitTransform: "none",
   } as React.CSSProperties,
 
   facesGrid: {
@@ -219,6 +221,10 @@ export function FaceAttendancePage(): React.ReactElement {
     fallbackMode?: "MANUAL_ATTENDANCE" | null;
   } | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
+  // True when the service is offline and we are actively polling for it to come back
+  const [faceAiWarmingUp, setFaceAiWarmingUp] = useState(false);
+  const warmingUpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [warmingUpCountdown, setWarmingUpCountdown] = useState(0);
 
   // Farm & Shed selection
   const [farms, setFarms] = useState<Farm[]>([]);
@@ -234,6 +240,7 @@ export function FaceAttendancePage(): React.ReactElement {
   // GPS Location State
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<string>("Fetching GPS location…");
+  const hasValidLocation = Boolean(location && (location.latitude !== 0 || location.longitude !== 0));
 
   // Camera state
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -253,33 +260,87 @@ export function FaceAttendancePage(): React.ReactElement {
 
   // Face identity selections
   const [selections, setSelections] = useState<FaceSelection[]>([]);
+  const [deviceLocationOff, setDeviceLocationOff] = useState(false);
+  const [isGpsLoading, setIsGpsLoading] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. High accuracy GPS Location acquisition with fresh fix (maximumAge: 0)
+  // 1. High accuracy GPS Location acquisition with smart fallbacks & device-off detection
   const requestGpsLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
       setLocationStatus("📍 Geolocation not supported by browser");
       return;
     }
-    setLocationStatus("📡 Requesting fresh GPS location…");
+
+    setIsGpsLoading(true);
+    setDeviceLocationOff(false);
+    setLocationStatus("📡 Requesting GPS location…");
+
+    const onGpsSuccess = (pos: GeolocationPosition) => {
+      setIsGpsLoading(false);
+      setDeviceLocationOff(false);
+      setLocation({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      });
+      setLocationStatus(
+        `📍 GPS Fixed: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)}m)`,
+      );
+    };
+
+    const handleGpsFailure = async (err: GeolocationPositionError) => {
+      // Check if browser permission is actually granted despite the failure
+      let permissionState: PermissionState | null = null;
+      try {
+        if ("permissions" in navigator && navigator.permissions?.query) {
+          const perm = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+          permissionState = perm.state;
+        }
+      } catch {
+        // Permissions API might not be supported on all browsers
+      }
+
+      setIsGpsLoading(false);
+      setLocation(null);
+
+      // If browser permission is granted, but we got TIMEOUT or POSITION_UNAVAILABLE,
+      // it means the device's master Location/GPS toggle is turned OFF on the phone!
+      if (
+        permissionState === "granted" &&
+        (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE)
+      ) {
+        setDeviceLocationOff(true);
+        setLocationStatus("⛔ GPS OFF: Phone Location switch is OFF. Attendance is strictly BLOCKED.");
+      } else if (err.code === err.PERMISSION_DENIED) {
+        setDeviceLocationOff(false);
+        setLocationStatus("⛔ Location Denied: Permission denied by browser. Attendance is strictly BLOCKED.");
+      } else {
+        setDeviceLocationOff(false);
+        setLocationStatus(`⛔ GPS Error: ${err.message || "Unable to acquire location"}. Attendance is strictly BLOCKED.`);
+      }
+    };
+
+    // First attempt: High accuracy with a shorter 6s timeout so mobile users aren't left waiting 15s
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        });
-        setLocationStatus(
-          `📍 GPS Fixed: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)}m)`,
-        );
+      onGpsSuccess,
+      (firstErr) => {
+        // If high accuracy times out or is unavailable, try low accuracy (cell tower / Wi-Fi / cached)
+        if (firstErr.code === firstErr.TIMEOUT || firstErr.code === firstErr.POSITION_UNAVAILABLE) {
+          setLocationStatus("📡 High-accuracy GPS timed out, trying network location…");
+          navigator.geolocation.getCurrentPosition(
+            onGpsSuccess,
+            (secondErr) => {
+              void handleGpsFailure(secondErr);
+            },
+            { enableHighAccuracy: false, maximumAge: 300000, timeout: 5000 },
+          );
+        } else {
+          void handleGpsFailure(firstErr);
+        }
       },
-      (err) => {
-        setLocationStatus(`⚠️ GPS Error (${err.message || "Denied/Timeout"}). Defaulting to 0,0.`);
-        setLocation({ latitude: 0, longitude: 0 });
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 },
     );
   }, []);
 
@@ -287,24 +348,86 @@ export function FaceAttendancePage(): React.ReactElement {
     requestGpsLocation();
   }, [requestGpsLocation]);
 
-  // Health-aware Circuit Breaker Check
-  const checkFaceAiHealth = useCallback(async () => {
+  // Stop the warm-up polling interval
+  const stopWarmingUpPoll = useCallback(() => {
+    if (warmingUpPollRef.current) {
+      clearInterval(warmingUpPollRef.current);
+      warmingUpPollRef.current = null;
+    }
+    setFaceAiWarmingUp(false);
+    setWarmingUpCountdown(0);
+  }, []);
+
+  // Health-aware Circuit Breaker Check — also triggers auto-restart when service is offline
+  const checkFaceAiHealth = useCallback(async (triggerRestart = false) => {
     setCheckingHealth(true);
     try {
+      // If service is offline and restart is requested, poke the restart endpoint first
+      if (triggerRestart) {
+        try {
+          await fetch("/api/face-ai/restart", { method: "POST" });
+        } catch {
+          // Restart endpoint fire-and-forget — ignore errors
+        }
+      }
+
       const res = await fetch("/api/face-ai/health");
       const data = await res.json().catch(() => null);
-      if (
+      const isOffline =
         data?.circuitBreaker?.state === "OPEN" ||
         data?.serviceStatus === "offline" ||
-        data?.fallbackMode === "MANUAL_ATTENDANCE"
-      ) {
+        data?.fallbackMode === "MANUAL_ATTENDANCE";
+
+      if (isOffline) {
         setFaceAiStatus({
           online: false,
           circuitBreakerState: data?.circuitBreaker?.state ?? "OPEN",
           message: data?.message || "Face AI biometric service is unavailable.",
           fallbackMode: "MANUAL_ATTENDANCE",
         });
+
+        // Begin warm-up polling every 8 seconds so the UI auto-updates when service recovers
+        if (!warmingUpPollRef.current) {
+          setFaceAiWarmingUp(true);
+          setWarmingUpCountdown(8);
+
+          // Countdown ticker
+          const countdownId = setInterval(() => {
+            setWarmingUpCountdown((prev) => (prev <= 1 ? 8 : prev - 1));
+          }, 1000);
+
+          // Health poll every 8 s
+          warmingUpPollRef.current = setInterval(async () => {
+            try {
+              const pollRes = await fetch("/api/face-ai/health");
+              const pollData = await pollRes.json().catch(() => null);
+              const stillOffline =
+                pollData?.circuitBreaker?.state === "OPEN" ||
+                pollData?.serviceStatus === "offline" ||
+                pollData?.fallbackMode === "MANUAL_ATTENDANCE";
+
+              if (!stillOffline) {
+                // Service recovered!
+                clearInterval(countdownId);
+                stopWarmingUpPoll();
+                setFaceAiStatus({
+                  online: true,
+                  circuitBreakerState: pollData?.circuitBreaker?.state ?? "CLOSED",
+                  fallbackMode: null,
+                });
+              } else {
+                setWarmingUpCountdown(8);
+              }
+            } catch {
+              // Still unreachable — keep polling
+            }
+          }, 8000);
+
+          // Clean up the countdown ticker when polling stops
+          return () => clearInterval(countdownId);
+        }
       } else {
+        stopWarmingUpPoll();
         setFaceAiStatus({
           online: true,
           circuitBreakerState: data?.circuitBreaker?.state ?? "CLOSED",
@@ -321,11 +444,14 @@ export function FaceAttendancePage(): React.ReactElement {
     } finally {
       setCheckingHealth(false);
     }
-  }, []);
+  }, [stopWarmingUpPoll]);
 
   useEffect(() => {
     checkFaceAiHealth();
-  }, [checkFaceAiHealth]);
+    return () => {
+      stopWarmingUpPoll();
+    };
+  }, [checkFaceAiHealth, stopWarmingUpPoll]);
 
   // 2. Load farms once
   if (!farmsLoaded) {
@@ -341,7 +467,7 @@ export function FaceAttendancePage(): React.ReactElement {
           setSelectedFarmId(list[0].id);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   // 3. Load Sheds when Farm changes
@@ -385,7 +511,7 @@ export function FaceAttendancePage(): React.ReactElement {
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [cameraActive, facingMode]);
 
@@ -407,17 +533,17 @@ export function FaceAttendancePage(): React.ReactElement {
     // 16:9 widescreen for back camera; portrait for front camera
     const videoConstraints: MediaTrackConstraints = isBackCamera
       ? {
-          facingMode: { ideal: "environment" },
-          aspectRatio: { ideal: 16 / 9 },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        }
+        facingMode: { ideal: "environment" },
+        aspectRatio: { ideal: 16 / 9 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      }
       : {
-          facingMode: { ideal: "user" },
-          aspectRatio: { ideal: 3 / 4 },
-          width: { ideal: 720 },
-          height: { ideal: 960 },
-        };
+        facingMode: { ideal: "user" },
+        aspectRatio: { ideal: 3 / 4 },
+        width: { ideal: 720 },
+        height: { ideal: 960 },
+      };
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -427,7 +553,7 @@ export function FaceAttendancePage(): React.ReactElement {
       setCameraActive(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } catch (err: any) {
       try {
@@ -441,7 +567,7 @@ export function FaceAttendancePage(): React.ReactElement {
         setCameraActive(true);
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch(() => { });
         }
       } catch (fallbackErr: any) {
         try {
@@ -450,7 +576,7 @@ export function FaceAttendancePage(): React.ReactElement {
           setCameraActive(true);
           if (videoRef.current) {
             videoRef.current.srcObject = genericStream;
-            videoRef.current.play().catch(() => {});
+            videoRef.current.play().catch(() => { });
           }
         } catch (lastErr: any) {
           setCameraError(
@@ -474,6 +600,11 @@ export function FaceAttendancePage(): React.ReactElement {
   const captureFrameAndProcess = async () => {
     if (!selectedFarmId) {
       setError("Please select a farm first.");
+      return;
+    }
+
+    if (!hasValidLocation) {
+      setError("⛔ Attendance Blocked: Valid GPS location is mandatory to capture attendance. Please enable device GPS / allow location access.");
       return;
     }
 
@@ -608,6 +739,12 @@ export function FaceAttendancePage(): React.ReactElement {
     const file = e.target.files?.[0];
     if (!file || !selectedFarmId) return;
 
+    if (!hasValidLocation) {
+      setError("⛔ Attendance Blocked: Valid GPS location is mandatory to process attendance. Please enable device GPS / grant location access.");
+      e.target.value = "";
+      return;
+    }
+
     stopCamera();
     setImagePreviewUrl(URL.createObjectURL(file));
     setResult(null);
@@ -691,6 +828,11 @@ export function FaceAttendancePage(): React.ReactElement {
   const handleSubmitAttendance = useCallback(async () => {
     if (!result) return;
 
+    if (!hasValidLocation || !location) {
+      setError("⛔ Attendance Blocked: Valid non-zero GPS location is strictly required to record attendance. Please enable device GPS / allow location access.");
+      return;
+    }
+
     // Shift timing verification check
     const timingValidation = validateShiftTiming(selectedShift);
     if (!timingValidation.allowed) {
@@ -701,8 +843,8 @@ export function FaceAttendancePage(): React.ReactElement {
     const today = new Date().toISOString().slice(0, 10);
     const records: FaceAttendanceRecord[] = [];
 
-    const lat = location?.latitude ?? 0;
-    const lng = location?.longitude ?? 0;
+    const lat = location.latitude;
+    const lng = location.longitude;
 
     const resolvedShedId =
       selectedShedId === "AC_ROOM"
@@ -770,8 +912,89 @@ export function FaceAttendancePage(): React.ReactElement {
         </p>
       </div>
 
-      {/* Circuit Breaker Fail-Open Alert Banner */}
-      {faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
+      {/* Server Warming-Up Banner — shown when service is offline and auto-polling */}
+      {faceAiWarmingUp && faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)",
+            border: "1px solid #3b82f6",
+            borderRadius: 12,
+            padding: "18px 22px",
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 14,
+            boxShadow: "0 4px 16px rgba(59, 130, 246, 0.2)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
+            {/* Animated spinner */}
+            <span
+              style={{
+                display: "inline-block",
+                width: 32,
+                height: 32,
+                border: "3px solid rgba(255,255,255,0.3)",
+                borderTopColor: "#fff",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                flexShrink: 0,
+              }}
+            />
+            <div>
+              <div style={{ fontWeight: 700, color: "#fff", fontSize: 15, marginBottom: 3 }}>
+                🤖 AI Server is Starting Up — Please Wait
+              </div>
+              <div style={{ color: "#bfdbfe", fontSize: 13, lineHeight: 1.5 }}>
+                The face recognition engine is warming up. This usually takes <strong style={{ color: "#fff" }}>15–30 seconds</strong>.
+                Checking again in <strong style={{ color: "#fbbf24" }}>{warmingUpCountdown}s</strong>…
+                Do not refresh the page.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.35)",
+                borderRadius: 8,
+                padding: "10px 18px",
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: checkingHealth ? "not-allowed" : "pointer",
+                backdropFilter: "blur(4px)",
+              }}
+              disabled={checkingHealth}
+              onClick={() => checkFaceAiHealth(true)}
+            >
+              {checkingHealth ? "⏳ Checking…" : "🔄 Check Now"}
+            </button>
+            <button
+              type="button"
+              style={{
+                background: "#d97706",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 16px",
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+              onClick={() => navigate("/attendance")}
+            >
+              📋 Manual Attendance
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Circuit Breaker Fail-Open Alert Banner — shown when NOT in warming-up state */}
+      {!faceAiWarmingUp && faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
         <div
           style={{
             background: "#fffbeb",
@@ -830,9 +1053,9 @@ export function FaceAttendancePage(): React.ReactElement {
                 cursor: "pointer",
               }}
               disabled={checkingHealth}
-              onClick={checkFaceAiHealth}
+              onClick={() => checkFaceAiHealth(true)}
             >
-              {checkingHealth ? "Probing..." : "🔄 Retry Connection"}
+              {checkingHealth ? "⏳ Restarting…" : "🔄 Restart & Retry"}
             </button>
           </div>
         </div>
@@ -908,14 +1131,36 @@ export function FaceAttendancePage(): React.ReactElement {
 
       {/* GPS & Shift Status Info Banner */}
       <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ ...styles.card, flex: 1, padding: "10px 16px", marginBottom: 0, fontSize: 13, background: "#f8fafc", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            ...styles.card,
+            flex: 1,
+            padding: "10px 16px",
+            marginBottom: 0,
+            fontSize: 13,
+            background: hasValidLocation ? "#f0fdf4" : "#fef2f2",
+            border: `1px solid ${hasValidLocation ? "#bbf7d0" : "#fecaca"}`,
+            color: hasValidLocation ? "#166534" : "#991b1b",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <span><strong>{locationStatus}</strong></span>
           <button
             type="button"
-            style={{ padding: "4px 10px", fontSize: 12, borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}
+            disabled={isGpsLoading}
+            style={{
+              padding: "4px 10px",
+              fontSize: 12,
+              borderRadius: 6,
+              border: "1px solid #d1d5db",
+              background: isGpsLoading ? "#f3f4f6" : "#fff",
+              cursor: isGpsLoading ? "not-allowed" : "pointer",
+            }}
             onClick={requestGpsLocation}
           >
-            🔄 Refresh GPS
+            {isGpsLoading ? "⏳ Detecting…" : "🔄 Refresh GPS"}
           </button>
         </div>
         {!shiftCheck.allowed && (
@@ -924,6 +1169,56 @@ export function FaceAttendancePage(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* Phone Location / GPS Turned Off Guidance Banner */}
+      {deviceLocationOff && (
+        <div
+          style={{
+            ...styles.card,
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            padding: "14px 18px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 14,
+          }}
+        >
+          <span style={{ fontSize: 26, lineHeight: 1 }}>📱</span>
+          <div style={{ flex: 1 }}>
+            <strong style={{ color: "#92400e", fontSize: 14, display: "block", marginBottom: 4 }}>
+              ⛔ Phone Location (GPS) is Turned Off — Attendance Blocked
+            </strong>
+            <p style={{ margin: 0, fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>
+              Browser permission is allowed, but your phone&apos;s master <strong>Location / GPS switch</strong> is turned OFF in your phone&apos;s settings. Attendance cannot be recorded without GPS.
+              <br />
+              <strong>To fix:</strong> Swipe down from the top of your phone screen, turn <strong>ON Location</strong>, then tap <strong>Retry GPS</strong> below.
+            </p>
+            <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                style={{
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#d97706",
+                  color: "#fff",
+                  cursor: isGpsLoading ? "not-allowed" : "pointer",
+                }}
+                disabled={isGpsLoading}
+                onClick={requestGpsLocation}
+              >
+                {isGpsLoading ? "📡 Detecting…" : "🔄 Turn ON & Retry GPS"}
+              </button>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c" }}>
+                ⛔ Attendance is strictly BLOCKED until GPS location is acquired.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Viewfinder Card */}
       <div style={styles.card}>
@@ -953,6 +1248,9 @@ export function FaceAttendancePage(): React.ReactElement {
                   display: "block",
                   margin: "0 auto",
                   boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
+                  // Mirror only the front (selfie) camera — back camera shows natural orientation
+                  transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                  WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
                 }}
               />
             </div>
@@ -1173,10 +1471,11 @@ export function FaceAttendancePage(): React.ReactElement {
                   fontSize: 16,
                   padding: "12px 28px",
                   boxShadow: "0 4px 12px rgba(79, 70, 229, 0.35)",
-                  ...(processing || !selectedFarmId ? styles.btnDisabled : {}),
+                  ...(processing || !selectedFarmId || !hasValidLocation ? styles.btnDisabled : {}),
                 }}
-                disabled={processing || !selectedFarmId}
+                disabled={processing || !selectedFarmId || !hasValidLocation}
                 onClick={captureFrameAndProcess}
+                title={!hasValidLocation ? "GPS location is required before taking attendance" : undefined}
               >
                 {processing && <span style={styles.spinner} />}
                 {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
@@ -1198,10 +1497,18 @@ export function FaceAttendancePage(): React.ReactElement {
           )}
 
           <button
-            style={{ ...styles.btn, background: "#f3f4f6", color: "#374151" }}
-            onClick={() => fileInputRef.current?.click()}
+            style={{
+              ...styles.btn,
+              background: "#f3f4f6",
+              color: "#9ca3af",
+              border: "1px dashed #d1d5db",
+              ...styles.btnDisabled,
+              cursor: "not-allowed",
+            }}
+            disabled={true}
+            title="Image upload is disabled for attendance. Live camera capture is required to verify real-time presence."
           >
-            📁 Upload Image
+            📁 Upload Image (Disabled for Attendance)
           </button>
 
           {result && liveFaces.length > 0 && (
@@ -1212,16 +1519,35 @@ export function FaceAttendancePage(): React.ReactElement {
                 fontSize: 16,
                 padding: "12px 28px",
                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
-                ...(submitting || confirmedCount === 0 || !shiftCheck.allowed
+                ...(submitting || confirmedCount === 0 || !shiftCheck.allowed || !hasValidLocation
                   ? styles.btnDisabled
                   : {}),
               }}
-              disabled={submitting || confirmedCount === 0 || !shiftCheck.allowed}
+              disabled={submitting || confirmedCount === 0 || !shiftCheck.allowed || !hasValidLocation}
               onClick={handleSubmitAttendance}
             >
               {submitting && <span style={styles.spinner} />}
               ✅ Mark Attendance ({confirmedCount})
             </button>
+          )}
+
+          {!hasValidLocation && (
+            <div
+              style={{
+                width: "100%",
+                marginTop: 10,
+                padding: "10px 14px",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                color: "#991b1b",
+                fontSize: 13,
+                fontWeight: 600,
+                textAlign: "center",
+              }}
+            >
+              ⛔ Attendance Blocked: Valid GPS Location access is strictly required. Please turn ON your device GPS / grant location permission and tap Refresh GPS.
+            </div>
           )}
         </div>
 
@@ -1282,24 +1608,24 @@ export function FaceAttendancePage(): React.ReactElement {
             error.toLowerCase().includes("circuit breaker") ||
             error.toLowerCase().includes("unavailable") ||
             error.toLowerCase().includes("offline")) && (
-            <button
-              type="button"
-              style={{
-                background: "#b91c1c",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: 6,
-                padding: "6px 14px",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 2px 4px rgba(185, 28, 28, 0.25)",
-              }}
-              onClick={() => navigate("/attendance")}
-            >
-              📋 Open Manual Attendance &rarr;
-            </button>
-          )}
+              <button
+                type="button"
+                style={{
+                  background: "#b91c1c",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 4px rgba(185, 28, 28, 0.25)",
+                }}
+                onClick={() => navigate("/attendance")}
+              >
+                📋 Open Manual Attendance &rarr;
+              </button>
+            )}
         </div>
       )}
 
@@ -1392,12 +1718,12 @@ function PersonAvatar({
   const [imgError, setImgError] = useState(false);
   const initials = name
     ? name
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
     : "?";
 
   if (src && !imgError) {

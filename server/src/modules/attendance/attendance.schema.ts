@@ -80,6 +80,13 @@ export const createAttendanceSchema = z
       message: "Provide exactly one of employeeId or workerId",
       path: ["employeeId"],
     },
+  )
+  .refine(
+    (value) => !(value.latitude === 0 && value.longitude === 0),
+    {
+      message: "Valid non-zero GPS coordinates are strictly required to record attendance.",
+      path: ["latitude"],
+    },
   );
 
 // A correction changes only the mutable fields; the person, farm, date, shift
@@ -112,16 +119,24 @@ export const unmarkedSummaryQuerySchema = z.object({
 });
 
 // Payload for bulk marking all unmarked personnel as absent.
-export const markUnmarkedAbsentSchema = z.object({
-  date: dateOnlySchema,
-  shift: shiftSchema,
-  farmId: z.uuid("Invalid farm ID"),
-  shedId: shedIdSchema.optional(),
-  target: z.enum(["ALL", "EMPLOYEES", "WORKERS"]).default("ALL"),
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-  notes: notesSchema.optional(),
-});
+export const markUnmarkedAbsentSchema = z
+  .object({
+    date: dateOnlySchema,
+    shift: shiftSchema,
+    farmId: z.uuid("Invalid farm ID"),
+    shedId: shedIdSchema.optional(),
+    target: z.enum(["ALL", "EMPLOYEES", "WORKERS"]).default("ALL"),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    notes: notesSchema.optional(),
+  })
+  .refine(
+    (value) => !(value.latitude === 0 && value.longitude === 0),
+    {
+      message: "Valid non-zero GPS coordinates are strictly required to record attendance.",
+      path: ["latitude"],
+    },
+  );
 
 // Query for the export endpoint.
 export const exportAttendanceQuerySchema = z.object({

@@ -158,6 +158,8 @@ export function CameraPhotoInput({
               maxHeight: 280,
               borderRadius: 6,
               objectFit: "cover",
+              transform: "scaleX(-1)",
+              WebkitTransform: "scaleX(-1)",
             }}
           />
           {cameraError && (

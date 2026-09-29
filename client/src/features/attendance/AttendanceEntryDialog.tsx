@@ -143,8 +143,8 @@ export function AttendanceEntryDialog({
       return;
     }
 
-    if (latitude === null || longitude === null) {
-      setError(new ApiError(0, "Location is required to mark attendance. Please allow location access."));
+    if (latitude === null || longitude === null || (latitude === 0 && longitude === 0)) {
+      setError(new ApiError(0, "⛔ Attendance Blocked: Valid GPS location is required to mark attendance. Please enable device GPS."));
       return;
     }
 
@@ -359,7 +359,12 @@ export function AttendanceEntryDialog({
           <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" busy={busy || locationLoading || latitude === null || longitude === null}>
+          <Button
+            type="submit"
+            variant="primary"
+            busy={busy || locationLoading}
+            disabled={busy || locationLoading || latitude === null || longitude === null || (latitude === 0 && longitude === 0)}
+          >
             Save record
           </Button>
         </div>

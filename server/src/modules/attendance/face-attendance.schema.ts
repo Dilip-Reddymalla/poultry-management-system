@@ -44,6 +44,12 @@ const faceAttendanceRecordSchema = z.object({
     message: "Provide exactly one of employeeId or workerId",
     path: ["employeeId"],
   },
+).refine(
+  (value) => !(value.latitude === 0 && value.longitude === 0),
+  {
+    message: "Valid non-zero GPS coordinates are strictly required to record attendance.",
+    path: ["latitude"],
+  },
 );
 
 export const bulkMarkFaceAttendanceSchema = z.object({

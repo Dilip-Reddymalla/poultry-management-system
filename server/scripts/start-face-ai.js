@@ -103,26 +103,92 @@ if (!isProd) {
   uvicornArgs.push("--reload");
 }
 
-const child = spawn(pythonExecutable, uvicornArgs, {
-  cwd: faceAiDir,
-  stdio: "inherit",
-  shell: false,
-  env: {
-    ...process.env,
-    // Limit CPU threads so Face-AI doesn't monopolize container cores and starve Node.js
-    OMP_NUM_THREADS: "1",
-    OPENBLAS_NUM_THREADS: "1",
-    MKL_NUM_THREADS: "1",
-    ONNX_NUM_THREADS: "1",
-  },
-});
+/**
+ * Process state shared with the Express restart endpoint.
+ * @type {{ child: import("child_process").ChildProcess | null; restarting: boolean; pid: number | null }}
+ */
+export const faceAiProcessState = {
+  child: /** @type {import("child_process").ChildProcess | null} */ (null),
+  restarting: false,
+  pid: /** @type {number | null} */ (null),
+};
 
-child.on("error", (err) => {
-  console.error(`[Face-AI Launcher] ❌ Failed to start Face-AI process (${pythonExecutable}):`, err.message);
-});
+function spawnFaceAi() {
+  const proc = spawn(pythonExecutable, uvicornArgs, {
+    cwd: faceAiDir,
+    stdio: "inherit",
+    shell: false,
+    env: {
+      ...process.env,
+      // Limit CPU threads so Face-AI doesn't monopolize container cores and starve Node.js
+      OMP_NUM_THREADS: "1",
+      OPENBLAS_NUM_THREADS: "1",
+      MKL_NUM_THREADS: "1",
+      ONNX_NUM_THREADS: "1",
+    },
+  });
 
-child.on("exit", (code) => {
-  if (code !== 0 && code !== null) {
-    console.warn(`[Face-AI Launcher] Face-AI process exited with code ${code}`);
+  faceAiProcessState.child = proc;
+  faceAiProcessState.pid = proc.pid ?? null;
+
+  proc.on("error", (err) => {
+    console.error(`[Face-AI Launcher] ❌ Failed to start Face-AI process (${pythonExecutable}):`, err.message);
+    faceAiProcessState.child = null;
+    faceAiProcessState.pid = null;
+  });
+
+  proc.on("exit", (code) => {
+    faceAiProcessState.child = null;
+    faceAiProcessState.pid = null;
+    if (code !== 0 && code !== null) {
+      console.warn(`[Face-AI Launcher] Face-AI process exited with code ${code}`);
+    }
+  });
+
+  return proc;
+}
+
+// Initial spawn
+spawnFaceAi();
+
+/**
+ * Gracefully kill the current Face-AI process and spawn a fresh one.
+ * Safe to call multiple times — concurrent restart calls are debounced.
+ */
+export async function restartFaceAi() {
+  if (faceAiProcessState.restarting) {
+    console.log("[Face-AI Launcher] ⏳ Restart already in progress, skipping duplicate request.");
+    return;
   }
-});
+
+  faceAiProcessState.restarting = true;
+  console.log("[Face-AI Launcher] 🔄 Restarting Face-AI Python process…");
+
+  // Kill the existing process if it is still running
+  const current = faceAiProcessState.child;
+  if (current) {
+    try {
+      current.kill("SIGTERM");
+      // Give the process 3 seconds to exit gracefully before SIGKILL
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          try { current.kill("SIGKILL"); } catch { /* already dead */ }
+          resolve(undefined);
+        }, 3000);
+        current.once("exit", () => {
+          clearTimeout(timeout);
+          resolve(undefined);
+        });
+      });
+    } catch (e) {
+      console.warn("[Face-AI Launcher] ⚠️ Could not terminate previous process:", e?.message);
+    }
+  }
+
+  // Brief delay so the OS releases the port before rebinding
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  spawnFaceAi();
+  console.log(`[Face-AI Launcher] ✅ Restarted Face-AI Python process (PID: ${faceAiProcessState.pid})`);
+  faceAiProcessState.restarting = false;
+}

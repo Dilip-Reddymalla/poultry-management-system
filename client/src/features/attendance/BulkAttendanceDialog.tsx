@@ -161,8 +161,8 @@ export function BulkAttendanceDialog({
     event.preventDefault();
     if (selectedIds.size === 0) return;
 
-    if (latitude === null || longitude === null) {
-      notify("error", "Location is required to mark attendance. Please allow location access.");
+    if (latitude === null || longitude === null || (latitude === 0 && longitude === 0)) {
+      notify("error", "⛔ Attendance Blocked: Valid GPS location is required to mark attendance. Please enable device GPS.");
       return;
     }
 
@@ -403,6 +403,7 @@ export function BulkAttendanceDialog({
               selectedIds.size === 0 ||
               latitude === null ||
               longitude === null ||
+              (latitude === 0 && longitude === 0) ||
               locationLoading
             }
           >

@@ -12,6 +12,7 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "framer-motion": "^13.4.0",
     "i18next": "^26.4.2",
     "lucide-react": "^1.47.0",

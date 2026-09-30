@@ -25,6 +25,7 @@ import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { statusLabel } from "../../lib/display.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { ShiftChoice } from "./ShiftChoice.js";
+import { LocationStatusAlert } from "./LocationStatusAlert.js";
 
 interface BulkAttendanceDialogProps {
   defaultDate: string;
@@ -53,7 +54,7 @@ export function BulkAttendanceDialog({
   const [personType, setPersonType] = useState<PersonType>("EMPLOYEE");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { latitude, longitude, error: locationError, loading: locationLoading } = useGeolocation();
+  const { latitude, longitude, accuracy, error: locationError, loading: locationLoading, retry: retryGps } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
@@ -214,16 +215,14 @@ export function BulkAttendanceDialog({
   return (
     <Dialog title="Bulk Attendance" onClose={onClose}>
       <form className="stack" onSubmit={handleSubmit}>
-        {locationError && (
-          <div className="alert alert--danger" style={{ marginBottom: "1rem" }}>
-            <strong>Location Required:</strong> {locationError}
-          </div>
-        )}
-        {locationLoading && (
-          <p className="field__hint">
-            <Spinner label="Getting location" /> Waiting for GPS location...
-          </p>
-        )}
+        <LocationStatusAlert
+          latitude={latitude}
+          longitude={longitude}
+          accuracy={accuracy}
+          loading={locationLoading}
+          error={locationError}
+          onRetry={retryGps}
+        />
 
         <div className="filters">
           <label className="filters__field">

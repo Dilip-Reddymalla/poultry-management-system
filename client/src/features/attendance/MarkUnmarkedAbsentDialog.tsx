@@ -14,6 +14,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { ShiftChoice } from "./ShiftChoice.js";
+import { LocationStatusAlert } from "./LocationStatusAlert.js";
 import { ApiError } from "../../api/client.js";
 
 interface MarkUnmarkedAbsentDialogProps {
@@ -44,7 +45,7 @@ export function MarkUnmarkedAbsentDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const { latitude, longitude, error: locationError, loading: locationLoading } = useGeolocation();
+  const { latitude, longitude, accuracy, error: locationError, loading: locationLoading, retry: retryGps } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
@@ -143,16 +144,14 @@ export function MarkUnmarkedAbsentDialog({
         <FormAlert error={error} />
         {farms.error ? <FormAlert error={farms.error} /> : null}
 
-        {locationError && (
-          <div className="alert alert--danger">
-            <strong>Location Required:</strong> {locationError}
-          </div>
-        )}
-        {locationLoading && (
-          <p className="field__hint">
-            <Spinner label="Getting location" /> Waiting for GPS location...
-          </p>
-        )}
+        <LocationStatusAlert
+          latitude={latitude}
+          longitude={longitude}
+          accuracy={accuracy}
+          loading={locationLoading}
+          error={locationError}
+          onRetry={retryGps}
+        />
 
         <div className="filters">
           <TextField

@@ -15,9 +15,9 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
   MORNING_SHIFT: {
     shift: "MORNING_SHIFT",
     label: "Morning Shift",
-    timeRange: "09:00 AM – 01:00 PM",
-    startHour: 9,
-    startMinute: 0,
+    timeRange: "08:30 AM – 01:00 PM",
+    startHour: 8,
+    startMinute: 30,
     endHour: 13,
     endMinute: 0,
   },
@@ -53,7 +53,7 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
 
 /**
  * Validates if the given clock time falls within the allowed recording window for a shift.
- * - MORNING_SHIFT: 09:00 to 13:00 (9 AM to 1 PM)
+ * - MORNING_SHIFT: 08:30 to 13:00 (8:30 AM to 1 PM)
  * - AFTERNOON_SHIFT: 14:00 to 18:00 (2 PM to 6 PM)
  * - NIGHT_SHIFT: 19:00 to 04:00 (7 PM to 4 AM)
  * - OVERTIME: Anytime

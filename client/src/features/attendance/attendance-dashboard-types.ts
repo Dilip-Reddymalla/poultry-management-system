@@ -59,7 +59,7 @@ export interface SnapshotPreviewData {
 }
 
 export const SHIFT_CONFIG: Record<Shift, { label: string; icon: string; timeRange: string; color: string }> = {
-  MORNING_SHIFT: { label: "Morning", icon: "🌅", timeRange: "09:00 – 13:00", color: "var(--moss, #2e7d32)" },
+  MORNING_SHIFT: { label: "Morning", icon: "🌅", timeRange: "08:30 – 13:00", color: "var(--moss, #2e7d32)" },
   AFTERNOON_SHIFT: { label: "Afternoon", icon: "☀️", timeRange: "14:00 – 18:00", color: "var(--clay, #c2410c)" },
   NIGHT_SHIFT: { label: "Night", icon: "🌙", timeRange: "19:00 – 04:00", color: "#4f46e5" },
   OVERTIME: { label: "Overtime", icon: "⚡", timeRange: "Flexible / Extra", color: "#0891b2" },

@@ -15,11 +15,11 @@ export interface ShiftTimingRule {
 export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
   MORNING_SHIFT: {
     shift: "MORNING_SHIFT",
-    label: "Morning Shift (09:00 AM – 01:00 PM)",
+    label: "Morning Shift (08:30 AM – 01:00 PM)",
     shortLabel: "Morning",
-    timeRange: "09:00 AM – 01:00 PM",
-    startHour: 9,
-    startMinute: 0,
+    timeRange: "08:30 AM – 01:00 PM",
+    startHour: 8,
+    startMinute: 30,
     endHour: 13,
     endMinute: 0,
   },

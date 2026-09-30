@@ -1,232 +1,57 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
 import { useNavigate } from "react-router-dom";
 import type { Farm, Shed, Shift } from "../../api/types.js";
-import { SHIFTS } from "../../api/types.js";
 import { apiClient } from "../../api/client.js";
 import { fetchSheds } from "../../api/resources.js";
 import { useAuth } from "../../auth/use-auth.js";
 import {
   processFrame,
   bulkMarkFaceAttendance,
-  type ProcessedFace,
   type FrameProcessResult,
   type FaceAttendanceRecord,
 } from "../../api/face-attendance.api.js";
+import { validateShiftTiming } from "../../lib/shift-timing.js";
 
-/* ------------------------------------------------------------------ */
-import { validateShiftTiming, SHIFT_TIMINGS } from "../../lib/shift-timing.js";
-
-function shiftLabel(shift: Shift): string {
-  return SHIFT_TIMINGS[shift]?.label ?? shift;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Styles                                                            */
-/* ------------------------------------------------------------------ */
-
-const styles = {
-  page: {
-    maxWidth: 1200,
-    margin: "0 auto",
-    padding: "24px 20px",
-  } as React.CSSProperties,
-
-  header: {
-    marginBottom: 24,
-  } as React.CSSProperties,
-
-  title: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: "var(--text-primary, #1a1a2e)",
-    marginBottom: 4,
-  } as React.CSSProperties,
-
-  subtitle: {
-    fontSize: 14,
-    color: "var(--text-secondary, #6b7280)",
-  } as React.CSSProperties,
-
-  card: {
-    background: "var(--surface, #fff)",
-    borderRadius: 12,
-    border: "1px solid var(--border, #e5e7eb)",
-    padding: 24,
-    marginBottom: 20,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-  } as React.CSSProperties,
-
-  controls: {
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "wrap" as const,
-    marginBottom: 20,
-  } as React.CSSProperties,
-
-  select: {
-    padding: "8px 12px",
-    borderRadius: 8,
-    border: "1px solid var(--border, #d1d5db)",
-    fontSize: 14,
-    background: "var(--surface, #fff)",
-    minWidth: 160,
-  } as React.CSSProperties,
-
-  btn: {
-    padding: "10px 20px",
-    borderRadius: 8,
-    border: "none",
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: "pointer",
-    transition: "all 0.2s",
-  } as React.CSSProperties,
-
-  btnPrimary: {
-    background: "var(--primary, #6366f1)",
-    color: "#fff",
-  } as React.CSSProperties,
-
-  btnSuccess: {
-    background: "#10b981",
-    color: "#fff",
-  } as React.CSSProperties,
-
-  btnDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  } as React.CSSProperties,
-
-  imageContainer: {
-    position: "relative" as const,
-    display: "inline-block",
-    maxWidth: "100%",
-  } as React.CSSProperties,
-
-  previewImage: {
-    maxWidth: "100%",
-    maxHeight: 500,
-    borderRadius: 8,
-    display: "block",
-    transform: "none",
-    WebkitTransform: "none",
-  } as React.CSSProperties,
-
-  facesGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: 16,
-    marginTop: 20,
-  } as React.CSSProperties,
-
-  faceCard: {
-    background: "var(--surface, #fff)",
-    borderRadius: 12,
-    border: "1px solid var(--border, #e5e7eb)",
-    padding: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-  } as React.CSSProperties,
-
-  badge: (color: string) =>
-    ({
-      display: "inline-block",
-      padding: "2px 10px",
-      borderRadius: 99,
-      fontSize: 12,
-      fontWeight: 700,
-      color: "#fff",
-      background: color,
-      marginRight: 8,
-    }) as React.CSSProperties,
-
-  candidateRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "8px 0",
-    borderBottom: "1px solid var(--border, #f3f4f6)",
-  } as React.CSSProperties,
-
-  candidateAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    objectFit: "cover" as const,
-    background: "#e5e7eb",
-    flexShrink: 0,
-  } as React.CSSProperties,
-
-  summary: {
-    padding: 16,
-    borderRadius: 12,
-    background: "#ecfdf5",
-    border: "1px solid #a7f3d0",
-    marginTop: 20,
-  } as React.CSSProperties,
-
-  error: {
-    padding: 16,
-    borderRadius: 12,
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    color: "#991b1b",
-    marginTop: 12,
-  } as React.CSSProperties,
-
-  warning: {
-    padding: 12,
-    borderRadius: 8,
-    background: "#fffbeb",
-    border: "1px solid #fde68a",
-    color: "#b45309",
-    fontSize: 13,
-    marginTop: 8,
-  } as React.CSSProperties,
-
-  spinner: {
-    display: "inline-block",
-    width: 18,
-    height: 18,
-    border: "2px solid #fff",
-    borderTopColor: "transparent",
-    borderRadius: "50%",
-    animation: "spin 0.6s linear infinite",
-    marginRight: 8,
-    verticalAlign: "middle",
-  } as React.CSSProperties,
-};
-
-function statusColor(status: string): string {
-  if (status === "LIVE") return "#10b981";
-  if (status === "SPOOF") return "#ef4444";
-  return "#f59e0b";
-}
-
-interface FaceSelection {
-  faceIndex: number;
-  personId: string | null;
-  personType: "EMPLOYEE" | "WORKER" | null;
-}
+import type { FaceSelection } from "./face-attendance/face-attendance.types.js";
+import { styles } from "./face-attendance/face-attendance.styles.js";
+import { useFaceAttendanceGps } from "./face-attendance/useFaceAttendanceGps.js";
+import { useFaceAiHealth } from "./face-attendance/useFaceAiHealth.js";
+import { FaceAiHealthBanners } from "./face-attendance/FaceAiHealthBanners.js";
+import { GpsGuidanceBanners } from "./face-attendance/GpsGuidanceBanners.js";
+import { FaceAttendanceControls } from "./face-attendance/FaceAttendanceControls.js";
+import { FaceViewfinder } from "./face-attendance/FaceViewfinder.js";
+import { FaceAttendanceFeedback } from "./face-attendance/FaceAttendanceFeedback.js";
+import { FaceCard } from "./face-attendance/FaceCard.js";
 
 export function FaceAttendancePage(): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Face AI Circuit Breaker & Health state
-  const [faceAiStatus, setFaceAiStatus] = useState<{
-    online: boolean;
-    circuitBreakerState?: "CLOSED" | "OPEN" | "HALF_OPEN";
-    message?: string;
-    fallbackMode?: "MANUAL_ATTENDANCE" | null;
-  } | null>(null);
-  const [checkingHealth, setCheckingHealth] = useState(false);
-  // True when the service is offline and we are actively polling for it to come back
-  const [faceAiWarmingUp, setFaceAiWarmingUp] = useState(false);
-  const warmingUpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [warmingUpCountdown, setWarmingUpCountdown] = useState(0);
+  // Face AI Circuit Breaker & Health Hook
+  const {
+    faceAiStatus,
+    setFaceAiStatus,
+    checkingHealth,
+    faceAiWarmingUp,
+    warmingUpCountdown,
+    checkFaceAiHealth,
+  } = useFaceAiHealth();
 
-  // Farm & Shed selection
+  // GPS Location Hook
+  const {
+    location,
+    locationStatus,
+    hasValidLocation,
+    deviceLocationOff,
+    locationPermissionDenied,
+    gpsTimedOut,
+    isGpsLoading,
+    isIOS,
+    requestGpsLocation,
+  } = useFaceAttendanceGps();
+
+  // Farm & Shed Selection
   const [farms, setFarms] = useState<Farm[]>([]);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
   const [farmsLoaded, setFarmsLoaded] = useState(false);
@@ -237,17 +62,12 @@ export function FaceAttendancePage(): React.ReactElement {
   // Shift Selection
   const [selectedShift, setSelectedShift] = useState<Shift>("MORNING_SHIFT");
 
-  // GPS Location State
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationStatus, setLocationStatus] = useState<string>("Fetching GPS location…");
-  const hasValidLocation = Boolean(location && (location.latitude !== 0 || location.longitude !== 0));
-
-  // Camera state
+  // Camera State
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  // Image & processing
+  // Image & Processing State
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [result, setResult] = useState<FrameProcessResult | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -258,202 +78,14 @@ export function FaceAttendancePage(): React.ReactElement {
     duplicateCount: number;
   } | null>(null);
 
-  // Face identity selections
+  // Face Identity Selections
   const [selections, setSelections] = useState<FaceSelection[]>([]);
-  const [deviceLocationOff, setDeviceLocationOff] = useState(false);
-  const [isGpsLoading, setIsGpsLoading] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. High accuracy GPS Location acquisition with smart fallbacks & device-off detection
-  const requestGpsLocation = useCallback(() => {
-    if (!("geolocation" in navigator)) {
-      setLocationStatus("📍 Geolocation not supported by browser");
-      return;
-    }
-
-    setIsGpsLoading(true);
-    setDeviceLocationOff(false);
-    setLocationStatus("📡 Requesting GPS location…");
-
-    const onGpsSuccess = (pos: GeolocationPosition) => {
-      setIsGpsLoading(false);
-      setDeviceLocationOff(false);
-      setLocation({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-      });
-      setLocationStatus(
-        `📍 GPS Fixed: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} (±${Math.round(pos.coords.accuracy)}m)`,
-      );
-    };
-
-    const handleGpsFailure = async (err: GeolocationPositionError) => {
-      // Check if browser permission is actually granted despite the failure
-      let permissionState: PermissionState | null = null;
-      try {
-        if ("permissions" in navigator && navigator.permissions?.query) {
-          const perm = await navigator.permissions.query({ name: "geolocation" as PermissionName });
-          permissionState = perm.state;
-        }
-      } catch {
-        // Permissions API might not be supported on all browsers
-      }
-
-      setIsGpsLoading(false);
-      setLocation(null);
-
-      // If browser permission is granted, but we got TIMEOUT or POSITION_UNAVAILABLE,
-      // it means the device's master Location/GPS toggle is turned OFF on the phone!
-      if (
-        permissionState === "granted" &&
-        (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE)
-      ) {
-        setDeviceLocationOff(true);
-        setLocationStatus("⛔ GPS OFF: Phone Location switch is OFF. Attendance is strictly BLOCKED.");
-      } else if (err.code === err.PERMISSION_DENIED) {
-        setDeviceLocationOff(false);
-        setLocationStatus("⛔ Location Denied: Permission denied by browser. Attendance is strictly BLOCKED.");
-      } else {
-        setDeviceLocationOff(false);
-        setLocationStatus(`⛔ GPS Error: ${err.message || "Unable to acquire location"}. Attendance is strictly BLOCKED.`);
-      }
-    };
-
-    // First attempt: High accuracy with a shorter 6s timeout so mobile users aren't left waiting 15s
-    navigator.geolocation.getCurrentPosition(
-      onGpsSuccess,
-      (firstErr) => {
-        // If high accuracy times out or is unavailable, try low accuracy (cell tower / Wi-Fi / cached)
-        if (firstErr.code === firstErr.TIMEOUT || firstErr.code === firstErr.POSITION_UNAVAILABLE) {
-          setLocationStatus("📡 High-accuracy GPS timed out, trying network location…");
-          navigator.geolocation.getCurrentPosition(
-            onGpsSuccess,
-            (secondErr) => {
-              void handleGpsFailure(secondErr);
-            },
-            { enableHighAccuracy: false, maximumAge: 300000, timeout: 5000 },
-          );
-        } else {
-          void handleGpsFailure(firstErr);
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 },
-    );
-  }, []);
-
-  useEffect(() => {
-    requestGpsLocation();
-  }, [requestGpsLocation]);
-
-  // Stop the warm-up polling interval
-  const stopWarmingUpPoll = useCallback(() => {
-    if (warmingUpPollRef.current) {
-      clearInterval(warmingUpPollRef.current);
-      warmingUpPollRef.current = null;
-    }
-    setFaceAiWarmingUp(false);
-    setWarmingUpCountdown(0);
-  }, []);
-
-  // Health-aware Circuit Breaker Check — also triggers auto-restart when service is offline
-  const checkFaceAiHealth = useCallback(async (triggerRestart = false) => {
-    setCheckingHealth(true);
-    try {
-      // If service is offline and restart is requested, poke the restart endpoint first
-      if (triggerRestart) {
-        try {
-          await fetch("/api/face-ai/restart", { method: "POST" });
-        } catch {
-          // Restart endpoint fire-and-forget — ignore errors
-        }
-      }
-
-      const res = await fetch("/api/face-ai/health");
-      const data = await res.json().catch(() => null);
-      const isOffline =
-        data?.circuitBreaker?.state === "OPEN" ||
-        data?.serviceStatus === "offline" ||
-        data?.fallbackMode === "MANUAL_ATTENDANCE";
-
-      if (isOffline) {
-        setFaceAiStatus({
-          online: false,
-          circuitBreakerState: data?.circuitBreaker?.state ?? "OPEN",
-          message: data?.message || "Face AI biometric service is unavailable.",
-          fallbackMode: "MANUAL_ATTENDANCE",
-        });
-
-        // Begin warm-up polling every 8 seconds so the UI auto-updates when service recovers
-        if (!warmingUpPollRef.current) {
-          setFaceAiWarmingUp(true);
-          setWarmingUpCountdown(8);
-
-          // Countdown ticker
-          const countdownId = setInterval(() => {
-            setWarmingUpCountdown((prev) => (prev <= 1 ? 8 : prev - 1));
-          }, 1000);
-
-          // Health poll every 8 s
-          warmingUpPollRef.current = setInterval(async () => {
-            try {
-              const pollRes = await fetch("/api/face-ai/health");
-              const pollData = await pollRes.json().catch(() => null);
-              const stillOffline =
-                pollData?.circuitBreaker?.state === "OPEN" ||
-                pollData?.serviceStatus === "offline" ||
-                pollData?.fallbackMode === "MANUAL_ATTENDANCE";
-
-              if (!stillOffline) {
-                // Service recovered!
-                clearInterval(countdownId);
-                stopWarmingUpPoll();
-                setFaceAiStatus({
-                  online: true,
-                  circuitBreakerState: pollData?.circuitBreaker?.state ?? "CLOSED",
-                  fallbackMode: null,
-                });
-              } else {
-                setWarmingUpCountdown(8);
-              }
-            } catch {
-              // Still unreachable — keep polling
-            }
-          }, 8000);
-
-          // Clean up the countdown ticker when polling stops
-          return () => clearInterval(countdownId);
-        }
-      } else {
-        stopWarmingUpPoll();
-        setFaceAiStatus({
-          online: true,
-          circuitBreakerState: data?.circuitBreaker?.state ?? "CLOSED",
-          fallbackMode: null,
-        });
-      }
-    } catch {
-      setFaceAiStatus({
-        online: false,
-        circuitBreakerState: "OPEN",
-        message: "Unable to connect to Face AI service.",
-        fallbackMode: "MANUAL_ATTENDANCE",
-      });
-    } finally {
-      setCheckingHealth(false);
-    }
-  }, [stopWarmingUpPoll]);
-
-  useEffect(() => {
-    checkFaceAiHealth();
-    return () => {
-      stopWarmingUpPoll();
-    };
-  }, [checkFaceAiHealth, stopWarmingUpPoll]);
-
-  // 2. Load farms once
+  // 1. Load farms once
   if (!farmsLoaded) {
     setFarmsLoaded(true);
     apiClient
@@ -467,10 +99,10 @@ export function FaceAttendancePage(): React.ReactElement {
           setSelectedFarmId(list[0].id);
         }
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
-  // 3. Load Sheds when Farm changes
+  // 2. Load Sheds when Farm changes
   useEffect(() => {
     if (!selectedFarmId) {
       setSheds([]);
@@ -492,7 +124,7 @@ export function FaceAttendancePage(): React.ReactElement {
       });
   }, [selectedFarmId]);
 
-  // Camera cleanup
+  // 3. Camera cleanup & stream attachment
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -507,14 +139,14 @@ export function FaceAttendancePage(): React.ReactElement {
     };
   }, [stopCamera]);
 
-  // Attach stream to video element once cameraActive renders the video tag or facingMode changes
   useEffect(() => {
     if (cameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => { });
+      videoRef.current.play().catch(() => {});
     }
   }, [cameraActive, facingMode]);
 
+  // 4. Start Camera
   const startCamera = async (targetFacingMode?: "user" | "environment") => {
     setCameraError(null);
     setImagePreviewUrl(null);
@@ -530,20 +162,19 @@ export function FaceAttendancePage(): React.ReactElement {
 
     const isBackCamera = modeToUse === "environment";
 
-    // 16:9 widescreen for back camera; portrait for front camera
     const videoConstraints: MediaTrackConstraints = isBackCamera
       ? {
-        facingMode: { ideal: "environment" },
-        aspectRatio: { ideal: 16 / 9 },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      }
+          facingMode: { ideal: "environment" },
+          aspectRatio: { ideal: 16 / 9 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        }
       : {
-        facingMode: { ideal: "user" },
-        aspectRatio: { ideal: 3 / 4 },
-        width: { ideal: 720 },
-        height: { ideal: 960 },
-      };
+          facingMode: { ideal: "user" },
+          aspectRatio: { ideal: 3 / 4 },
+          width: { ideal: 720 },
+          height: { ideal: 960 },
+        };
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -553,7 +184,7 @@ export function FaceAttendancePage(): React.ReactElement {
       setCameraActive(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => { });
+        videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
       try {
@@ -567,7 +198,7 @@ export function FaceAttendancePage(): React.ReactElement {
         setCameraActive(true);
         if (videoRef.current) {
           videoRef.current.srcObject = fallbackStream;
-          videoRef.current.play().catch(() => { });
+          videoRef.current.play().catch(() => {});
         }
       } catch (fallbackErr: any) {
         try {
@@ -576,7 +207,7 @@ export function FaceAttendancePage(): React.ReactElement {
           setCameraActive(true);
           if (videoRef.current) {
             videoRef.current.srcObject = genericStream;
-            videoRef.current.play().catch(() => { });
+            videoRef.current.play().catch(() => {});
           }
         } catch (lastErr: any) {
           setCameraError(
@@ -584,7 +215,8 @@ export function FaceAttendancePage(): React.ReactElement {
               fallbackErr.name === "NotAllowedError" ||
               lastErr.name === "NotAllowedError"
               ? "Camera access denied. Please grant permission."
-              : "Could not open camera: " + (err.message || fallbackErr.message || lastErr.message || "Unknown error"),
+              : "Could not open camera: " +
+                  (err.message || fallbackErr.message || lastErr.message || "Unknown error"),
           );
           stopCamera();
         }
@@ -597,6 +229,7 @@ export function FaceAttendancePage(): React.ReactElement {
     await startCamera(nextFacing);
   };
 
+  // 5. Frame capture & recognition
   const captureFrameAndProcess = async () => {
     if (!selectedFarmId) {
       setError("Please select a farm first.");
@@ -604,7 +237,9 @@ export function FaceAttendancePage(): React.ReactElement {
     }
 
     if (!hasValidLocation) {
-      setError("⛔ Attendance Blocked: Valid GPS location is mandatory to capture attendance. Please enable device GPS / allow location access.");
+      setError(
+        "⛔ Attendance Blocked: Valid GPS location is mandatory to capture attendance. Please enable device GPS / allow location access.",
+      );
       return;
     }
 
@@ -624,17 +259,14 @@ export function FaceAttendancePage(): React.ReactElement {
       let sHeight = vh;
 
       if (isBack) {
-        // Back camera: strictly 16:9 ratio matching widescreen viewfinder
         const targetRatio = 16 / 9;
         if (Math.abs(currentRatio - targetRatio) > 0.02) {
           if (currentRatio < targetRatio) {
-            // Source stream is taller than 16:9 (e.g. mobile sensor held in portrait)
             sWidth = vw;
             sHeight = Math.round(vw / targetRatio);
             sx = 0;
             sy = Math.round((vh - sHeight) / 2);
           } else {
-            // Source stream is wider than 16:9
             sHeight = vh;
             sWidth = Math.round(vh * targetRatio);
             sy = 0;
@@ -642,9 +274,7 @@ export function FaceAttendancePage(): React.ReactElement {
           }
         }
       } else {
-        // Front camera: portrait ratio matching viewfinder
         if (currentRatio > 1) {
-          // Source is landscape (e.g. desktop webcam), crop center to 3:4 portrait
           const targetRatio = 3 / 4;
           sHeight = vh;
           sWidth = Math.round(vh * targetRatio);
@@ -702,7 +332,8 @@ export function FaceAttendancePage(): React.ReactElement {
       const isConnectionError =
         err?.code === "FACE_AI_CIRCUIT_OPEN" ||
         errMsg.includes("circuit breaker") ||
-        (errMsg.includes("Face AI service is unavailable") && (err?.status === 503 || err?.status === 502)) ||
+        (errMsg.includes("Face AI service is unavailable") &&
+          (err?.status === 503 || err?.status === 502)) ||
         errMsg.includes("ECONNREFUSED") ||
         err?.status === 503 ||
         err?.status === 502;
@@ -716,7 +347,6 @@ export function FaceAttendancePage(): React.ReactElement {
         });
         setError(errMsg || "Face AI biometric service is temporarily unavailable.");
       } else {
-        // Image decoding, validation, or recognition error — guide user to cleaner image
         if (
           errMsg.includes("decode") ||
           errMsg.includes("corrupt") ||
@@ -725,7 +355,9 @@ export function FaceAttendancePage(): React.ReactElement {
           err?.status === 400 ||
           err?.status === 422
         ) {
-          setError("Unable to process this image. Please upload or capture a clearer, standard photo (JPG, PNG, or WEBP) with good lighting.");
+          setError(
+            "Unable to process this image. Please capture a clearer photo with good lighting.",
+          );
         } else {
           setError(errMsg || "Failed to process face frame. Please try taking another photo.");
         }
@@ -740,7 +372,9 @@ export function FaceAttendancePage(): React.ReactElement {
     if (!file || !selectedFarmId) return;
 
     if (!hasValidLocation) {
-      setError("⛔ Attendance Blocked: Valid GPS location is mandatory to process attendance. Please enable device GPS / grant location access.");
+      setError(
+        "⛔ Attendance Blocked: Valid GPS location is mandatory to process attendance. Please enable device GPS / grant location access.",
+      );
       e.target.value = "";
       return;
     }
@@ -774,7 +408,8 @@ export function FaceAttendancePage(): React.ReactElement {
       const isConnectionError =
         err?.code === "FACE_AI_CIRCUIT_OPEN" ||
         errMsg.includes("circuit breaker") ||
-        (errMsg.includes("Face AI service is unavailable") && (err?.status === 503 || err?.status === 502)) ||
+        (errMsg.includes("Face AI service is unavailable") &&
+          (err?.status === 503 || err?.status === 502)) ||
         errMsg.includes("ECONNREFUSED") ||
         err?.status === 503 ||
         err?.status === 502;
@@ -788,7 +423,6 @@ export function FaceAttendancePage(): React.ReactElement {
         });
         setError(errMsg || "Face AI biometric service is temporarily unavailable.");
       } else {
-        // Image decoding, validation, or recognition error — guide user to cleaner image
         if (
           errMsg.includes("decode") ||
           errMsg.includes("corrupt") ||
@@ -797,7 +431,9 @@ export function FaceAttendancePage(): React.ReactElement {
           err?.status === 400 ||
           err?.status === 422
         ) {
-          setError("Unable to process this image. Please upload or capture a clearer, standard photo (JPG, PNG, or WEBP) with good lighting.");
+          setError(
+            "Unable to process this image. Please upload a clearer photo with good lighting.",
+          );
         } else {
           setError(errMsg || "Failed to process image. Please try uploading a cleaner photo.");
         }
@@ -811,9 +447,7 @@ export function FaceAttendancePage(): React.ReactElement {
     (faceIndex: number, candidateId: string, personType: "EMPLOYEE" | "WORKER") => {
       setSelections((prev) =>
         prev.map((s) =>
-          s.faceIndex === faceIndex
-            ? { ...s, personId: candidateId, personType }
-            : s,
+          s.faceIndex === faceIndex ? { ...s, personId: candidateId, personType } : s,
         ),
       );
     },
@@ -823,20 +457,22 @@ export function FaceAttendancePage(): React.ReactElement {
   const acRoomShed = sheds.find(
     (s) => s.number.toLowerCase() === "ac room" || s.number.toLowerCase().includes("ac room"),
   );
-  const regularSheds = sheds.filter((s) => s.id !== acRoomShed?.id);
 
   const handleSubmitAttendance = useCallback(async () => {
     if (!result) return;
 
     if (!hasValidLocation || !location) {
-      setError("⛔ Attendance Blocked: Valid non-zero GPS location is strictly required to record attendance. Please enable device GPS / allow location access.");
+      setError(
+        "⛔ Attendance Blocked: Valid non-zero GPS location is strictly required to record attendance. Please enable device GPS / allow location access.",
+      );
       return;
     }
 
-    // Shift timing verification check
     const timingValidation = validateShiftTiming(selectedShift);
     if (!timingValidation.allowed) {
-      setError(timingValidation.message || "Attendance submission blocked due to shift timing restriction.");
+      setError(
+        timingValidation.message || "Attendance submission blocked due to shift timing restriction.",
+      );
       return;
     }
 
@@ -898,13 +534,13 @@ export function FaceAttendancePage(): React.ReactElement {
   }, [result, selections, selectedShift, selectedShedId, location, acRoomShed]);
 
   const confirmedCount = selections.filter((s) => s.personId).length;
-  const liveFaces = result?.faces.filter((f) => f.status === "LIVE") ?? [];
   const shiftCheck = validateShiftTiming(selectedShift);
 
   return (
     <div style={styles.page}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
+      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>🎯 Live Face Attendance</h1>
         <p style={styles.subtitle}>
@@ -912,1119 +548,93 @@ export function FaceAttendancePage(): React.ReactElement {
         </p>
       </div>
 
-      {/* Server Warming-Up Banner — shown when service is offline and auto-polling */}
-      {faceAiWarmingUp && faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
-        <div
-          style={{
-            background: "linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)",
-            border: "1px solid #3b82f6",
-            borderRadius: 12,
-            padding: "18px 22px",
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 14,
-            boxShadow: "0 4px 16px rgba(59, 130, 246, 0.2)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
-            {/* Animated spinner */}
-            <span
-              style={{
-                display: "inline-block",
-                width: 32,
-                height: 32,
-                border: "3px solid rgba(255,255,255,0.3)",
-                borderTopColor: "#fff",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-                flexShrink: 0,
-              }}
-            />
-            <div>
-              <div style={{ fontWeight: 700, color: "#fff", fontSize: 15, marginBottom: 3 }}>
-                🤖 AI Server is Starting Up — Please Wait
-              </div>
-              <div style={{ color: "#bfdbfe", fontSize: 13, lineHeight: 1.5 }}>
-                The face recognition engine is warming up. This usually takes <strong style={{ color: "#fff" }}>15–30 seconds</strong>.
-                Checking again in <strong style={{ color: "#fbbf24" }}>{warmingUpCountdown}s</strong>…
-                Do not refresh the page.
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              style={{
-                background: "rgba(255,255,255,0.15)",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.35)",
-                borderRadius: 8,
-                padding: "10px 18px",
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: checkingHealth ? "not-allowed" : "pointer",
-                backdropFilter: "blur(4px)",
-              }}
-              disabled={checkingHealth}
-              onClick={() => checkFaceAiHealth(true)}
-            >
-              {checkingHealth ? "⏳ Checking…" : "🔄 Check Now"}
-            </button>
-            <button
-              type="button"
-              style={{
-                background: "#d97706",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 16px",
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-              onClick={() => navigate("/attendance")}
-            >
-              📋 Manual Attendance
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Face AI Circuit Breaker & Warm-up Banners */}
+      <FaceAiHealthBanners
+        faceAiStatus={faceAiStatus}
+        faceAiWarmingUp={faceAiWarmingUp}
+        warmingUpCountdown={warmingUpCountdown}
+        checkingHealth={checkingHealth}
+        onCheckHealth={checkFaceAiHealth}
+        onSwitchToManual={() => navigate("/attendance")}
+      />
 
-      {/* Circuit Breaker Fail-Open Alert Banner — shown when NOT in warming-up state */}
-      {!faceAiWarmingUp && faceAiStatus?.fallbackMode === "MANUAL_ATTENDANCE" && (
-        <div
-          style={{
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            borderRadius: 12,
-            padding: "16px 20px",
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 14,
-            boxShadow: "0 2px 8px rgba(245, 158, 11, 0.08)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 260, flex: 1 }}>
-            <span style={{ fontSize: 28, lineHeight: 1 }}>⚡</span>
-            <div>
-              <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15 }}>
-                Face AI Biometric Service Unavailable (Circuit Breaker: OPEN)
-              </div>
-              <div style={{ color: "#b45309", fontSize: 13, marginTop: 3 }}>
-                The biometric model is offline or has encountered high error rates. Operations continue seamlessly:
-                the system has failed open to manual attendance mode.
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              style={{
-                background: "#d97706",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 18px",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(217, 119, 6, 0.3)",
-              }}
-              onClick={() => navigate("/attendance")}
-            >
-              📋 Switch to Manual Attendance &rarr;
-            </button>
-            <button
-              type="button"
-              style={{
-                background: "#ffffff",
-                color: "#78350f",
-                border: "1px solid #fcd34d",
-                borderRadius: 8,
-                padding: "10px 14px",
-                fontWeight: 500,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-              disabled={checkingHealth}
-              onClick={() => checkFaceAiHealth(true)}
-            >
-              {checkingHealth ? "⏳ Restarting…" : "🔄 Restart & Retry"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Farm, Shed, Shift, Camera & GPS Status Controls */}
+      <FaceAttendanceControls
+        farms={farms}
+        selectedFarmId={selectedFarmId}
+        onSelectFarmId={setSelectedFarmId}
+        sheds={sheds}
+        selectedShedId={selectedShedId}
+        onSelectShedId={setSelectedShedId}
+        selectedShift={selectedShift}
+        onSelectShift={setSelectedShift}
+        facingMode={facingMode}
+        onChangeFacingMode={(mode) => {
+          setFacingMode(mode);
+          if (cameraActive) {
+            startCamera(mode);
+          }
+        }}
+        locationStatus={locationStatus}
+        hasValidLocation={hasValidLocation}
+        isGpsLoading={isGpsLoading}
+        onRequestGpsLocation={requestGpsLocation}
+      />
 
-      {/* Controls Header */}
-      <div style={styles.controls} className="face-controls">
-        {/* Farm Select */}
-        <select
-          style={styles.select}
-          value={selectedFarmId}
-          onChange={(e) => setSelectedFarmId(e.target.value)}
-        >
-          <option value="">Select Farm</option>
-          {farms.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name} ({f.code})
-            </option>
-          ))}
-        </select>
+      {/* Guidance Banners when Location is Blocked or Unavailable */}
+      <GpsGuidanceBanners
+        deviceLocationOff={deviceLocationOff}
+        locationPermissionDenied={locationPermissionDenied}
+        gpsTimedOut={gpsTimedOut}
+        hasValidLocation={hasValidLocation}
+        isIOS={isIOS}
+        isGpsLoading={isGpsLoading}
+        onRequestGpsLocation={requestGpsLocation}
+      />
 
-        {/* Shed Select */}
-        <select
-          style={styles.select}
-          value={selectedShedId}
-          disabled={!selectedFarmId}
-          onChange={(e) => setSelectedShedId(e.target.value)}
-        >
-          <option value="">🏢 General / Unassigned</option>
-          {acRoomShed ? (
-            <option value={acRoomShed.id}>❄️ AC Room</option>
-          ) : (
-            <option value="AC_ROOM">❄️ AC Room</option>
-          )}
-          {regularSheds.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.number.toLowerCase().startsWith("shed")
-                ? s.number.replace("-", " ")
-                : `Shed ${s.number}`}
-            </option>
-          ))}
-        </select>
+      {/* Camera Feed, Bounding Box Viewfinder & Capture Controls */}
+      <FaceViewfinder
+        cameraActive={cameraActive}
+        facingMode={facingMode}
+        cameraError={cameraError}
+        videoRef={videoRef}
+        fileInputRef={fileInputRef}
+        imagePreviewUrl={imagePreviewUrl}
+        result={result}
+        selections={selections}
+        processing={processing}
+        submitting={submitting}
+        selectedFarmId={selectedFarmId}
+        hasValidLocation={hasValidLocation}
+        shiftAllowed={shiftCheck.allowed}
+        confirmedCount={confirmedCount}
+        onStartCamera={startCamera}
+        onStopCamera={stopCamera}
+        onToggleCamera={toggleCamera}
+        onCaptureFrame={captureFrameAndProcess}
+        onFileSelect={handleFileSelect}
+        onSubmitAttendance={handleSubmitAttendance}
+      />
 
-        {/* Shift Select */}
-        <select
-          style={styles.select}
-          value={selectedShift}
-          onChange={(e) => setSelectedShift(e.target.value as Shift)}
-        >
-          {SHIFTS.map((sh) => (
-            <option key={sh} value={sh}>
-              {shiftLabel(sh)}
-            </option>
-          ))}
-        </select>
+      {/* Processing Statistics & Feedback Alerts */}
+      <FaceAttendanceFeedback
+        result={result}
+        error={error}
+        submitResult={submitResult}
+        onNavigateToManual={() => navigate("/attendance")}
+      />
 
-        {/* Camera Select */}
-        <select
-          style={styles.select}
-          value={facingMode}
-          onChange={(e) => {
-            const newFacing = e.target.value as "user" | "environment";
-            setFacingMode(newFacing);
-            if (cameraActive) {
-              startCamera(newFacing);
-            }
-          }}
-        >
-          <option value="user">📷 Front Camera (Portrait)</option>
-          <option value="environment">📸 Back Camera (16:9 Widescreen)</option>
-        </select>
-      </div>
-
-      {/* GPS & Shift Status Info Banner */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <div
-          style={{
-            ...styles.card,
-            flex: 1,
-            padding: "10px 16px",
-            marginBottom: 0,
-            fontSize: 13,
-            background: hasValidLocation ? "#f0fdf4" : "#fef2f2",
-            border: `1px solid ${hasValidLocation ? "#bbf7d0" : "#fecaca"}`,
-            color: hasValidLocation ? "#166534" : "#991b1b",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span><strong>{locationStatus}</strong></span>
-          <button
-            type="button"
-            disabled={isGpsLoading}
-            style={{
-              padding: "4px 10px",
-              fontSize: 12,
-              borderRadius: 6,
-              border: "1px solid #d1d5db",
-              background: isGpsLoading ? "#f3f4f6" : "#fff",
-              cursor: isGpsLoading ? "not-allowed" : "pointer",
-            }}
-            onClick={requestGpsLocation}
-          >
-            {isGpsLoading ? "⏳ Detecting…" : "🔄 Refresh GPS"}
-          </button>
-        </div>
-        {!shiftCheck.allowed && (
-          <div style={{ ...styles.card, flex: 2, padding: 12, marginBottom: 0, ...styles.warning }}>
-            ⚠️ <strong>Shift Timing Warning:</strong> {shiftCheck.message}
-          </div>
-        )}
-      </div>
-
-      {/* Phone Location / GPS Turned Off Guidance Banner */}
-      {deviceLocationOff && (
-        <div
-          style={{
-            ...styles.card,
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            padding: "14px 18px",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 14,
-          }}
-        >
-          <span style={{ fontSize: 26, lineHeight: 1 }}>📱</span>
-          <div style={{ flex: 1 }}>
-            <strong style={{ color: "#92400e", fontSize: 14, display: "block", marginBottom: 4 }}>
-              ⛔ Phone Location (GPS) is Turned Off — Attendance Blocked
-            </strong>
-            <p style={{ margin: 0, fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>
-              Browser permission is allowed, but your phone&apos;s master <strong>Location / GPS switch</strong> is turned OFF in your phone&apos;s settings. Attendance cannot be recorded without GPS.
-              <br />
-              <strong>To fix:</strong> Swipe down from the top of your phone screen, turn <strong>ON Location</strong>, then tap <strong>Retry GPS</strong> below.
-            </p>
-            <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                style={{
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: 6,
-                  border: "none",
-                  background: "#d97706",
-                  color: "#fff",
-                  cursor: isGpsLoading ? "not-allowed" : "pointer",
-                }}
-                disabled={isGpsLoading}
-                onClick={requestGpsLocation}
-              >
-                {isGpsLoading ? "📡 Detecting…" : "🔄 Turn ON & Retry GPS"}
-              </button>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c" }}>
-                ⛔ Attendance is strictly BLOCKED until GPS location is acquired.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Viewfinder Card */}
-      <div style={styles.card}>
-        {cameraError && <div style={styles.error}>⚠️ {cameraError}</div>}
-
-        {cameraActive && (
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                ...styles.imageContainer,
-                width: "100%",
-                maxWidth: facingMode === "environment" ? 920 : 420,
-              }}
-            >
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  width: "100%",
-                  maxWidth: facingMode === "environment" ? 920 : 420,
-                  aspectRatio: facingMode === "environment" ? "16 / 9" : "3 / 4",
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  background: "#000",
-                  display: "block",
-                  margin: "0 auto",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
-                  // Mirror only the front (selfie) camera — back camera shows natural orientation
-                  transform: facingMode === "user" ? "scaleX(-1)" : "none",
-                  WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
-                }}
-              />
-            </div>
-            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
-              {facingMode === "environment"
-                ? "📸 Back Camera (16:9 Widescreen) — Position workers across the frame"
-                : "📷 Front Camera (Portrait) — Position face clearly inside the frame"}
-              {" and click "}
-              <strong>Capture & Recognize</strong>.
-            </p>
-          </div>
-        )}
-
-        {!cameraActive && imagePreviewUrl && (
-          <div style={{ textAlign: "center" }}>
-            <div style={styles.imageContainer}>
-              <img src={imagePreviewUrl} alt="Captured frame" style={styles.previewImage} />
-
-              {/* Bounding box overlay */}
-              {result && (
-                <svg
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    pointerEvents: "none",
-                  }}
-                  viewBox={`0 0 ${result.imageWidth} ${result.imageHeight}`}
-                  preserveAspectRatio="none"
-                >
-                  {result.faces.map((face) => {
-                    const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = face.bbox;
-                    const color = statusColor(face.status);
-                    const selectedId = selections.find((s) => s.faceIndex === face.faceIndex)?.personId;
-                    const matched =
-                      face.candidates.find((c) => c.id === selectedId) ||
-                      (face.candidates[0] && face.candidates[0].similarity >= 0.4 ? face.candidates[0] : null);
-
-                    const scale = Math.max(0.65, result.imageWidth / 900);
-                    const strokeWidth = Math.max(3, result.imageWidth * 0.0035);
-                    const badgeHeight = 48 * scale;
-                    const avatarSize = 36 * scale;
-                    const fontSizeName = 15 * scale;
-                    const fontSizeSub = 11 * scale;
-                    const padding = 6 * scale;
-                    const badgeWidth = Math.max(x2 - x1, 220 * scale);
-                    const badgeX = Math.max(4, Math.min(x1, result.imageWidth - badgeWidth - 4));
-                    // Place above bounding box if fits, else below bbox, clamped inside image
-                    const badgeY =
-                      y1 - badgeHeight - 8 < 0
-                        ? Math.min(result.imageHeight - badgeHeight - 4, y2 + 8)
-                        : y1 - badgeHeight - 8;
-
-                    return (
-                      <g key={face.faceIndex}>
-                        {/* Face Bounding Box */}
-                        <rect
-                          x={x1}
-                          y={y1}
-                          width={x2 - x1}
-                          height={y2 - y1}
-                          fill="none"
-                          stroke={color}
-                          strokeWidth={strokeWidth}
-                          rx={8 * scale}
-                        />
-
-                        {/* Floating Identity Badge */}
-                        <g>
-                          <defs>
-                            <clipPath id={`avatar-clip-${face.faceIndex}`}>
-                              <circle
-                                cx={badgeX + padding + avatarSize / 2}
-                                cy={badgeY + badgeHeight / 2}
-                                r={avatarSize / 2}
-                              />
-                            </clipPath>
-                          </defs>
-
-                          <rect
-                            x={badgeX}
-                            y={badgeY}
-                            width={badgeWidth}
-                            height={badgeHeight}
-                            rx={8 * scale}
-                            fill="rgba(15, 23, 42, 0.92)"
-                            stroke={color}
-                            strokeWidth={Math.max(1.5, strokeWidth * 0.6)}
-                          />
-
-                          {matched ? (
-                            <>
-                              {/* Avatar in badge */}
-                              {matched.photoUrl ? (
-                                <image
-                                  href={matched.photoUrl}
-                                  x={badgeX + padding}
-                                  y={badgeY + (badgeHeight - avatarSize) / 2}
-                                  width={avatarSize}
-                                  height={avatarSize}
-                                  clipPath={`url(#avatar-clip-${face.faceIndex})`}
-                                  preserveAspectRatio="xMidYMid slice"
-                                />
-                              ) : (
-                                <circle
-                                  cx={badgeX + padding + avatarSize / 2}
-                                  cy={badgeY + badgeHeight / 2}
-                                  r={avatarSize / 2}
-                                  fill="#6366f1"
-                                />
-                              )}
-                              {!matched.photoUrl && (
-                                <text
-                                  x={badgeX + padding + avatarSize / 2}
-                                  y={badgeY + badgeHeight / 2 + 5 * scale}
-                                  textAnchor="middle"
-                                  fill="#ffffff"
-                                  fontSize={fontSizeName * 0.9}
-                                  fontWeight="bold"
-                                >
-                                  {matched.name.charAt(0).toUpperCase()}
-                                </text>
-                              )}
-
-                              {/* Recognized Name */}
-                              <text
-                                x={badgeX + padding + avatarSize + 8 * scale}
-                                y={badgeY + padding + fontSizeName}
-                                fill="#ffffff"
-                                fontSize={fontSizeName}
-                                fontWeight="bold"
-                              >
-                                {matched.name}
-                              </text>
-
-                              {/* Match percentage & role */}
-                              <text
-                                x={badgeX + padding + avatarSize + 8 * scale}
-                                y={badgeY + padding + fontSizeName + fontSizeSub + 4 * scale}
-                                fill={matched.similarity >= 0.6 ? "#34d399" : "#fbbf24"}
-                                fontSize={fontSizeSub}
-                                fontWeight="600"
-                              >
-                                {Math.round(matched.similarity * 100)}% Match • {matched.personType}
-                              </text>
-                            </>
-                          ) : (
-                            <text
-                              x={badgeX + 12 * scale}
-                              y={badgeY + badgeHeight / 2 + 5 * scale}
-                              fill={color}
-                              fontSize={fontSizeName}
-                              fontWeight="bold"
-                            >
-                              Face #{face.faceIndex} — {face.status === "LIVE" ? "Unrecognized" : face.status}
-                            </text>
-                          )}
-                        </g>
-                      </g>
-                    );
-                  })}
-                </svg>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!cameraActive && !imagePreviewUrl && (
-          <div
-            style={{
-              padding: "48px 24px",
-              textAlign: "center",
-              background: "var(--surface-secondary, #f9fafb)",
-              borderRadius: 12,
-              border: "2px dashed #d1d5db",
-            }}
-          >
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🎥</div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>
-              Live Camera Ready
-            </h3>
-            <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 16 }}>
-              Select a farm and start the live camera or upload an image to begin face recognition.
-            </p>
-          </div>
-        )}
-
-        {/* Camera & Capture Action Buttons — Directly under the camera feed */}
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            marginTop: 20,
-            paddingTop: 16,
-            borderTop: "1px solid var(--border, #f3f4f6)",
-          }}
-          className="face-capture-actions"
-        >
-          {!cameraActive ? (
-            <button
-              style={{ ...styles.btn, ...styles.btnPrimary, padding: "12px 24px", fontSize: 15 }}
-              onClick={() => startCamera()}
-            >
-              {imagePreviewUrl ? "📸 Retake / Open Live Camera" : "🎥 Start Live Camera"}
-            </button>
-          ) : (
-            <>
-              <button
-                style={{
-                  ...styles.btn,
-                  ...styles.btnPrimary,
-                  background: "#4f46e5",
-                  fontSize: 16,
-                  padding: "12px 28px",
-                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.35)",
-                  ...(processing || !selectedFarmId || !hasValidLocation ? styles.btnDisabled : {}),
-                }}
-                disabled={processing || !selectedFarmId || !hasValidLocation}
-                onClick={captureFrameAndProcess}
-                title={!hasValidLocation ? "GPS location is required before taking attendance" : undefined}
-              >
-                {processing && <span style={styles.spinner} />}
-                {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
-              </button>
-              <button
-                style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
-                onClick={toggleCamera}
-                title="Switch between front and back camera"
-              >
-                🔄 {facingMode === "user" ? "Use Back Cam (16:9)" : "Use Front Cam (Portrait)"}
-              </button>
-              <button
-                style={{ ...styles.btn, background: "#fee2e2", color: "#991b1b" }}
-                onClick={stopCamera}
-              >
-                ⏹ Stop Camera
-              </button>
-            </>
-          )}
-
-          <button
-            style={{
-              ...styles.btn,
-              background: "#f3f4f6",
-              color: "#9ca3af",
-              border: "1px dashed #d1d5db",
-              ...styles.btnDisabled,
-              cursor: "not-allowed",
-            }}
-            disabled={true}
-            title="Image upload is disabled for attendance. Live camera capture is required to verify real-time presence."
-          >
-            📁 Upload Image (Disabled for Attendance)
-          </button>
-
-          {result && liveFaces.length > 0 && (
-            <button
-              style={{
-                ...styles.btn,
-                ...styles.btnSuccess,
-                fontSize: 16,
-                padding: "12px 28px",
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.35)",
-                ...(submitting || confirmedCount === 0 || !shiftCheck.allowed || !hasValidLocation
-                  ? styles.btnDisabled
-                  : {}),
-              }}
-              disabled={submitting || confirmedCount === 0 || !shiftCheck.allowed || !hasValidLocation}
-              onClick={handleSubmitAttendance}
-            >
-              {submitting && <span style={styles.spinner} />}
-              ✅ Mark Attendance ({confirmedCount})
-            </button>
-          )}
-
-          {!hasValidLocation && (
-            <div
-              style={{
-                width: "100%",
-                marginTop: 10,
-                padding: "10px 14px",
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: 8,
-                color: "#991b1b",
-                fontSize: 13,
-                fontWeight: 600,
-                textAlign: "center",
-              }}
-            >
-              ⛔ Attendance Blocked: Valid GPS Location access is strictly required. Please turn ON your device GPS / grant location permission and tap Refresh GPS.
-            </div>
-          )}
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          style={{ display: "none" }}
-          onChange={handleFileSelect}
-        />
-      </div>
-
-      {/* Processing stats */}
-      {result && (
-        <div
-          style={{
-            display: "flex",
-            gap: 16,
-            flexWrap: "wrap",
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ ...styles.card, flex: 1, minWidth: 140, textAlign: "center", marginBottom: 0 }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#6366f1" }}>
-              {result.faceCount}
-            </div>
-            <div style={{ fontSize: 13, color: "#6b7280" }}>Faces Detected</div>
-          </div>
-          <div style={{ ...styles.card, flex: 1, minWidth: 140, textAlign: "center", marginBottom: 0 }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#10b981" }}>
-              {liveFaces.length}
-            </div>
-            <div style={{ fontSize: 13, color: "#6b7280" }}>Live Faces</div>
-          </div>
-          <div style={{ ...styles.card, flex: 1, minWidth: 140, textAlign: "center", marginBottom: 0 }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#f59e0b" }}>
-              {result.processTimeMs.toFixed(0)}ms
-            </div>
-            <div style={{ fontSize: 13, color: "#6b7280" }}>Process Time</div>
-          </div>
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div
-          style={{
-            ...styles.error,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <span>⚠️ {error}</span>
-          {(error.toLowerCase().includes("manual attendance") ||
-            error.toLowerCase().includes("circuit breaker") ||
-            error.toLowerCase().includes("unavailable") ||
-            error.toLowerCase().includes("offline")) && (
-              <button
-                type="button"
-                style={{
-                  background: "#b91c1c",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  boxShadow: "0 2px 4px rgba(185, 28, 28, 0.25)",
-                }}
-                onClick={() => navigate("/attendance")}
-              >
-                📋 Open Manual Attendance &rarr;
-              </button>
-            )}
-        </div>
-      )}
-
-      {/* Submit result */}
-      {submitResult && (
-        <div style={styles.summary}>
-          <strong>✅ Attendance Submitted!</strong>
-          <p style={{ margin: "4px 0 0" }}>
-            {submitResult.markedCount} marked
-            {submitResult.duplicateCount > 0 &&
-              ` • ${submitResult.duplicateCount} already recorded`}
-          </p>
-        </div>
-      )}
-
-      {/* No faces detected notice */}
-      {result && result.faceCount === 0 && (
-        <div
-          style={{
-            ...styles.card,
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            padding: "20px 24px",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-          <div style={{ fontWeight: 700, color: "#92400e", fontSize: 16 }}>
-            No Faces Detected in Image
-          </div>
-          <div style={{ color: "#b45309", fontSize: 14, marginTop: 6, maxWidth: 600, margin: "6px auto 0" }}>
-            We could not detect any faces in this photo. Please upload or capture a clearer, front-facing photo with adequate lighting and visible faces.
-          </div>
-        </div>
-      )}
-
-      {/* Faces detected but none usable (low quality / blur / extreme angle / spoof) */}
-      {result && result.faceCount > 0 && liveFaces.length === 0 && (
-        <div
-          style={{
-            ...styles.card,
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            padding: "20px 24px",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
-          <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 16 }}>
-            Faces Detected but Cannot Be Verified
-          </div>
-          <div style={{ color: "#b91c1c", fontSize: 14, marginTop: 6, maxWidth: 600, margin: "6px auto 0" }}>
-            The detected face(s) did not meet the sharpness or quality requirements. Please take or upload a cleaner, well-lit image with personnel looking directly at the camera.
-          </div>
-        </div>
-      )}
-
-      {/* Face Cards */}
+      {/* Detected Faces Grid & Candidate Matching Cards */}
       {result && result.faces.length > 0 && (
         <div style={styles.facesGrid}>
           {result.faces.map((face) => (
             <FaceCard
               key={face.faceIndex}
               face={face}
-              selection={selections.find(
-                (s) => s.faceIndex === face.faceIndex,
-              )}
+              selection={selections.find((s) => s.faceIndex === face.faceIndex)}
               onSelect={handleSelectionChange}
             />
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Person Avatar with Fallback                                        */
-/* ------------------------------------------------------------------ */
-
-function PersonAvatar({
-  src,
-  name,
-  size = 40,
-}: {
-  src?: string | null;
-  name: string;
-  size?: number;
-}): React.ReactElement {
-  const [imgError, setImgError] = useState(false);
-  const initials = name
-    ? name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-    : "?";
-
-  if (src && !imgError) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        onError={() => setImgError(true)}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          objectFit: "cover",
-          border: "2px solid #e0e7ff",
-          flexShrink: 0,
-          display: "block",
-        }}
-      />
-    );
-  }
-
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-        color: "#ffffff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 700,
-        fontSize: Math.max(11, Math.round(size * 0.38)),
-        border: "2px solid #e0e7ff",
-        flexShrink: 0,
-        textTransform: "uppercase",
-      }}
-    >
-      {initials}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Face Card                                                          */
-/* ------------------------------------------------------------------ */
-
-function FaceCard({
-  face,
-  selection,
-  onSelect,
-}: {
-  face: ProcessedFace;
-  selection?: FaceSelection | undefined;
-  onSelect: (
-    faceIndex: number,
-    candidateId: string,
-    personType: "EMPLOYEE" | "WORKER",
-  ) => void;
-}): React.ReactElement {
-  const isLive = face.status === "LIVE";
-  const activeCandidate =
-    face.candidates.find((c) => c.id === selection?.personId) ||
-    (face.candidates[0] && face.candidates[0].similarity >= 0.4 ? face.candidates[0] : null);
-
-  return (
-    <div style={styles.faceCard}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 12,
-        }}
-      >
-        <span style={{ fontWeight: 700, fontSize: 16 }}>
-          Face #{face.faceIndex}
-        </span>
-        <span style={styles.badge(statusColor(face.status))}>
-          {face.status}
-        </span>
-      </div>
-
-      {/* Prominent Recognized Person Hero Identity Badge */}
-      {isLive && activeCandidate && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            padding: 12,
-            borderRadius: 10,
-            background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
-            border: "1px solid #a7f3d0",
-            marginBottom: 14,
-            boxShadow: "0 1px 3px rgba(16, 185, 129, 0.1)",
-          }}
-        >
-          <PersonAvatar src={activeCandidate.photoUrl} name={activeCandidate.name} size={54} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "#065f46" }}>
-                {activeCandidate.name}
-              </span>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "2px 8px",
-                  borderRadius: 99,
-                  background: activeCandidate.similarity >= 0.6 ? "#10b981" : "#f59e0b",
-                  color: "#fff",
-                }}
-              >
-                {Math.round(activeCandidate.similarity * 100)}% Match
-              </span>
-            </div>
-            <div style={{ fontSize: 13, color: "#047857", marginTop: 2 }}>
-              {activeCandidate.personCode} • {activeCandidate.personType}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Unrecognized Face Banner */}
-      {isLive && !activeCandidate && face.candidates.length === 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef3c7",
-            border: "1px solid #fde68a",
-            marginBottom: 14,
-          }}
-        >
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: "#f59e0b",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            ?
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e" }}>
-              Unrecognized Face
-            </div>
-            <div style={{ fontSize: 12, color: "#b45309" }}>
-              No matching person found in enrolled facial database
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Metrics */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          marginBottom: 12,
-          fontSize: 13,
-          color: "#6b7280",
-        }}
-      >
-        {face.qualityScore != null && (
-          <span>
-            Quality: <strong>{(face.qualityScore * 100).toFixed(0)}%</strong>
-          </span>
-        )}
-        {face.livenessScore != null && (
-          <span>
-            Liveness: <strong>{(face.livenessScore * 100).toFixed(0)}%</strong>
-          </span>
-        )}
-      </div>
-
-      {/* Candidates */}
-      {isLive && face.candidates.length > 0 && (
-        <div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#374151",
-              marginBottom: 8,
-            }}
-          >
-            Candidate Matches
-          </div>
-          {face.candidates.map((c) => {
-            const pct = Math.round(c.similarity * 100);
-            const isSelected = selection?.personId === c.id;
-
-            return (
-              <div
-                key={c.id}
-                style={{
-                  ...styles.candidateRow,
-                  cursor: "pointer",
-                  background: isSelected
-                    ? "rgba(99,102,241,0.08)"
-                    : "transparent",
-                  borderRadius: 8,
-                  padding: "8px 10px",
-                }}
-                onClick={() =>
-                  onSelect(face.faceIndex, c.id, c.personType)
-                }
-              >
-                {/* Radio */}
-                <div
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    border: `2px solid ${isSelected ? "#6366f1" : "#d1d5db"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {isSelected && (
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: "#6366f1",
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* Avatar with fallback */}
-                <PersonAvatar src={c.photoUrl} name={c.name} size={38} />
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      fontSize: 14,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {c.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                    {c.personCode} • {c.personType}
-                  </div>
-                </div>
-
-                {/* Similarity */}
-                <div style={{ textAlign: "right", minWidth: 50 }}>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 14,
-                      color: pct >= 60 ? "#10b981" : pct >= 40 ? "#f59e0b" : "#ef4444",
-                    }}
-                  >
-                    {pct}%
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {!isLive && (
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 8,
-            background:
-              face.status === "SPOOF" ? "#fef2f2" : "#fefce8",
-            fontSize: 13,
-            color: face.status === "SPOOF" ? "#991b1b" : "#854d0e",
-          }}
-        >
-          {face.status === "SPOOF"
-            ? "🚫 Spoof detected — this face will not be matched"
-            : "⚠️ Low quality image — please try a clearer photo"}
         </div>
       )}
     </div>

@@ -191,9 +191,12 @@ export async function bulkMarkFaceAttendance(
           confidenceScore: record.confidenceScore ?? null,
           snapshotUrl: record.snapshotUrl ?? null,
           notes: record.notes ?? null,
+          locationSource: record.locationSource || "GPS_EXACT",
+          accuracy: record.accuracy ?? null,
+          ipAddress: record.ipAddress ?? null,
           recordedById: scope.userId,
-          approvedById: scope.userId,
-          approvedAt: new Date(),
+          approvedById: (record.locationSource === "IP_FALLBACK" || record.locationSource === "FARM_DEFAULT") ? null : scope.userId,
+          approvedAt: (record.locationSource === "IP_FALLBACK" || record.locationSource === "FARM_DEFAULT") ? null : new Date(),
         },
       });
 

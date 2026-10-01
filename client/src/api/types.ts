@@ -195,6 +195,9 @@ export interface Attendance {
   status: AttendanceStatus;
   latitude: number | null;
   longitude: number | null;
+  locationSource?: string;
+  accuracy?: number | null;
+  ipAddress?: string | null;
   notes: string | null;
   recordedById: string;
   recordedBy?: {

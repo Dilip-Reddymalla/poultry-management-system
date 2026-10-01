@@ -49,13 +49,26 @@ export function AttendancePage({
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 
-  const setParam = useCallback((key: string, value: string) => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) { next.set(key, value); } else { next.delete(key); }
-      return next;
-    }, { replace: true });
-  }, [setParams]);
+  const updateFilters = useCallback(
+    (updates: Record<string, string | number | undefined>) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [key, value] of Object.entries(updates)) {
+            if (value !== undefined && value !== null && value !== "") {
+              next.set(key, String(value));
+            } else {
+              next.delete(key);
+            }
+          }
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const employeeId = propEmployeeId ?? params.get("employeeId") ?? "";
   const workerId = propWorkerId ?? params.get("workerId") ?? "";
@@ -68,13 +81,28 @@ export function AttendancePage({
 
   // URL-synced filter state
   const date = params.get("date") || todayInputValue();
-  const setDate = useCallback((v: string) => setParam("date", v === todayInputValue() ? "" : v), [setParam]);
   const farmId = params.get("farmId") || "";
   const shift = (params.get("shift") || "") as Shift | "";
   const status = (params.get("status") || "") as AttendanceStatus | "";
   const search = params.get("q") || "";
   const page = Number(params.get("page")) || 1;
-  const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+  const setPage = useCallback(
+    (v: number) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (v > 1) {
+            next.set("page", String(v));
+          } else {
+            next.delete("page");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   // Transient UI state
   const [creating, setCreating] = useState(false);
@@ -219,8 +247,7 @@ export function AttendancePage({
                 aria-label={t("attendance.date")}
                 value={date}
                 onChange={(event) => {
-                  setDate(event.target.value);
-                  setPage(1);
+                  updateFilters({ date: event.target.value === todayInputValue() ? "" : event.target.value });
                 }}
               />
             </label>
@@ -233,8 +260,7 @@ export function AttendancePage({
                   className="input select"
                   value={farmId}
                   onChange={(event) => {
-                    setParam("farmId", event.target.value);
-                    setPage(1);
+                    updateFilters({ farmId: event.target.value });
                   }}
                 >
                   <option value="">{t("common.allFarms")}</option>
@@ -253,8 +279,7 @@ export function AttendancePage({
                 className="input select"
                 value={shift}
                 onChange={(event) => {
-                  setParam("shift", event.target.value);
-                  setPage(1);
+                  updateFilters({ shift: event.target.value });
                 }}
               >
                 <option value="">{t("attendance.allShifts")}</option>
@@ -272,8 +297,7 @@ export function AttendancePage({
                 className="input select"
                 value={status}
                 onChange={(event) => {
-                  setParam("status", event.target.value);
-                  setPage(1);
+                  updateFilters({ status: event.target.value });
                 }}
               >
                 <option value="">{t("common.allStatuses")}</option>
@@ -292,8 +316,7 @@ export function AttendancePage({
                 placeholder={`${t("common.search")}...`}
                 value={search}
                 onChange={(event) => {
-                  setParam("q", event.target.value);
-                  setPage(1);
+                  updateFilters({ q: event.target.value });
                 }}
               />
             </label>

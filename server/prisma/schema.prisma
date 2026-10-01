@@ -33,6 +33,9 @@ model Farm {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  latitude  Float?
+  longitude Float?
+
   company     Company      @relation(fields: [companyId], references: [id])
   sheds       Shed[]
   employees   Employee[]
@@ -276,6 +279,11 @@ model Attendance {
   // attendance creation when the browser denies location access.
   latitude  Float
   longitude Float
+
+  // Location audit verification fields
+  locationSource String  @default("GPS_EXACT") // "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT"
+  accuracy       Float?
+  ipAddress      String?
 
   notes String?
 

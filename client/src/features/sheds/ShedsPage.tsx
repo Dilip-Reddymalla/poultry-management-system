@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -48,17 +48,17 @@ export function ShedsPage(): React.ReactElement {
     .filter((s) => !s.number.toLowerCase().includes("ac room"))
     .reduce((total, shed) => total + (shed.capacity ?? 0), 0);
 
-  function setParam(key: string, value: string): void {
-    const next = new URLSearchParams(params);
-
-    if (value) {
-      next.set(key, value);
-    } else {
-      next.delete(key);
-    }
-
-    setParams(next, { replace: true });
-  }
+  const setParam = useCallback((key: string, value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   return (
     <div className="stack">

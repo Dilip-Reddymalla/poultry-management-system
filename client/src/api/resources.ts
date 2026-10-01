@@ -161,14 +161,17 @@ export interface AttendanceListResponse {
 
 export interface AttendanceInput {
   date: string;
-  employeeId?: string;
-  workerId?: string;
-  shedId?: string;
+  employeeId?: string | undefined;
+  workerId?: string | undefined;
+  shedId?: string | undefined;
   shift: Shift;
   status: AttendanceStatus;
   latitude: number;
   longitude: number;
-  notes?: string;
+  locationSource?: "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT" | undefined;
+  accuracy?: number | null | undefined;
+  ipAddress?: string | null | undefined;
+  notes?: string | undefined;
 }
 
 export interface AttendanceCorrection {
@@ -293,9 +296,30 @@ export function deleteEmployee(id: string): Promise<{ success: boolean; message:
   return apiClient.delete(`/employees/${id}`);
 }
 
+export interface CurrentLocationResponse {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  city: string;
+  region: string;
+  country: string;
+  isp?: string;
+  ip: string;
+  isLoopback: boolean;
+}
+
+export function fetchCurrentLocation(): Promise<CurrentLocationResponse> {
+  return apiClient.get("/attendance/current-location").then((res: any) => res.location);
+}
+
+export function bulkApproveAttendance(ids: string[]): Promise<{ approvedCount: number }> {
+  return apiClient.post("/attendance/bulk-approve", { ids });
+}
+
 // -- Farms --
 export function fetchFarms(query?: any, signal?: AbortSignal): Promise<Farm[]> {
-  return apiClient.get("/farms", { query, signal }).then((res: any) => res.farms);
+  const q = typeof query === "string" ? (query.trim() ? { status: query.trim() } : undefined) : query;
+  return apiClient.get("/farms", { query: q, signal }).then((res: any) => res.farms);
 }
 export function fetchFarm(id: string): Promise<Farm> {
   return apiClient.get(`/farms/${id}`).then((res: any) => res.farm);

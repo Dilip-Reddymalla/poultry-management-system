@@ -39,6 +39,9 @@ const attendanceSelect = {
   status: true,
   latitude: true,
   longitude: true,
+  locationSource: true,
+  accuracy: true,
+  ipAddress: true,
   notes: true,
   verificationMode: true,
   livenessScore: true,
@@ -133,6 +136,9 @@ function toSafeAttendance(record: AttendanceRecord): SafeAttendance {
     shedId: record.shedId ?? null,
     latitude: record.latitude,
     longitude: record.longitude,
+    locationSource: record.locationSource ?? "GPS_EXACT",
+    accuracy: record.accuracy ?? null,
+    ipAddress: record.ipAddress ?? null,
     notes: record.notes,
     farm: {
       id: record.farm.id,
@@ -340,28 +346,38 @@ export async function listAttendance(
     personFilter = { workerId: query.workerId };
   }
 
-  const where: Prisma.AttendanceWhereInput = {
-    // Attendance is always scoped to the caller's permitted farm/company.
-    ...farmScopedWhere(scope),
-    ...(query.farmId !== undefined && { farmId: query.farmId }),
-    ...(query.shedId !== undefined && { shedId: query.shedId }),
-    ...personFilter,
-    ...(query.status !== undefined && { status: query.status }),
-    ...(query.shift !== undefined && { shift: query.shift }),
-    ...(query.recordedById !== undefined && { recordedById: query.recordedById }),
-    ...(dateFilter !== undefined && { date: dateFilter }),
-  };
+  const andConditions: Prisma.AttendanceWhereInput[] = [];
+  const scoped = farmScopedWhere(scope);
+  if (scoped) {
+    andConditions.push(scoped);
+  }
+
+  if (query.farmId !== undefined) andConditions.push({ farmId: query.farmId });
+  if (query.shedId !== undefined) andConditions.push({ shedId: query.shedId });
+  if (query.status !== undefined) andConditions.push({ status: query.status });
+  if (query.shift !== undefined) andConditions.push({ shift: query.shift });
+  if (query.recordedById !== undefined) andConditions.push({ recordedById: query.recordedById });
+  if (dateFilter !== undefined) andConditions.push({ date: dateFilter });
+  if (query.locationSource !== undefined) andConditions.push({ locationSource: query.locationSource });
+  if (query.pendingLocationApproval) andConditions.push({ approvedAt: null, locationSource: "IP_FALLBACK" });
+  if (Object.keys(personFilter).length > 0) andConditions.push(personFilter);
 
   if (query.search) {
-    where.OR = [
-      { employee: { name: { contains: query.search, mode: "insensitive" } } },
-      { worker: { name: { contains: query.search, mode: "insensitive" } } },
-      { employee: { employeeId: { contains: query.search, mode: "insensitive" } } },
-      { worker: { workerId: { contains: query.search, mode: "insensitive" } } },
-      { employee: { phone: { contains: query.search } } },
-      { worker: { phone: { contains: query.search } } },
-    ];
+    andConditions.push({
+      OR: [
+        { employee: { name: { contains: query.search, mode: "insensitive" } } },
+        { worker: { name: { contains: query.search, mode: "insensitive" } } },
+        { employee: { employeeId: { contains: query.search, mode: "insensitive" } } },
+        { worker: { workerId: { contains: query.search, mode: "insensitive" } } },
+        { employee: { phone: { contains: query.search } } },
+        { worker: { phone: { contains: query.search } } },
+      ],
+    });
   }
+
+  const where: Prisma.AttendanceWhereInput = {
+    AND: andConditions,
+  };
 
   const [records, total] = await Promise.all([
     prisma.attendance.findMany({
@@ -397,6 +413,9 @@ export async function createAttendance(
   input: CreateAttendanceInput,
 ): Promise<SafeAttendance> {
   const { farmId, shedId, link } = await resolvePersonForWrite(scope, input);
+  const isFallback =
+    input.locationSource === "IP_FALLBACK" ||
+    input.locationSource === "FARM_DEFAULT";
 
   try {
     const record = await prisma.attendance.create({
@@ -409,11 +428,14 @@ export async function createAttendance(
         status: input.status,
         latitude: input.latitude,
         longitude: input.longitude,
+        locationSource: input.locationSource || "GPS_EXACT",
+        ...(input.accuracy !== undefined && { accuracy: input.accuracy }),
+        ...(input.ipAddress !== undefined && { ipAddress: input.ipAddress }),
         ...(input.notes !== undefined && { notes: input.notes }),
         // Audit: who entered it. Null for the System Admin, which has no user row.
         recordedById: scope.userId,
-        approvedById: scope.userId, // Initial attendance is automatically approved
-        approvedAt: new Date(),
+        approvedById: isFallback ? null : scope.userId,
+        approvedAt: isFallback ? null : new Date(),
       },
       select: attendanceSelect,
     });
@@ -424,8 +446,15 @@ export async function createAttendance(
       action: "CREATE",
       entity: "Attendance",
       entityId: record.id,
-      summary: `Marked ${record.status} attendance for ${safeRecord.person.name} (${safeRecord.person.code}) on ${safeRecord.date} [${safeRecord.shift}]`,
-      changes: { status: record.status, shift: record.shift, date: input.date, latitude: input.latitude, longitude: input.longitude },
+      summary: `Marked ${record.status} attendance for ${safeRecord.person.name} (${safeRecord.person.code}) on ${safeRecord.date} [${safeRecord.shift}] (${safeRecord.locationSource})`,
+      changes: {
+        status: record.status,
+        shift: record.shift,
+        date: input.date,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        locationSource: record.locationSource,
+      },
     });
     return safeRecord;
   } catch (error) {
@@ -516,6 +545,47 @@ export async function approveAttendance(
   return safeRecord;
 }
 
+export async function bulkApproveAttendance(
+  scope: AuthScope,
+  ids: string[],
+): Promise<{ approvedCount: number }> {
+  // Find all unapproved records that are within caller's scope
+  const unapproved = await prisma.attendance.findMany({
+    where: {
+      id: { in: ids },
+      ...farmScopedWhere(scope),
+      approvedAt: null,
+    },
+    select: { id: true },
+  });
+
+  const validIds = unapproved.map((r) => r.id);
+  if (validIds.length === 0) {
+    return { approvedCount: 0 };
+  }
+
+  const result = await prisma.attendance.updateMany({
+    where: { id: { in: validIds } },
+    data: {
+      approvedById: scope.userId,
+      approvedAt: new Date(),
+    },
+  });
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "Attendance",
+    summary: `Bulk approved location/attendance for ${result.count} record(s)`,
+    changes: {
+      approvedCount: result.count,
+      approvedAt: new Date(),
+    },
+  });
+
+  return { approvedCount: result.count };
+}
+
 export async function bulkCreateAttendance(
   scope: AuthScope,
   input: BulkCreateAttendanceInput,
@@ -526,6 +596,9 @@ export async function bulkCreateAttendance(
   for (const recordInput of input.records) {
     try {
       const { farmId, shedId, link } = await resolvePersonForWrite(scope, recordInput);
+      const isFallback =
+        recordInput.locationSource === "IP_FALLBACK" ||
+        recordInput.locationSource === "FARM_DEFAULT";
       
       const record = await prisma.attendance.create({
         data: {
@@ -537,10 +610,13 @@ export async function bulkCreateAttendance(
           status: recordInput.status,
           latitude: recordInput.latitude,
           longitude: recordInput.longitude,
+          locationSource: recordInput.locationSource || "GPS_EXACT",
+          ...(recordInput.accuracy !== undefined && { accuracy: recordInput.accuracy }),
+          ...(recordInput.ipAddress !== undefined && { ipAddress: recordInput.ipAddress }),
           ...(recordInput.notes !== undefined && { notes: recordInput.notes }),
           recordedById: scope.userId,
-          approvedById: scope.userId, // Initial attendance is automatically approved
-          approvedAt: new Date(),
+          approvedById: isFallback ? null : scope.userId,
+          approvedAt: isFallback ? null : new Date(),
         },
         select: attendanceSelect,
       });

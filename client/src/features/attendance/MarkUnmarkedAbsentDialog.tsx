@@ -45,7 +45,17 @@ export function MarkUnmarkedAbsentDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const { latitude, longitude, accuracy, error: locationError, loading: locationLoading, retry: retryGps } = useGeolocation();
+  const {
+    latitude,
+    longitude,
+    accuracy,
+    locationSource,
+    ipAddress,
+    ipFallbackActive,
+    error: locationError,
+    loading: locationLoading,
+    retry: retryGps,
+  } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
@@ -56,7 +66,7 @@ export function MarkUnmarkedAbsentDialog({
 
   const sheds = useResource<Shed[]>(
     `sheds:picker:${farmId}`,
-    () => fetchSheds(farmId ? { farmId, status: "AVAILABLE" } : { status: "AVAILABLE" }),
+    () => fetchSheds(farmId ? { farmId } : {}),
     { enabled: farmId !== "" }
   );
 
@@ -90,8 +100,8 @@ export function MarkUnmarkedAbsentDialog({
       setError(
         new ApiError(
           0,
-          "⛔ Attendance Blocked: Valid GPS location is required to mark attendance records. Please enable device GPS."
-        )
+          "⛔ Attendance Blocked: Location could not be acquired via GPS or IP Fallback. Please check connection and allow location access.",
+        ),
       );
       return;
     }
@@ -148,6 +158,9 @@ export function MarkUnmarkedAbsentDialog({
           latitude={latitude}
           longitude={longitude}
           accuracy={accuracy}
+          locationSource={locationSource}
+          ipAddress={ipAddress}
+          ipFallbackActive={ipFallbackActive}
           loading={locationLoading}
           error={locationError}
           onRetry={retryGps}

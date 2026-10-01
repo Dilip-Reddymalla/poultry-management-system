@@ -70,7 +70,17 @@ export function AttendanceEntryDialog({
   const [missingPerson, setMissingPerson] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const { latitude, longitude, accuracy, error: locationError, loading: locationLoading, retry: retryGps } = useGeolocation();
+  const {
+    latitude,
+    longitude,
+    accuracy,
+    locationSource,
+    ipAddress,
+    ipFallbackActive,
+    error: locationError,
+    loading: locationLoading,
+    retry: retryGps,
+  } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms());
   const farmOptions = farms.data ?? [];
@@ -79,7 +89,7 @@ export function AttendanceEntryDialog({
 
   const sheds = useResource<Shed[]>(
     `sheds:picker:${farmId}`,
-    () => fetchSheds({ farmId, status: "AVAILABLE" }),
+    () => fetchSheds({ farmId }),
     { enabled: farmId !== "" }
   );
 
@@ -145,7 +155,12 @@ export function AttendanceEntryDialog({
     }
 
     if (latitude === null || longitude === null || (latitude === 0 && longitude === 0)) {
-      setError(new ApiError(0, "⛔ Attendance Blocked: Valid GPS location is required to mark attendance. Please enable device GPS."));
+      setError(
+        new ApiError(
+          0,
+          "⛔ Attendance Blocked: Location could not be acquired via GPS or IP Fallback. Please check connection and allow location access.",
+        ),
+      );
       return;
     }
 
@@ -158,6 +173,9 @@ export function AttendanceEntryDialog({
       status,
       latitude,
       longitude,
+      locationSource,
+      accuracy: accuracy ?? undefined,
+      ipAddress: ipAddress ?? undefined,
       ...(shedId !== "" ? { shedId } : {}),
       ...(personType === "EMPLOYEE"
         ? { employeeId: personId }
@@ -193,6 +211,9 @@ export function AttendanceEntryDialog({
           latitude={latitude}
           longitude={longitude}
           accuracy={accuracy}
+          locationSource={locationSource}
+          ipAddress={ipAddress}
+          ipFallbackActive={ipFallbackActive}
           loading={locationLoading}
           error={locationError}
           onRetry={retryGps}
@@ -253,13 +274,16 @@ export function AttendanceEntryDialog({
           onChange={(event) => setShedId(event.target.value)}
         >
           <option value="">No specific shed / General</option>
-          {(sheds.data ?? []).map((shed) => (
+          {(sheds.data ?? [])
+            .filter((s) => s.status !== "INACTIVE")
+            .map((shed) => (
             <option key={shed.id} value={shed.id}>
               {shed.number.toLowerCase().includes("ac room")
                 ? "❄️ AC Room"
                 : shed.number.toLowerCase().startsWith("shed")
                 ? shed.number.replace("-", " ")
                 : `Shed ${shed.number}`}
+              {shed.status === "OCCUPIED" ? " (Occupied)" : ""}
             </option>
           ))}
         </SelectField>

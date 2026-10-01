@@ -43,6 +43,9 @@ export interface FaceAttendanceRecord {
   status: string;
   latitude: number;
   longitude: number;
+  locationSource?: "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT" | undefined;
+  accuracy?: number | undefined;
+  ipAddress?: string | undefined;
   livenessScore?: number | undefined;
   qualityScore?: number | undefined;
   confidenceScore?: number | undefined;

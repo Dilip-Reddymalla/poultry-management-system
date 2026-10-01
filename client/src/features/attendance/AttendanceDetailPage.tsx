@@ -183,12 +183,46 @@ export function AttendanceDetailPage(): React.ReactElement {
                 ),
               },
               {
-                label: "Location (GPS)",
+                label: "Location",
                 value:
                   record.latitude != null && record.longitude != null ? (
-                    <span className="numeric">
-                      {record.latitude.toFixed(6)}, {record.longitude.toFixed(6)}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span className="numeric">
+                          {record.latitude.toFixed(6)}, {record.longitude.toFixed(6)}
+                        </span>
+                        <a
+                          href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}
+                        >
+                          View Map ↗
+                        </a>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                        <span
+                          className="tag"
+                          style={{
+                            background: record.locationSource === "IP_FALLBACK" ? "#fffbeb" : "#f0fdf4",
+                            color: record.locationSource === "IP_FALLBACK" ? "#92400e" : "#166534",
+                            borderColor: record.locationSource === "IP_FALLBACK" ? "#fde68a" : "#bbf7d0",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          {record.locationSource === "IP_FALLBACK"
+                            ? `🌐 IP Fallback ${record.ipAddress ? `(${record.ipAddress})` : ""}`
+                            : "📍 GPS Verified"}
+                        </span>
+                        {record.accuracy && (
+                          <span className="table__sub" style={{ fontSize: "0.75rem" }}>
+                            ±{Math.round(record.accuracy > 1000 ? record.accuracy / 1000 : record.accuracy)}
+                            {record.accuracy > 1000 ? "km" : "m"} accuracy
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <span className="muted">Not recorded</span>
                   ),

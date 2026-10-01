@@ -48,6 +48,10 @@ export function FaceAttendancePage(): React.ReactElement {
     gpsTimedOut,
     isGpsLoading,
     isIOS,
+    locationSource,
+    accuracy,
+    ipAddress,
+    ipFallbackActive,
     requestGpsLocation,
   } = useFaceAttendanceGps();
 
@@ -504,6 +508,9 @@ export function FaceAttendancePage(): React.ReactElement {
         status: "PRESENT",
         latitude: lat,
         longitude: lng,
+        locationSource,
+        accuracy: accuracy ?? undefined,
+        ipAddress: ipAddress ?? undefined,
         livenessScore: face.livenessScore ?? undefined,
         qualityScore: face.qualityScore ?? undefined,
         confidenceScore: topCandidate?.similarity ?? undefined,
@@ -589,6 +596,8 @@ export function FaceAttendancePage(): React.ReactElement {
         hasValidLocation={hasValidLocation}
         isIOS={isIOS}
         isGpsLoading={isGpsLoading}
+        ipFallbackActive={ipFallbackActive}
+        ipAddress={ipAddress}
         onRequestGpsLocation={requestGpsLocation}
       />
 

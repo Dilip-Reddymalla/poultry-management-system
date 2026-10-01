@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { getScope } from "../../middlewares/authorize.middleware.js";
 import {
   approveAttendance,
+  bulkApproveAttendance,
   createAttendance,
   bulkCreateAttendance,
   getAttendanceById,
@@ -17,6 +18,7 @@ import {
   attendanceIdParamSchema,
   createAttendanceSchema,
   bulkCreateAttendanceSchema,
+  bulkApproveAttendanceSchema,
   listAttendanceQuerySchema,
   updateAttendanceSchema,
   markedPersonIdsQuerySchema,
@@ -24,6 +26,10 @@ import {
   markUnmarkedAbsentSchema,
   exportAttendanceQuerySchema,
 } from "./attendance.schema.js";
+import {
+  extractClientIp,
+  resolveClientLocation,
+} from "./ip-geolocation.service.js";
 
 export async function listAttendanceController(
   req: Request,
@@ -36,6 +42,17 @@ export async function listAttendanceController(
     success: true,
     attendance,
     pagination,
+  });
+}
+
+export async function getCurrentLocationController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const location = await resolveClientLocation(req);
+  res.status(200).json({
+    success: true,
+    location,
   });
 }
 
@@ -56,7 +73,11 @@ export async function createAttendanceController(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const input = createAttendanceSchema.parse(req.body);
+  const clientIp = extractClientIp(req);
+  const input = createAttendanceSchema.parse({
+    ...req.body,
+    ipAddress: req.body?.ipAddress || clientIp,
+  });
   const record = await createAttendance(getScope(req), input);
 
   res.status(201).json({
@@ -95,11 +116,32 @@ export async function approveAttendanceController(
   });
 }
 
+export async function bulkApproveAttendanceController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = bulkApproveAttendanceSchema.parse(req.body);
+  const result = await bulkApproveAttendance(getScope(req), input.ids);
+
+  res.status(200).json({
+    success: true,
+    message: `Successfully approved ${result.approvedCount} record(s)`,
+    ...result,
+  });
+}
+
 export async function bulkCreateAttendanceController(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const input = bulkCreateAttendanceSchema.parse(req.body);
+  const clientIp = extractClientIp(req);
+  const rawRecords = Array.isArray(req.body?.records)
+    ? req.body.records.map((r: any) => ({
+        ...r,
+        ipAddress: r.ipAddress || clientIp,
+      }))
+    : req.body?.records;
+  const input = bulkCreateAttendanceSchema.parse({ ...req.body, records: rawRecords });
   const results = await bulkCreateAttendance(getScope(req), input);
 
   res.status(207).json({

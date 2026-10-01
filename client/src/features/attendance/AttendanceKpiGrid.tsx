@@ -10,6 +10,7 @@ export function AttendanceKpiGrid({
   canApprove,
   bulkApproving,
   onApproveAllPending,
+  onApproveIpFallbackPending,
   onResetShift,
   isMobile: isMobileProp,
 }: {
@@ -20,6 +21,7 @@ export function AttendanceKpiGrid({
   canApprove: boolean;
   bulkApproving: boolean;
   onApproveAllPending: () => void;
+  onApproveIpFallbackPending?: () => void;
   onResetShift: () => void;
   isMobile?: boolean;
 }): React.ReactElement {
@@ -235,6 +237,47 @@ export function AttendanceKpiGrid({
               {metrics.pendingApprovalCount === 0 ? "All signed off" : "Awaiting review"}
             </span>
           </div>
+
+          {/* Chip 6: IP Fallback Audit */}
+          {metrics.ipFallbackCount > 0 && (
+            <div
+              style={{
+                flex: "0 0 135px",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                borderTop: "3px solid #d97706",
+                borderRadius: "var(--radius)",
+                padding: "0.5rem 0.65rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="eyebrow" style={{ fontSize: "0.68rem" }}>IP Fallback</span>
+                <span style={{ fontSize: "0.9rem" }}>🌐</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "1.4rem", fontWeight: 700, color: "#d97706", lineHeight: 1.1 }}>
+                  {metrics.ipFallbackCount}
+                </span>
+                {metrics.pendingIpFallbackCount > 0 && canApprove && onApproveIpFallbackPending && (
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    style={{ padding: "0.15rem 0.4rem", fontSize: "0.7rem", minHeight: "22px", borderColor: "#d97706", color: "#b45309" }}
+                    onClick={onApproveIpFallbackPending}
+                    disabled={bulkApproving}
+                  >
+                    {bulkApproving ? "..." : "Approve"}
+                  </button>
+                )}
+              </div>
+              <span className="muted" style={{ fontSize: "0.68rem" }}>
+                {metrics.pendingIpFallbackCount === 0 ? "All IP approved" : `${metrics.pendingIpFallbackCount} pending review`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -463,6 +506,53 @@ export function AttendanceKpiGrid({
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>
             {metrics.pendingApprovalCount === 0 ? "✓ All records approved" : "Awaiting supervisor/manager signoff"}
+          </div>
+        </div>
+
+        {/* Card 6: IP Fallback Audit */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderTop: `3px solid ${metrics.pendingIpFallbackCount > 0 ? "#d97706" : "var(--moss)"}`,
+            borderRadius: "var(--radius-lg)",
+            padding: "1rem 1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.5rem",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="eyebrow" style={{ color: "var(--ink-soft)" }}>IP Fallback Audit</span>
+            <span style={{ fontSize: "1.1rem" }}>🌐</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
+              <span style={{ fontSize: "2rem", fontWeight: 700, color: "#d97706", lineHeight: 1 }}>
+                {metrics.ipFallbackCount}
+              </span>
+              <span className="muted" style={{ fontSize: "0.85rem" }}>
+                ({metrics.pendingIpFallbackCount} pending)
+              </span>
+            </div>
+            {metrics.pendingIpFallbackCount > 0 && canApprove && onApproveIpFallbackPending && (
+              <button
+                type="button"
+                className="button button--secondary"
+                style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem", minHeight: "26px", borderColor: "#d97706", color: "#b45309" }}
+                onClick={onApproveIpFallbackPending}
+                disabled={bulkApproving}
+              >
+                {bulkApproving ? "Approving..." : "Approve Fallbacks"}
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>
+            {metrics.ipFallbackCount === 0
+              ? "All attendance verified via satellite GPS"
+              : metrics.pendingIpFallbackCount === 0
+                ? "✓ All IP fallback records verified & approved"
+                : "IP fallback active: pending Incharge / DGM audit"}
           </div>
         </div>
       </div>

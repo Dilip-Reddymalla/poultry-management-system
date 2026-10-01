@@ -8,6 +8,8 @@ interface GpsGuidanceBannersProps {
   hasValidLocation: boolean;
   isIOS: boolean;
   isGpsLoading: boolean;
+  ipFallbackActive?: boolean;
+  ipAddress?: string | null;
   onRequestGpsLocation: () => void;
 }
 
@@ -18,8 +20,58 @@ export function GpsGuidanceBanners({
   hasValidLocation,
   isIOS,
   isGpsLoading,
+  ipFallbackActive,
+  ipAddress,
   onRequestGpsLocation,
 }: GpsGuidanceBannersProps): React.ReactElement | null {
+  if (ipFallbackActive) {
+    return (
+      <div
+        style={{
+          ...styles.card,
+          background: "#fffbeb",
+          border: "1px solid #fde68a",
+          padding: "12px 18px",
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>🌐</span>
+          <div>
+            <strong style={{ color: "#92400e", fontSize: 14, display: "block" }}>
+              Using IP Geolocation Fallback {ipAddress ? `(IP: ${ipAddress})` : ""}
+            </strong>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#78350f" }}>
+              Attendance is permitted and will be flagged for Incharge / Super Incharge approval. You can also tap Retry GPS.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{
+            padding: "6px 14px",
+            fontSize: 12,
+            fontWeight: 600,
+            borderRadius: 6,
+            border: "1px solid #d97706",
+            background: "#fff",
+            color: "#b45309",
+            cursor: isGpsLoading ? "not-allowed" : "pointer",
+          }}
+          disabled={isGpsLoading}
+          onClick={onRequestGpsLocation}
+        >
+          {isGpsLoading ? "📡 Detecting…" : "🔄 Retry GPS"}
+        </button>
+      </div>
+    );
+  }
+
   if (hasValidLocation) return null;
 
   return (

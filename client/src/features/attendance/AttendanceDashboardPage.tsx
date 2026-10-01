@@ -8,6 +8,7 @@ import {
   fetchWorkers,
   fetchFarms,
   approveAttendance,
+  bulkApproveAttendance,
   type AttendanceListResponse,
   type EmployeeListResponse,
   type WorkerListResponse,
@@ -80,7 +81,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const dashboardShift = (params.get("shift") || "") as Shift | "";
   const setDashboardShift = useCallback((v: Shift | "") => setParam("shift", v), [setParam]);
 
-  type TabKey = "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING";
+  type TabKey = "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING" | "IP_FALLBACK";
   const activeTab = (params.get("tab") || "ALL") as TabKey;
   const setActiveTab = useCallback((v: TabKey) => setParam("tab", v === "ALL" ? "" : v), [setParam]);
 
@@ -173,6 +174,8 @@ export function AttendanceDashboardPage(): React.ReactElement {
     let faceAiCount = 0;
     let faceAiConfidenceSum = 0;
     let pendingApprovalCount = 0;
+    let ipFallbackCount = 0;
+    let pendingIpFallbackCount = 0;
 
     for (const r of scopedRecords) {
       if (r.status === "PRESENT") {
@@ -190,6 +193,13 @@ export function AttendanceDashboardPage(): React.ReactElement {
         faceAiCount++;
         if (r.confidenceScore != null) {
           faceAiConfidenceSum += r.confidenceScore;
+        }
+      }
+
+      if (r.locationSource === "IP_FALLBACK") {
+        ipFallbackCount++;
+        if (!r.approvedAt) {
+          pendingIpFallbackCount++;
         }
       }
 
@@ -215,6 +225,8 @@ export function AttendanceDashboardPage(): React.ReactElement {
       faceAiCount,
       avgConfidence,
       pendingApprovalCount,
+      ipFallbackCount,
+      pendingIpFallbackCount,
       attendanceRate,
       totalMarked: scopedRecords.length,
     };
@@ -414,6 +426,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
       if (activeTab === "LEAVE" && r.status !== "LEAVE") return false;
       if (activeTab === "FACE_AI" && r.verificationMode !== "FACE_AI") return false;
       if (activeTab === "PENDING" && r.approvedAt != null) return false;
+      if (activeTab === "IP_FALLBACK" && r.locationSource !== "IP_FALLBACK") return false;
 
       // Text Search
       if (searchQuery.trim() !== "") {
@@ -451,18 +464,34 @@ export function AttendanceDashboardPage(): React.ReactElement {
     }
 
     setBulkApproving(true);
-    let successCount = 0;
-    for (const r of pending) {
-      try {
-        await approveAttendance(r.id);
-        successCount++;
-      } catch {
-        // continue best effort
-      }
+    try {
+      const res = await bulkApproveAttendance(pending.map((r) => r.id));
+      notify("success", `Approved ${res.approvedCount} attendance records.`);
+      attendanceResource.reload();
+    } catch (err: any) {
+      notify("error", err?.message || "Failed to approve attendance records.");
+    } finally {
+      setBulkApproving(false);
     }
-    setBulkApproving(false);
-    notify("success", `Approved ${successCount} attendance records.`);
-    attendanceResource.reload();
+  };
+
+  const handleBulkApproveIpFallback = async () => {
+    const ipPending = records.filter((r) => r.locationSource === "IP_FALLBACK" && !r.approvedAt);
+    if (ipPending.length === 0) return;
+    if (!window.confirm(`Are you sure you want to approve all ${ipPending.length} IP Fallback attendance records for ${date}?`)) {
+      return;
+    }
+
+    setBulkApproving(true);
+    try {
+      const res = await bulkApproveAttendance(ipPending.map((r) => r.id));
+      notify("success", `Approved ${res.approvedCount} IP Fallback attendance records.`);
+      attendanceResource.reload();
+    } catch (err: any) {
+      notify("error", err?.message || "Failed to approve IP Fallback records.");
+    } finally {
+      setBulkApproving(false);
+    }
   };
 
   const resetAllFilters = useCallback(() => {
@@ -642,6 +671,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
         canApprove={can("attendance:approve")}
         bulkApproving={bulkApproving}
         onApproveAllPending={handleApproveAllPending}
+        onApproveIpFallbackPending={handleBulkApproveIpFallback}
         onResetShift={() => setDashboardShift("")}
         isMobile={isMobile}
       />

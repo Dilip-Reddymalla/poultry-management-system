@@ -47,6 +47,8 @@ export interface AttendanceMetrics {
   faceAiCount: number;
   avgConfidence: number | null;
   pendingApprovalCount: number;
+  ipFallbackCount: number;
+  pendingIpFallbackCount: number;
   attendanceRate: number;
   totalMarked: number;
 }

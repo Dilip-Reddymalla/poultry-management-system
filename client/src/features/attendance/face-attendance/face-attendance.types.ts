@@ -21,5 +21,9 @@ export interface GpsLocationState {
   gpsTimedOut: boolean;
   isGpsLoading: boolean;
   isIOS: boolean;
+  locationSource: "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT";
+  accuracy: number | null;
+  ipAddress: string | null;
+  ipFallbackActive: boolean;
   requestGpsLocation: () => void;
 }

@@ -56,6 +56,10 @@ export const listAttendanceQuerySchema = z.object({
   search: z.string().trim().optional(),
   // Filter by who recorded the attendance (for the dashboard).
   recordedById: z.uuid("Invalid user ID").optional(),
+  locationSource: z
+    .enum(["GPS_EXACT", "NETWORK_APPROX", "CACHED_GPS", "IP_FALLBACK", "FARM_DEFAULT"])
+    .optional(),
+  pendingLocationApproval: z.coerce.boolean().optional(),
 });
 
 // Exactly one of employeeId/workerId identifies the person. The farm is NOT
@@ -71,6 +75,11 @@ export const createAttendanceSchema = z
     status: statusSchema.default("PRESENT"),
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
+    locationSource: z
+      .enum(["GPS_EXACT", "NETWORK_APPROX", "CACHED_GPS", "IP_FALLBACK", "FARM_DEFAULT"])
+      .default("GPS_EXACT"),
+    accuracy: z.number().min(0).optional(),
+    ipAddress: z.string().trim().optional(),
     notes: notesSchema.optional(),
   })
   .refine(
@@ -101,6 +110,10 @@ export const updateAttendanceSchema = z
 
 export const bulkCreateAttendanceSchema = z.object({
   records: z.array(createAttendanceSchema).min(1, "Must provide at least one record"),
+});
+
+export const bulkApproveAttendanceSchema = z.object({
+  ids: z.array(z.uuid("Invalid attendance ID")).min(1, "Must provide at least one attendance ID"),
 });
 
 // Query for the "already marked" dedup endpoint.

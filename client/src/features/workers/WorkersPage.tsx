@@ -39,13 +39,27 @@ export function WorkersPage(): React.ReactElement {
 
   // URL-synced filter state
   const [params, setParams] = useSearchParams();
-  const setParam = useCallback((key: string, value: string) => {
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) { next.set(key, value); } else { next.delete(key); }
-      return next;
-    }, { replace: true });
-  }, [setParams]);
+
+  const updateFilters = useCallback(
+    (updates: Record<string, string | number | undefined>) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [key, value] of Object.entries(updates)) {
+            if (value !== undefined && value !== null && value !== "") {
+              next.set(key, String(value));
+            } else {
+              next.delete(key);
+            }
+          }
+          next.delete("page");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const search = params.get("q") || "";
   const status = (params.get("status") || "") as WorkerStatus | "";
@@ -54,7 +68,23 @@ export function WorkersPage(): React.ReactElement {
   const sortBy = (params.get("sortBy") || "workerId") as "workerId" | "name" | "status";
   const sortOrder = (params.get("sortOrder") || "asc") as "asc" | "desc";
 
-  const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+  const setPage = useCallback(
+    (v: number) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (v > 1) {
+            next.set("page", String(v));
+          } else {
+            next.delete("page");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   // Local input for debounced search
   const [searchInput, setSearchInput] = useState(search);
@@ -83,16 +113,11 @@ export function WorkersPage(): React.ReactElement {
     const timer = setTimeout(() => {
       const trimmed = searchInput.trim();
       if (trimmed !== search) {
-        setParams((prev) => {
-          const next = new URLSearchParams(prev);
-          if (trimmed) { next.set("q", trimmed); } else { next.delete("q"); }
-          next.delete("page");
-          return next;
-        }, { replace: true });
+        updateFilters({ q: trimmed });
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search, updateFilters]);
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
@@ -158,8 +183,7 @@ export function WorkersPage(): React.ReactElement {
               className="input select"
               value={status}
               onChange={(event) => {
-                setParam("status", event.target.value);
-                setPage(1);
+                updateFilters({ status: event.target.value });
               }}
             >
               <option value="">{t("common.allStatuses")}</option>
@@ -176,8 +200,7 @@ export function WorkersPage(): React.ReactElement {
                 className="input select"
                 value={farmId}
                 onChange={(event) => {
-                  setParam("farmId", event.target.value);
-                  setPage(1);
+                  updateFilters({ farmId: event.target.value });
                 }}
               >
                 <option value="">{t("common.allFarms")}</option>

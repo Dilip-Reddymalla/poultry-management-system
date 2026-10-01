@@ -53,8 +53,17 @@ export function BulkAttendanceDialog({
   const [saving, setSaving] = useState(false);
   const [personType, setPersonType] = useState<PersonType>("EMPLOYEE");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const { latitude, longitude, accuracy, error: locationError, loading: locationLoading, retry: retryGps } = useGeolocation();
+  const {
+    latitude,
+    longitude,
+    accuracy,
+    locationSource,
+    ipAddress,
+    ipFallbackActive,
+    error: locationError,
+    loading: locationLoading,
+    retry: retryGps,
+  } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm,
@@ -65,7 +74,7 @@ export function BulkAttendanceDialog({
 
   const sheds = useResource<Shed[]>(
     `sheds:picker:${farmId}`,
-    () => fetchSheds(farmId ? { farmId, status: "AVAILABLE" } : { status: "AVAILABLE" })
+    () => fetchSheds(farmId ? { farmId } : {})
   );
 
   const markedIds = useResource(
@@ -163,7 +172,10 @@ export function BulkAttendanceDialog({
     if (selectedIds.size === 0) return;
 
     if (latitude === null || longitude === null || (latitude === 0 && longitude === 0)) {
-      notify("error", "⛔ Attendance Blocked: Valid GPS location is required to mark attendance. Please enable device GPS.");
+      notify(
+        "error",
+        "⛔ Attendance Blocked: Location could not be acquired via GPS or IP Fallback. Please check connection and allow location access.",
+      );
       return;
     }
 
@@ -180,6 +192,9 @@ export function BulkAttendanceDialog({
           status,
           latitude,
           longitude,
+          locationSource,
+          accuracy: accuracy ?? undefined,
+          ipAddress: ipAddress ?? undefined,
           ...(person.type === "EMPLOYEE" ? { employeeId: person.id } : { workerId: person.id }),
         };
       });
@@ -219,6 +234,9 @@ export function BulkAttendanceDialog({
           latitude={latitude}
           longitude={longitude}
           accuracy={accuracy}
+          locationSource={locationSource}
+          ipAddress={ipAddress}
+          ipFallbackActive={ipFallbackActive}
           loading={locationLoading}
           error={locationError}
           onRetry={retryGps}
@@ -264,15 +282,18 @@ export function BulkAttendanceDialog({
             Shed / Location
             <select className="input select" value={shedId} onChange={(e) => setShedId(e.target.value)}>
               <option value="">No specific shed / General</option>
-              {sheds.data?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.number.toLowerCase().includes("ac room")
-                    ? "❄️ AC Room"
-                    : s.number.toLowerCase().startsWith("shed")
-                    ? s.number.replace("-", " ")
-                    : `Shed ${s.number}`}
-                </option>
-              ))}
+              {sheds.data
+                ?.filter((s) => s.status !== "INACTIVE")
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.number.toLowerCase().includes("ac room")
+                      ? "❄️ AC Room"
+                      : s.number.toLowerCase().startsWith("shed")
+                      ? s.number.replace("-", " ")
+                      : `Shed ${s.number}`}
+                    {s.status === "OCCUPIED" ? " (Occupied)" : ""}
+                  </option>
+                ))}
             </select>
           </label>
         </div>

@@ -30,8 +30,8 @@ export function AttendanceRosterTable({
   records: Attendance[];
   allRecords: Attendance[];
   shedList: Shed[];
-  activeTab: "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING";
-  onTabChange: (tab: "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING") => void;
+  activeTab: "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING" | "IP_FALLBACK";
+  onTabChange: (tab: "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING" | "IP_FALLBACK") => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedShedId: string;
@@ -121,6 +121,23 @@ export function AttendanceRosterTable({
               onClick={() => onTabChange("PENDING")}
             >
               ✍️ Pending ({allRecords.filter((r) => !r.approvedAt).length})
+            </button>
+            <button
+              type="button"
+              className={`button ${activeTab === "IP_FALLBACK" ? "button--primary" : "button--ghost"}`}
+              style={{
+                padding: "0.25rem 0.55rem",
+                fontSize: "0.75rem",
+                minHeight: "26px",
+                flex: "0 0 auto",
+                whiteSpace: "nowrap",
+                ...(activeTab === "IP_FALLBACK"
+                  ? { backgroundColor: "#d97706", borderColor: "#d97706", color: "#ffffff" }
+                  : {}),
+              }}
+              onClick={() => onTabChange("IP_FALLBACK")}
+            >
+              🌐 IP Fallback ({allRecords.filter((r) => r.locationSource === "IP_FALLBACK").length})
             </button>
           </div>
 
@@ -327,6 +344,25 @@ export function AttendanceRosterTable({
                           </button>
                         )}
                       </div>
+                    ) : record.locationSource === "IP_FALLBACK" && record.latitude != null && record.longitude != null ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          textDecoration: "none",
+                          fontSize: "0.68rem",
+                          fontWeight: 600,
+                          color: "#92400e",
+                          background: "#fef3c7",
+                          padding: "1px 5px",
+                          borderRadius: 4,
+                          border: "1px solid #fde68a",
+                        }}
+                        title={`IP: ${record.ipAddress || "Unknown"}, Accuracy: ±${record.accuracy ? Math.round(record.accuracy > 1000 ? record.accuracy / 1000 : record.accuracy) + (record.accuracy > 1000 ? "km" : "m") : "N/A"}`}
+                      >
+                        🌐 IP Fallback ↗
+                      </a>
                     ) : record.latitude != null && record.longitude != null ? (
                       <a
                         href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
@@ -496,6 +532,26 @@ export function AttendanceRosterTable({
                             </button>
                           )}
                         </div>
+                      ) : record.locationSource === "IP_FALLBACK" && record.latitude != null && record.longitude != null ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                            color: "#92400e",
+                            background: "#fef3c7",
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            border: "1px solid #fde68a",
+                            display: "inline-block",
+                          }}
+                          title={`IP Address: ${record.ipAddress || "Unknown"}, Accuracy: ±${record.accuracy ? Math.round(record.accuracy > 1000 ? record.accuracy / 1000 : record.accuracy) + (record.accuracy > 1000 ? "km" : "m") : "N/A"}`}
+                        >
+                          🌐 IP Fallback {record.ipAddress ? `(${record.ipAddress})` : ""} ↗
+                        </a>
                       ) : record.latitude != null && record.longitude != null ? (
                         <a
                           href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}

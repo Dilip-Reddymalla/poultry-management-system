@@ -4,10 +4,12 @@ import { requirePermission } from "../../middlewares/authorize.middleware.js";
 import { uploadImage } from "../../middlewares/upload.middleware.js";
 import {
   approveAttendanceController,
+  bulkApproveAttendanceController,
   bulkCreateAttendanceController,
   createAttendanceController,
   exportAttendanceController,
   getAttendanceByIdController,
+  getCurrentLocationController,
   getMarkedPersonIdsController,
   getUnmarkedSummaryController,
   markUnmarkedAbsentController,
@@ -54,6 +56,20 @@ router.post(
   "/mark-unmarked-absent",
   requirePermission("attendance:create"),
   markUnmarkedAbsentController,
+);
+
+// Current location from IP (fallback)
+router.get(
+  "/current-location",
+  requirePermission("attendance:view"),
+  getCurrentLocationController,
+);
+
+// Bulk approve (Super Incharge, Incharge, DGM, AM, Admin)
+router.post(
+  "/bulk-approve",
+  requirePermission("attendance:approve"),
+  bulkApproveAttendanceController,
 );
 
 router.get(

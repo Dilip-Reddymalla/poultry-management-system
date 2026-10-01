@@ -29,6 +29,9 @@ export interface SafeAttendance {
   shedId: string | null;
   latitude: number;
   longitude: number;
+  locationSource: string;
+  accuracy: number | null;
+  ipAddress: string | null;
   notes: string | null;
   farm: {
     id: string;

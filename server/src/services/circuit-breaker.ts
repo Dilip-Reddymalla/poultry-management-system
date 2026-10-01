@@ -333,7 +333,7 @@ export const faceAiCircuitBreaker = new CircuitBreaker({
   failureThreshold: 3,
   successThreshold: 2,
   resetTimeoutMs: 15000,
-  requestTimeoutMs: 5000,
+  requestTimeoutMs: Number(process.env.FACE_AI_TIMEOUT_MS) || 15000,
   healthCheckFn: async () => {
     try {
       const res = await fetch(`${env.FASTAPI_AI_URL}/health`, {

@@ -152,6 +152,10 @@ export interface AttendanceListQuery {
   status?: AttendanceStatus;
   shift?: Shift;
   recordedById?: string;
+  locationSource?: "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT";
+  pendingApproval?: boolean;
+  approvalStatus?: "ALL" | "PENDING" | "APPROVED";
+  pendingLocationApproval?: boolean;
 }
 
 export interface AttendanceListResponse {

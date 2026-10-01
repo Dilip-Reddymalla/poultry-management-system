@@ -9,9 +9,11 @@ interface LocationStatusAlertProps {
   locationSource?: LocationSource | string;
   ipAddress?: string | null;
   ipFallbackActive?: boolean;
+  canUseFallback?: boolean;
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
+  onUseFallback?: () => void;
 }
 
 export function LocationStatusAlert({
@@ -21,9 +23,11 @@ export function LocationStatusAlert({
   locationSource = "GPS_EXACT",
   ipAddress,
   ipFallbackActive,
+  canUseFallback,
   loading,
   error,
   onRetry,
+  onUseFallback,
 }: LocationStatusAlertProps): React.ReactElement | null {
   const hasValidLocation = Boolean(
     latitude !== null && longitude !== null && (latitude !== 0 || longitude !== 0),
@@ -101,39 +105,79 @@ export function LocationStatusAlert({
     );
   }
 
-  // Hard failure (Neither GPS nor IP Fallback succeeded)
-  if (!hasValidLocation && error) {
+  // GPS failed — show error + Retry GPS + optional "Use IP Fallback" button
+  if (!hasValidLocation && (error || canUseFallback)) {
     return (
       <div
-        className="alert alert--danger"
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 10,
+          flexDirection: "column",
+          gap: 8,
+          padding: "10px 14px",
+          background: "#fef2f2",
+          border: "1px solid #fecaca",
+          borderRadius: 8,
+          fontSize: 13,
+          color: "#991b1b",
           marginBottom: 12,
         }}
       >
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <strong>⛔ Location Required:</strong> {error}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <strong>⚠️ GPS Location Not Acquired</strong>
+            {error && <span style={{ display: "block", fontSize: 12, marginTop: 2 }}>{error}</span>}
+          </div>
+          {onRetry && (
+            <Button
+              type="button"
+              variant="ghost"
+              style={{
+                padding: "4px 10px",
+                fontSize: 12,
+                background: "#fff",
+                border: "1px solid #fca5a5",
+                color: "#991b1b",
+                fontWeight: 600,
+              }}
+              onClick={onRetry}
+            >
+              🔄 Retry GPS
+            </Button>
+          )}
         </div>
-        {onRetry && (
-          <Button
-            type="button"
-            variant="ghost"
+        {canUseFallback && onUseFallback && (
+          <div
             style={{
-              padding: "4px 10px",
-              fontSize: 12,
-              background: "#fff",
-              border: "1px solid #fca5a5",
-              color: "#991b1b",
-              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              background: "#fffbeb",
+              border: "1px solid #fde68a",
+              borderRadius: 6,
             }}
-            onClick={onRetry}
           >
-            🔄 Retry Location
-          </Button>
+            <div style={{ flex: 1, fontSize: 12, color: "#92400e" }}>
+              <strong>Can't get GPS?</strong> Use IP-based location instead. This record will require Incharge/Super Incharge approval.
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              style={{
+                padding: "6px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                background: "#d97706",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                whiteSpace: "nowrap",
+              }}
+              onClick={onUseFallback}
+            >
+              🌐 Use IP Fallback
+            </Button>
+          </div>
         )}
       </div>
     );

@@ -10,7 +10,9 @@ interface GpsGuidanceBannersProps {
   isGpsLoading: boolean;
   ipFallbackActive?: boolean;
   ipAddress?: string | null;
+  canUseFallback?: boolean;
   onRequestGpsLocation: () => void;
+  onUseFallback?: () => void;
 }
 
 export function GpsGuidanceBanners({
@@ -22,7 +24,9 @@ export function GpsGuidanceBanners({
   isGpsLoading,
   ipFallbackActive,
   ipAddress,
+  canUseFallback,
   onRequestGpsLocation,
+  onUseFallback,
 }: GpsGuidanceBannersProps): React.ReactElement | null {
   if (ipFallbackActive) {
     return (
@@ -74,6 +78,27 @@ export function GpsGuidanceBanners({
 
   if (hasValidLocation) return null;
 
+  // Shared fallback button rendered inside each guidance banner
+  const fallbackButton = canUseFallback && onUseFallback ? (
+    <button
+      type="button"
+      style={{
+        padding: "8px 16px",
+        fontSize: 13,
+        fontWeight: 600,
+        borderRadius: 6,
+        border: "none",
+        background: "#d97706",
+        color: "#fff",
+        cursor: isGpsLoading ? "not-allowed" : "pointer",
+      }}
+      disabled={isGpsLoading}
+      onClick={onUseFallback}
+    >
+      🌐 Use IP Fallback (Requires Approval)
+    </button>
+  ) : null;
+
   return (
     <>
       {/* 1. Phone Location / GPS Turned Off Guidance Banner */}
@@ -93,7 +118,7 @@ export function GpsGuidanceBanners({
           <span style={{ fontSize: 28, lineHeight: 1 }}>📱</span>
           <div style={{ flex: 1 }}>
             <strong style={{ color: "#92400e", fontSize: 15, display: "block", marginBottom: 6 }}>
-              {isIOS ? "⛔ iPhone Location Services are Turned OFF" : "⛔ Phone Location (GPS) is Turned Off"} — Attendance Blocked
+              {isIOS ? "⛔ iPhone Location Services are Turned OFF" : "⛔ Phone Location (GPS) is Turned Off"}
             </strong>
             {isIOS ? (
               <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
@@ -138,9 +163,7 @@ export function GpsGuidanceBanners({
               >
                 {isGpsLoading ? "📡 Detecting…" : "🔄 Turn ON & Retry GPS"}
               </button>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c" }}>
-                ⛔ Attendance is strictly BLOCKED until GPS location is acquired.
-              </span>
+              {fallbackButton}
             </div>
           </div>
         </div>
@@ -163,7 +186,7 @@ export function GpsGuidanceBanners({
           <span style={{ fontSize: 28, lineHeight: 1 }}>🚫</span>
           <div style={{ flex: 1 }}>
             <strong style={{ color: "#991b1b", fontSize: 15, display: "block", marginBottom: 6 }}>
-              ⛔ Location Permission Blocked — Attendance Blocked
+              ⛔ Location Permission Blocked
             </strong>
             {isIOS ? (
               <div style={{ fontSize: 13, color: "#7f1d1d", lineHeight: 1.6 }}>
@@ -207,9 +230,7 @@ export function GpsGuidanceBanners({
               >
                 {isGpsLoading ? "📡 Detecting…" : "🔄 Unblock & Retry GPS"}
               </button>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#b91c1c" }}>
-                ⛔ Attendance is strictly BLOCKED until GPS location is acquired.
-              </span>
+              {fallbackButton}
             </div>
           </div>
         </div>
@@ -262,6 +283,7 @@ export function GpsGuidanceBanners({
               >
                 {isGpsLoading ? "📡 Detecting…" : "🔄 Retry GPS Acquisition"}
               </button>
+              {fallbackButton}
               <span style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>
                 Keep screen open while acquiring satellite fix.
               </span>

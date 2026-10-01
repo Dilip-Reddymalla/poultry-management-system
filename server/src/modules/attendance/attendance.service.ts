@@ -360,6 +360,9 @@ export async function listAttendance(
   if (dateFilter !== undefined) andConditions.push({ date: dateFilter });
   if (query.locationSource !== undefined) andConditions.push({ locationSource: query.locationSource });
   if (query.pendingLocationApproval) andConditions.push({ approvedAt: null, locationSource: "IP_FALLBACK" });
+  if (query.pendingApproval) andConditions.push({ approvedAt: null });
+  if (query.approvalStatus === "PENDING") andConditions.push({ approvedAt: null });
+  if (query.approvalStatus === "APPROVED") andConditions.push({ approvedAt: { not: null } });
   if (Object.keys(personFilter).length > 0) andConditions.push(personFilter);
 
   if (query.search) {

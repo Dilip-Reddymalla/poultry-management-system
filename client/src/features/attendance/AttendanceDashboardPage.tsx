@@ -591,6 +591,15 @@ export function AttendanceDashboardPage(): React.ReactElement {
             >
               Full Log ↗
             </Link>
+            {can("attendance:approve") && (
+              <Link
+                to="/attendance/approvals"
+                className="button button--ghost"
+                style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "28px", flex: "0 0 auto", whiteSpace: "nowrap", color: "#d97706", fontWeight: 600 }}
+              >
+                ✅ Approvals ↗
+              </Link>
+            )}
           </div>
         </div>
       ) : (
@@ -633,6 +642,11 @@ export function AttendanceDashboardPage(): React.ReactElement {
               <Link to="/attendance" className="button button--ghost" title="Detailed Roster Search">
                 Full Log ↗
               </Link>
+              {can("attendance:approve") && (
+                <Link to="/attendance/approvals" className="button button--ghost" style={{ color: "#d97706", fontWeight: 600 }} title="Review pending approvals">
+                  ✅ Approvals ↗
+                </Link>
+              )}
             </div>
           }
         />

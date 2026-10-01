@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 
 import { AttendanceDashboardPage } from "./features/attendance/AttendanceDashboardPage.js";
+import { AttendanceApprovalsPage } from "./features/attendance/AttendanceApprovalsPage.js";
 import { AttendanceDetailPage } from "./features/attendance/AttendanceDetailPage.js";
 import { AttendancePage } from "./features/attendance/AttendancePage.js";
 import { FaceAttendancePage } from "./features/attendance/FaceAttendancePage.js";
@@ -159,6 +160,14 @@ export default function App(): React.ReactElement {
                 element={
                   <RequirePermission permission="attendance:view">
                     <AttendanceDashboardPage />
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="/attendance/approvals"
+                element={
+                  <RequirePermission permission="attendance:approve">
+                    <AttendanceApprovalsPage />
                   </RequirePermission>
                 }
               />

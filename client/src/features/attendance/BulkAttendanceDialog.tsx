@@ -60,9 +60,11 @@ export function BulkAttendanceDialog({
     locationSource,
     ipAddress,
     ipFallbackActive,
+    canUseFallback,
     error: locationError,
     loading: locationLoading,
     retry: retryGps,
+    useFallbackLocation,
   } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
@@ -237,9 +239,11 @@ export function BulkAttendanceDialog({
           locationSource={locationSource}
           ipAddress={ipAddress}
           ipFallbackActive={ipFallbackActive}
+          canUseFallback={canUseFallback}
           loading={locationLoading}
           error={locationError}
           onRetry={retryGps}
+          onUseFallback={useFallbackLocation}
         />
 
         <div className="filters">

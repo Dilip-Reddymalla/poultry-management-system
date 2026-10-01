@@ -65,6 +65,7 @@
   },
 
   "nav": {
+    "dashboard": "Dashboard",
     "overview": "Overview",
     "companies": "Companies",
     "farms": "Farms",
@@ -73,6 +74,7 @@
     "workers": "Workers",
     "attDashboard": "Att. Dashboard",
     "attendanceList": "Attendance List",
+    "attendanceApprovals": "Approvals",
     "faceAttendance": "Face Attendance",
     "auditLogs": "Audit Logs",
     "myProfile": "My profile",

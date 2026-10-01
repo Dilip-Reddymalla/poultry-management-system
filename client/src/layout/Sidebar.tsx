@@ -58,6 +58,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: CalendarIcon,
   },
   {
+    to: "/attendance/approvals",
+    labelKey: "nav.attendanceApprovals",
+    permission: "attendance:approve",
+    icon: CalendarIcon,
+  },
+  {
     to: "/attendance/face",
     labelKey: "nav.faceAttendance",
     permission: "attendance:create",

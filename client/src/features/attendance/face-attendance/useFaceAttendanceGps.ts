@@ -23,6 +23,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
   const [ipFallbackActive, setIpFallbackActive] = useState(false);
+  const [canUseFallback, setCanUseFallback] = useState(false);
 
   const activeAttemptRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
@@ -36,45 +37,33 @@ export function useFaceAttendanceGps(): GpsLocationState {
 
   const hasValidLocation = Boolean(location && (location.latitude !== 0 || location.longitude !== 0));
 
-  const triggerIpFallback = useCallback(
-    async (
-      _failureReason: string,
-      isPermissionDenied: boolean,
-      isDeviceOff: boolean,
-      isTimedOut: boolean,
-    ) => {
-      setLocationStatus("🌐 GPS unavailable. Connecting to IP Geolocation fallback…");
-      try {
-        const ipLocation = await fetchCurrentLocation();
-        setLocation({
-          latitude: ipLocation.latitude,
-          longitude: ipLocation.longitude,
-        });
-        setLocationSource("IP_FALLBACK");
-        setAccuracy(ipLocation.accuracy);
-        setIpAddress(ipLocation.ip);
-        setIpFallbackActive(true);
-        setIsGpsLoading(false);
-        setLocationPermissionDenied(isPermissionDenied);
-        setDeviceLocationOff(isDeviceOff);
-        setGpsTimedOut(isTimedOut);
-        setLocationStatus(
-          `🌐 IP Fallback Active (${ipLocation.city || "Network"}, IP: ${ipLocation.ip}) — Attendance allowed with Incharge approval`,
-        );
-      } catch {
-        setIsGpsLoading(false);
-        setLocation(null);
-        setLocationPermissionDenied(isPermissionDenied);
-        setDeviceLocationOff(isDeviceOff);
-        setGpsTimedOut(isTimedOut);
-        setIpFallbackActive(false);
-        setLocationStatus(
-          "⛔ Location Acquisition Failed: Neither GPS nor Network IP could be resolved. Please check internet connection.",
-        );
-      }
-    },
-    [],
-  );
+  // User-triggered IP fallback — only called from explicit button click
+  const useFallbackLocation = useCallback(async () => {
+    setLocationStatus("🌐 Connecting to IP Geolocation fallback…");
+    setIsGpsLoading(true);
+    try {
+      const ipLocation = await fetchCurrentLocation();
+      setLocation({
+        latitude: ipLocation.latitude,
+        longitude: ipLocation.longitude,
+      });
+      setLocationSource("IP_FALLBACK");
+      setAccuracy(ipLocation.accuracy);
+      setIpAddress(ipLocation.ip);
+      setIpFallbackActive(true);
+      setCanUseFallback(false);
+      setIsGpsLoading(false);
+      setLocationStatus(
+        `🌐 IP Fallback Active (${ipLocation.city || "Network"}, IP: ${ipLocation.ip}) — Attendance allowed with Incharge approval`,
+      );
+    } catch {
+      setIsGpsLoading(false);
+      setIpFallbackActive(false);
+      setLocationStatus(
+        "⛔ Location Acquisition Failed: Neither GPS nor Network IP could be resolved. Please check internet connection.",
+      );
+    }
+  }, []);
 
   const onGpsSuccess = useCallback(
     (pos: GeolocationPosition, source: LocationSource = "GPS_EXACT") => {
@@ -84,6 +73,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
       setLocationPermissionDenied(false);
       setGpsTimedOut(false);
       setIpFallbackActive(false);
+      setCanUseFallback(false);
       setLocationSource(source);
       setAccuracy(pos.coords.accuracy);
       setIpAddress(null);
@@ -114,6 +104,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
             setAccuracy(livePos.coords.accuracy);
             setLocationSource("GPS_EXACT");
             setIpFallbackActive(false);
+            setCanUseFallback(false);
           },
           () => {},
           { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 },
@@ -123,6 +114,8 @@ export function useFaceAttendanceGps(): GpsLocationState {
     [clearWatch],
   );
 
+  // When GPS fails, set diagnostic state but do NOT auto-trigger IP fallback.
+  // Set canUseFallback = true so the UI shows a fallback button.
   const handleGpsFailure = useCallback(
     async (err: GeolocationPositionError, isTimeout: boolean) => {
       let permissionState: PermissionState | null = null;
@@ -151,15 +144,23 @@ export function useFaceAttendanceGps(): GpsLocationState {
         reason = "GPS satellite signal timeout";
       }
 
-      // Priority 2: Engage IP Fallback
-      await triggerIpFallback(reason, isPermissionDenied, isDeviceOff, isTimedOut);
+      // Do NOT auto-fallback — set canUseFallback for opt-in
+      setIsGpsLoading(false);
+      setLocationPermissionDenied(isPermissionDenied);
+      setDeviceLocationOff(isDeviceOff);
+      setGpsTimedOut(isTimedOut);
+      setCanUseFallback(true);
+      setIpFallbackActive(false);
+      setLocationStatus(`⚠️ ${reason}. Tap "Retry GPS" or use IP Fallback below.`);
     },
-    [isIOS, triggerIpFallback],
+    [isIOS],
   );
 
   const requestGpsLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
-      void triggerIpFallback("Geolocation not supported by browser", false, false, false);
+      setIsGpsLoading(false);
+      setCanUseFallback(true);
+      setLocationStatus("Geolocation not supported by browser. Use IP Fallback.");
       return;
     }
 
@@ -168,6 +169,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
     activeAttemptRef.current = attemptId;
 
     setIsGpsLoading(true);
+    setCanUseFallback(false);
     setLocationStatus("📡 Detecting high-accuracy GPS location (Attempt 1/3)…");
 
     // Tier 1: High accuracy satellite GPS (6s timeout, fresh coordinates)
@@ -180,7 +182,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
       (firstErr) => {
         if (activeAttemptRef.current !== attemptId) return;
 
-        // If user explicitly denied permission, skip straight to fallback
+        // If user explicitly denied permission, show failure with fallback option
         if (firstErr.code === firstErr.PERMISSION_DENIED) {
           void handleGpsFailure(firstErr, false);
           return;
@@ -227,7 +229,7 @@ export function useFaceAttendanceGps(): GpsLocationState {
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 },
     );
-  }, [clearWatch, onGpsSuccess, handleGpsFailure, triggerIpFallback]);
+  }, [clearWatch, onGpsSuccess, handleGpsFailure]);
 
   useEffect(() => {
     requestGpsLocation();
@@ -249,6 +251,8 @@ export function useFaceAttendanceGps(): GpsLocationState {
     accuracy,
     ipAddress,
     ipFallbackActive,
+    canUseFallback,
     requestGpsLocation,
+    useFallbackLocation,
   };
 }

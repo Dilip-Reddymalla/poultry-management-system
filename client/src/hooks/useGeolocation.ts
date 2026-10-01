@@ -21,9 +21,11 @@ export interface GeolocationState {
   deviceLocationOff: boolean;
   permissionDenied: boolean;
   gpsTimedOut: boolean;
+  canUseFallback: boolean;
   ipFallbackActive: boolean;
   isIOS: boolean;
   retry: () => void;
+  useFallbackLocation: () => Promise<void>;
 }
 
 const isIOSDevice = (): boolean => {
@@ -36,7 +38,7 @@ const isIOSDevice = (): boolean => {
 
 export function useGeolocation(): GeolocationState {
   const isIOS = isIOSDevice();
-  const [state, setState] = useState<Omit<GeolocationState, "retry" | "isIOS">>({
+  const [state, setState] = useState<Omit<GeolocationState, "retry" | "isIOS" | "useFallbackLocation">>({
     latitude: null,
     longitude: null,
     accuracy: null,
@@ -49,6 +51,7 @@ export function useGeolocation(): GeolocationState {
     deviceLocationOff: false,
     permissionDenied: false,
     gpsTimedOut: false,
+    canUseFallback: false,
     ipFallbackActive: false,
   });
 
@@ -79,6 +82,7 @@ export function useGeolocation(): GeolocationState {
         deviceLocationOff: false,
         permissionDenied: false,
         gpsTimedOut: false,
+        canUseFallback: false,
         ipFallbackActive: false,
       });
 
@@ -93,6 +97,7 @@ export function useGeolocation(): GeolocationState {
               accuracy: livePos.coords.accuracy,
               locationSource: "GPS_EXACT",
               ipFallbackActive: false,
+              canUseFallback: false,
               location: `${livePos.coords.latitude},${livePos.coords.longitude}`,
             }));
           },
@@ -106,48 +111,8 @@ export function useGeolocation(): GeolocationState {
     [clearWatch],
   );
 
-  // Fallback to IP Geolocation when native Geolocation fails
-  const triggerIpFallback = useCallback(
-    async (
-      failureReason: string,
-      isPermissionDenied: boolean,
-      isDeviceOff: boolean,
-      isGpsTimedOut: boolean,
-    ) => {
-      try {
-        const ipLocation = await fetchCurrentLocation();
-        setState((prev) => ({
-          ...prev,
-          latitude: ipLocation.latitude,
-          longitude: ipLocation.longitude,
-          accuracy: ipLocation.accuracy,
-          locationSource: "IP_FALLBACK",
-          ipAddress: ipLocation.ip,
-          city: ipLocation.city,
-          location: `${ipLocation.latitude},${ipLocation.longitude}`,
-          loading: false,
-          error: null,
-          deviceLocationOff: isDeviceOff,
-          permissionDenied: isPermissionDenied,
-          gpsTimedOut: isGpsTimedOut,
-          ipFallbackActive: true,
-        }));
-      } catch {
-        // If IP lookup also failed (completely offline), show the failure message
-        setState((prev) => ({
-          ...prev,
-          error: failureReason,
-          loading: false,
-          deviceLocationOff: isDeviceOff,
-          permissionDenied: isPermissionDenied,
-          gpsTimedOut: isGpsTimedOut,
-          ipFallbackActive: false,
-        }));
-      }
-    },
-    [],
-  );
-
+  // When GPS fails, set diagnostic state but do NOT auto-trigger IP fallback.
+  // Instead set canUseFallback = true so the UI can show an opt-in button.
   const handleFailure = useCallback(
     async (err: GeolocationPositionError, isTimeout: boolean) => {
       let permissionState: PermissionState | null = null;
@@ -182,16 +147,62 @@ export function useGeolocation(): GeolocationState {
         errorMessage = err.message || "Unable to acquire location.";
       }
 
-      // Priority 2: Engage IP Fallback
-      await triggerIpFallback(errorMessage, isPermissionDenied, isDeviceOff, isGpsTimedOut);
+      // Do NOT auto-fallback. Set canUseFallback so UI shows fallback button.
+      setState((prev) => ({
+        ...prev,
+        error: errorMessage,
+        loading: false,
+        deviceLocationOff: isDeviceOff,
+        permissionDenied: isPermissionDenied,
+        gpsTimedOut: isGpsTimedOut,
+        canUseFallback: true,
+        ipFallbackActive: false,
+      }));
     },
-    [isIOS, triggerIpFallback],
+    [isIOS],
   );
 
-  // Progressive Priority 1 acquisition: High Accuracy GPS -> Network/Wi-Fi -> Warm Cache -> Fallback
+  // User-triggered IP fallback — only called when the user explicitly clicks
+  // the "Use IP Fallback" button.
+  const useFallbackLocation = useCallback(async () => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const ipLocation = await fetchCurrentLocation();
+      setState((prev) => ({
+        ...prev,
+        latitude: ipLocation.latitude,
+        longitude: ipLocation.longitude,
+        accuracy: ipLocation.accuracy,
+        locationSource: "IP_FALLBACK",
+        ipAddress: ipLocation.ip,
+        city: ipLocation.city,
+        location: `${ipLocation.latitude},${ipLocation.longitude}`,
+        loading: false,
+        error: null,
+        ipFallbackActive: true,
+        canUseFallback: false,
+      }));
+    } catch {
+      setState((prev) => ({
+        ...prev,
+        error: "IP Geolocation failed. Check internet connection.",
+        loading: false,
+        ipFallbackActive: false,
+      }));
+    }
+  }, []);
+
+  // Progressive Priority 1 acquisition: High Accuracy GPS -> Network/Wi-Fi -> Warm Cache
+  // If all tiers fail, canUseFallback becomes true (but IP fallback is NOT triggered).
   const fetchPosition = useCallback(() => {
     if (!("geolocation" in navigator)) {
-      void triggerIpFallback("Geolocation is not supported by your browser.", false, false, false);
+      // No geolocation API at all — allow fallback immediately
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Geolocation is not supported by your browser.",
+        canUseFallback: true,
+      }));
       return;
     }
 
@@ -204,6 +215,7 @@ export function useGeolocation(): GeolocationState {
       loading: true,
       error: null,
       ipFallbackActive: false,
+      canUseFallback: false,
     }));
 
     // Tier 1: High accuracy satellite GPS (6s timeout, fresh)
@@ -216,7 +228,7 @@ export function useGeolocation(): GeolocationState {
       (firstErr) => {
         if (activeAttemptRef.current !== attemptId) return;
 
-        // If user explicitly denied permission, skip straight to fallback
+        // If user explicitly denied permission, show failure with fallback option
         if (firstErr.code === firstErr.PERMISSION_DENIED) {
           void handleFailure(firstErr, false);
           return;
@@ -261,7 +273,7 @@ export function useGeolocation(): GeolocationState {
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 },
     );
-  }, [clearWatch, handleSuccess, handleFailure, triggerIpFallback]);
+  }, [clearWatch, handleSuccess, handleFailure]);
 
   useEffect(() => {
     fetchPosition();
@@ -274,5 +286,6 @@ export function useGeolocation(): GeolocationState {
     ...state,
     isIOS,
     retry: fetchPosition,
+    useFallbackLocation,
   };
 }

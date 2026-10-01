@@ -25,5 +25,7 @@ export interface GpsLocationState {
   accuracy: number | null;
   ipAddress: string | null;
   ipFallbackActive: boolean;
+  canUseFallback: boolean;
   requestGpsLocation: () => void;
+  useFallbackLocation: () => Promise<void>;
 }

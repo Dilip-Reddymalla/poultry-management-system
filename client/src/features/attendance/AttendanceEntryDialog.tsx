@@ -77,9 +77,11 @@ export function AttendanceEntryDialog({
     locationSource,
     ipAddress,
     ipFallbackActive,
+    canUseFallback,
     error: locationError,
     loading: locationLoading,
     retry: retryGps,
+    useFallbackLocation,
   } = useGeolocation();
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms());
@@ -214,9 +216,11 @@ export function AttendanceEntryDialog({
           locationSource={locationSource}
           ipAddress={ipAddress}
           ipFallbackActive={ipFallbackActive}
+          canUseFallback={canUseFallback}
           loading={locationLoading}
           error={locationError}
           onRetry={retryGps}
+          onUseFallback={useFallbackLocation}
         />
 
         <TextField

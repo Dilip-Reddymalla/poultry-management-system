@@ -52,7 +52,9 @@ export function FaceAttendancePage(): React.ReactElement {
     accuracy,
     ipAddress,
     ipFallbackActive,
+    canUseFallback,
     requestGpsLocation,
+    useFallbackLocation,
   } = useFaceAttendanceGps();
 
   // Farm & Shed Selection
@@ -598,7 +600,9 @@ export function FaceAttendancePage(): React.ReactElement {
         isGpsLoading={isGpsLoading}
         ipFallbackActive={ipFallbackActive}
         ipAddress={ipAddress}
+        canUseFallback={canUseFallback}
         onRequestGpsLocation={requestGpsLocation}
+        onUseFallback={useFallbackLocation}
       />
 
       {/* Camera Feed, Bounding Box Viewfinder & Capture Controls */}

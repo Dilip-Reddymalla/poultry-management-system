@@ -60,6 +60,7 @@
     "installApp": "యాప్ ఇన్‌స్టాల్ చేయండి"
   },
   "nav": {
+    "dashboard": "డాష్‌బోర్డ్",
     "overview": "ఓవerview",
     "companies": "కంపెనీలు",
     "farms": "ఫారాలు",
@@ -68,6 +69,7 @@
     "workers": "వర్కర్లు",
     "attDashboard": "హాజరు డాష్‌బోర్డ్",
     "attendanceList": "హాజరు జాబితా",
+    "attendanceApprovals": "ఆమోదాలు",
     "faceAttendance": "ఫేస్ అటెండెన్స్",
     "auditLogs": "ఆడిట్ లాగ్స్",
     "myProfile": "నా ప్రొఫైల్",

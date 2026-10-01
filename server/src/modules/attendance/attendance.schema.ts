@@ -60,6 +60,8 @@ export const listAttendanceQuerySchema = z.object({
     .enum(["GPS_EXACT", "NETWORK_APPROX", "CACHED_GPS", "IP_FALLBACK", "FARM_DEFAULT"])
     .optional(),
   pendingLocationApproval: z.coerce.boolean().optional(),
+  pendingApproval: z.coerce.boolean().optional(),
+  approvalStatus: z.enum(["ALL", "PENDING", "APPROVED"]).optional(),
 });
 
 // Exactly one of employeeId/workerId identifies the person. The farm is NOT

@@ -105,6 +105,23 @@ export const authEndpointRateLimiter = rateLimit({
 });
 
 /**
+ * 2b. Token Refresh Rate Limiter:
+ * Allows background token rotation and multi-tab visibility refreshes without hitting brute-force limits (default: 150 requests / 15 minutes).
+ */
+export const tokenRefreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 150,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  skip: () => shouldSkipInTest(),
+  keyGenerator: (req) => `refresh:${getClientIp(req)}`,
+  handler: standardJsonHandler,
+  message: "Too many token refresh attempts. Please try again after 15 minutes.",
+  validate: { xForwardedForHeader: false },
+});
+
+
+/**
  * 3. After Login / Authenticated Rate Limiter:
  * High limit applied per authenticated user account (default: 1000 requests / 15 minutes).
  */

@@ -856,18 +856,24 @@ export async function rotateRefreshToken(
     throw new AppError("Invalid refresh token", 401);
   }
 
-  // Automatic reuse detection: If a revoked token is used, assume breach and revoke all tokens for this user
+  // Automatic reuse detection: If a revoked token is used, check if it falls within the rotation grace period.
+  // A 30-second window allows for network latency, retries, and concurrent tab requests without false-positive lockouts.
+  const ROTATION_GRACE_PERIOD_MS = 30_000;
   if (existingToken.revokedAt !== null) {
-    if (existingToken.userId) {
-      await prisma.refreshToken.updateMany({
-        where: { userId: existingToken.userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-    } else if (existingToken.systemAdmin) {
-      await prisma.refreshToken.updateMany({
-        where: { systemAdmin: true, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
+    const elapsedSinceRevocation = Date.now() - existingToken.revokedAt.getTime();
+    if (elapsedSinceRevocation > ROTATION_GRACE_PERIOD_MS) {
+      // Past grace period: True reuse breach detected! Revoke all active tokens for this user/admin
+      if (existingToken.userId) {
+        await prisma.refreshToken.updateMany({
+          where: { userId: existingToken.userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      } else if (existingToken.systemAdmin) {
+        await prisma.refreshToken.updateMany({
+          where: { systemAdmin: true, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
     }
     throw new AppError("Refresh token revoked. Please log in again.", 401);
   }

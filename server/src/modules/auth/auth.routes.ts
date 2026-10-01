@@ -16,13 +16,16 @@ import {
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
-import { authEndpointRateLimiter } from "../../middlewares/rate-limit.middleware.js";
+import {
+  authEndpointRateLimiter,
+  tokenRefreshRateLimiter,
+} from "../../middlewares/rate-limit.middleware.js";
 
 const router = Router();
 
 router.post("/login", authEndpointRateLimiter, loginController);
 router.post("/phone/login", authEndpointRateLimiter, phoneLoginController);
-router.post("/refresh", authEndpointRateLimiter, refreshTokenController);
+router.post("/refresh", tokenRefreshRateLimiter, refreshTokenController);
 router.get("/me", requireAuth, getCurrentUserController);
 router.post("/logout", logoutController);
 router.post("/logout-all", requireAuth, logoutAllController);

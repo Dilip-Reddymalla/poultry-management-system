@@ -1,16 +1,30 @@
-import { apiRequest } from "./client.js";
+import { ApiError, apiRequest, tryRefreshToken } from "./client.js";
 import type { PhoneAccount, SessionUser } from "./types.js";
 
 interface SessionResponse {
   user: SessionUser;
 }
 
-export function fetchSession(signal?: AbortSignal): Promise<SessionResponse> {
-  return apiRequest<SessionResponse>("/auth/me", {
-    // A 401 here is the normal "not signed in yet" answer during bootstrap.
-    keepSessionOnUnauthorized: true,
-    ...(signal ? { signal } : {}),
-  });
+export async function fetchSession(signal?: AbortSignal): Promise<SessionResponse> {
+  try {
+    return await apiRequest<SessionResponse>("/auth/me", {
+      // Keep session on unauthorized initially so we can catch 401 and try silent refresh
+      keepSessionOnUnauthorized: true,
+      ...(signal ? { signal } : {}),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      // Access token expired or missing — attempt silent refresh using the 7-day refresh token cookie
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        return apiRequest<SessionResponse>("/auth/me", {
+          keepSessionOnUnauthorized: true,
+          ...(signal ? { signal } : {}),
+        });
+      }
+    }
+    throw error;
+  }
 }
 
 export function signIn(

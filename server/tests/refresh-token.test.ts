@@ -137,4 +137,41 @@ describe("Refresh Token System", () => {
 
     expect(refreshRes.status).toBe(401);
   });
+
+  it("does not revoke new active refresh token when old token is replayed within grace period", async () => {
+    // 1. Login
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({
+        email: supervisor.email,
+        password: TEST_PASSWORD,
+      });
+
+    const oldRefreshCookie = extractCookie(loginRes.headers["set-cookie"], REFRESH_COOKIE_NAME)!;
+
+    // 2. Rotate token
+    const firstRefreshRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", oldRefreshCookie);
+
+    expect(firstRefreshRes.status).toBe(200);
+    const newRefreshCookie = extractCookie(firstRefreshRes.headers["set-cookie"], REFRESH_COOKIE_NAME)!;
+    expect(newRefreshCookie).not.toBe(oldRefreshCookie);
+
+    // 3. Immediately replay old token (simulating concurrent request or delayed tab)
+    const replayRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", oldRefreshCookie);
+
+    // The old token itself is rejected
+    expect(replayRes.status).toBe(401);
+
+    // 4. Crucial: The new token must STILL be active and valid (not nuked by breach detection)
+    const secondRefreshRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", newRefreshCookie);
+
+    expect(secondRefreshRes.status).toBe(200);
+    expect(secondRefreshRes.body.success).toBe(true);
+  });
 });

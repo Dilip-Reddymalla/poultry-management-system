@@ -92,7 +92,7 @@ let refreshingPromise: Promise<boolean> | null = null;
  * Returns true if the refresh succeeded (new access token cookie is set),
  * false if the refresh token is also expired / revoked / missing.
  */
-async function tryRefreshToken(): Promise<boolean> {
+export async function tryRefreshToken(): Promise<boolean> {
   // If a refresh is already in progress, wait for it rather than making a second call.
   if (refreshingPromise) return refreshingPromise;
 

@@ -1,7 +1,9 @@
 import type React from "react";
+import { useState } from "react";
 import type { FrameProcessResult } from "../../../api/face-attendance.api.js";
 import type { FaceSelection } from "./face-attendance.types.js";
 import { styles, statusColor } from "./face-attendance.styles.js";
+import { FaceProcessingOverlay, ShutterFlash } from "./FaceProcessingOverlay.js";
 
 interface FaceViewfinderProps {
   cameraActive: boolean;
@@ -49,6 +51,15 @@ export function FaceViewfinder({
   onSubmitAttendance,
 }: FaceViewfinderProps): React.ReactElement {
   const liveFaces = result?.faces.filter((f) => f.status === "LIVE") ?? [];
+  // Track shutter flash trigger — fires once when capture is clicked
+  const [shutterFired, setShutterFired] = useState(false);
+
+  const handleCapture = () => {
+    setShutterFired(true);
+    onCaptureFrame();
+    // Reset after flash animation completes
+    setTimeout(() => setShutterFired(false), 300);
+  };
 
   return (
     <div style={styles.card}>
@@ -83,6 +94,8 @@ export function FaceViewfinder({
                 WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
               }}
             />
+            {/* Camera shutter flash effect */}
+            <ShutterFlash trigger={shutterFired} />
           </div>
           <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
             {facingMode === "environment"
@@ -97,9 +110,21 @@ export function FaceViewfinder({
       {!cameraActive && imagePreviewUrl && (
         <div style={{ textAlign: "center" }}>
           <div style={styles.imageContainer}>
-            <img src={imagePreviewUrl} alt="Captured frame" style={styles.previewImage} />
+            <img
+              src={imagePreviewUrl}
+              alt="Captured frame"
+              style={{
+                ...styles.previewImage,
+                // Slight blur while processing to emphasise the overlay
+                filter: processing ? "blur(1.5px) brightness(0.88)" : "none",
+                transition: "filter 0.3s ease",
+              }}
+            />
 
-            {/* Bounding box overlay */}
+            {/* ── Adaptive processing overlay ── */}
+            <FaceProcessingOverlay visible={processing} />
+
+            {/* Bounding box overlay (only when result is available) */}
             {result && (
               <svg
                 style={{
@@ -302,7 +327,7 @@ export function FaceViewfinder({
                 ...(processing || !selectedFarmId || !hasValidLocation ? styles.btnDisabled : {}),
               }}
               disabled={processing || !selectedFarmId || !hasValidLocation}
-              onClick={onCaptureFrame}
+              onClick={handleCapture}
               title={!hasValidLocation ? "GPS location is required before taking attendance" : undefined}
             >
               {processing && <span style={styles.spinner} />}

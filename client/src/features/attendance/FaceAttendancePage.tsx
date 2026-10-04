@@ -171,7 +171,6 @@ export function FaceAttendancePage(): React.ReactElement {
     const videoConstraints: MediaTrackConstraints = isBackCamera
       ? {
           facingMode: { ideal: "environment" },
-          aspectRatio: { ideal: 16 / 9 },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         }
@@ -265,8 +264,10 @@ export function FaceAttendancePage(): React.ReactElement {
       let sHeight = vh;
 
       if (isBack) {
-        const targetRatio = 16 / 9;
-        if (Math.abs(currentRatio - targetRatio) > 0.02) {
+        // Adapt to phone orientation: portrait 3/4 if held vertically, 16/9 if held horizontally
+        const isPortrait = vw < vh;
+        const targetRatio = isPortrait ? 3 / 4 : 16 / 9;
+        if (Math.abs(currentRatio - targetRatio) > 0.04) {
           if (currentRatio < targetRatio) {
             sWidth = vw;
             sHeight = Math.round(vw / targetRatio);

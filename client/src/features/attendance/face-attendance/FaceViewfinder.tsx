@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { FrameProcessResult } from "../../../api/face-attendance.api.js";
 import type { FaceSelection } from "./face-attendance.types.js";
 import { styles, statusColor } from "./face-attendance.styles.js";
-import { FaceProcessingOverlay, ShutterFlash } from "./FaceProcessingOverlay.js";
+import { FaceProcessingOverlay, ShutterFlash, useIsMobile } from "./FaceProcessingOverlay.js";
 
 interface FaceViewfinderProps {
   cameraActive: boolean;
@@ -51,13 +51,17 @@ export function FaceViewfinder({
   onSubmitAttendance,
 }: FaceViewfinderProps): React.ReactElement {
   const liveFaces = result?.faces.filter((f) => f.status === "LIVE") ?? [];
+  const isMobile = useIsMobile();
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Track shutter flash trigger — fires once when capture is clicked
   const [shutterFired, setShutterFired] = useState(false);
 
   const handleCapture = () => {
     setShutterFired(true);
     onCaptureFrame();
-    // Reset after flash animation completes
+    if (isFullscreen) {
+      setTimeout(() => setIsFullscreen(false), 250);
+    }
     setTimeout(() => setShutterFired(false), 300);
   };
 
@@ -66,44 +70,276 @@ export function FaceViewfinder({
       {cameraError && <div style={styles.error}>⚠️ {cameraError}</div>}
 
       {cameraActive && (
-        <div style={{ textAlign: "center" }}>
+        <div
+          style={
+            isFullscreen
+              ? {
+                  position: "fixed",
+                  inset: 0,
+                  width: "100vw",
+                  height: "100dvh",
+                  zIndex: 99999,
+                  background: "#030712",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  padding: "max(env(safe-area-inset-top), 12px) 12px max(env(safe-area-inset-bottom), 16px) 12px",
+                  boxSizing: "border-box",
+                }
+              : { textAlign: "center" }
+          }
+        >
+          {/* Top Bar when in Fullscreen Mode */}
+          {isFullscreen && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 12px",
+                background: "rgba(15, 23, 42, 0.8)",
+                backdropFilter: "blur(8px)",
+                borderRadius: 12,
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#fff",
+                marginBottom: 8,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(false)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  border: "none",
+                  color: "#fff",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                ✕ <span>Exit Fullscreen</span>
+              </button>
+
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#e0e7ff", textAlign: "center" }}>
+                {facingMode === "environment" ? "📸 Back Camera (Group View)" : "📷 Front Camera (Selfie)"}
+              </div>
+
+              <button
+                type="button"
+                onClick={onToggleCamera}
+                style={{
+                  background: "rgba(99, 102, 241, 0.3)",
+                  border: "1px solid rgba(165, 180, 252, 0.4)",
+                  color: "#e0e7ff",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                🔄 <span>Switch</span>
+              </button>
+            </div>
+          )}
+
+          {/* Video Container (Shared instance - zero stream reloading) */}
           <div
-            style={{
-              ...styles.imageContainer,
-              width: "100%",
-              maxWidth: facingMode === "environment" ? 920 : 420,
-            }}
+            style={
+              isFullscreen
+                ? {
+                    position: "relative",
+                    flex: 1,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    borderRadius: 16,
+                  }
+                : {
+                    ...styles.imageContainer,
+                    width: "100%",
+                    maxWidth: facingMode === "environment" ? 920 : 420,
+                  }
+            }
           >
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              style={{
-                width: "100%",
-                maxWidth: facingMode === "environment" ? 920 : 420,
-                aspectRatio: facingMode === "environment" ? "16 / 9" : "3 / 4",
-                objectFit: "cover",
-                borderRadius: 12,
-                background: "#000",
-                display: "block",
-                margin: "0 auto",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
-                // Mirror only front camera
-                transform: facingMode === "user" ? "scaleX(-1)" : "none",
-                WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
-              }}
+              style={
+                isFullscreen
+                  ? {
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: 16,
+                      background: "#000",
+                      transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                      WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
+                    }
+                  : {
+                      width: "100%",
+                      maxWidth: facingMode === "environment" ? 920 : 420,
+                      aspectRatio: facingMode === "environment" ? (isMobile ? "4 / 3" : "16 / 9") : "3 / 4",
+                      objectFit: "cover",
+                      borderRadius: 12,
+                      background: "#000",
+                      display: "block",
+                      margin: "0 auto",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
+                      transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                      WebkitTransform: facingMode === "user" ? "scaleX(-1)" : "none",
+                    }
+              }
             />
+
+            {/* In inline mode: Floating 'Fullscreen Camera' button on top-right of preview */}
+            {!isFullscreen && (
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(true)}
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  zIndex: 12,
+                  background: "rgba(15, 23, 42, 0.8)",
+                  backdropFilter: "blur(6px)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.25)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
+                }}
+                title="Expand camera to full mobile screen (Ideal for group attendance)"
+              >
+                <span>⛶</span> Fullscreen
+              </button>
+            )}
+
+            {/* In fullscreen mode: Group alignment guide watermark */}
+            {isFullscreen && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 20,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(0, 0, 0, 0.65)",
+                  backdropFilter: "blur(6px)",
+                  padding: "6px 16px",
+                  borderRadius: 999,
+                  color: "#f3f4f6",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  pointerEvents: "none",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                👥 Position workers across frame
+              </div>
+            )}
+
             {/* Camera shutter flash effect */}
             <ShutterFlash trigger={shutterFired} />
           </div>
-          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
-            {facingMode === "environment"
-              ? "📸 Back Camera (16:9 Widescreen) — Position workers across the frame"
-              : "📷 Front Camera (Portrait) — Position face clearly inside the frame"}
-            {" and click "}
-            <strong>Capture & Recognize</strong>.
-          </p>
+
+          {/* Fullscreen Bottom Shutter Bar */}
+          {isFullscreen && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-around",
+                alignItems: "center",
+                padding: "16px 8px 8px 8px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => onStopCamera()}
+                style={{
+                  background: "rgba(239, 68, 68, 0.2)",
+                  border: "1px solid rgba(239, 68, 68, 0.4)",
+                  color: "#fca5a5",
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                ⏹ Stop
+              </button>
+
+              {/* Shutter Capture Button */}
+              <button
+                type="button"
+                onClick={handleCapture}
+                disabled={processing || !selectedFarmId || !hasValidLocation}
+                style={{
+                  width: 76,
+                  height: 76,
+                  borderRadius: "50%",
+                  border: "4px solid #ffffff",
+                  background: processing || !selectedFarmId || !hasValidLocation ? "#6b7280" : "#4f46e5",
+                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.6)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  transition: "transform 0.15s ease",
+                }}
+              >
+                <span style={{ fontSize: 24 }}>📸</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(false)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.15)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: "#ffffff",
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                ✕ Close
+              </button>
+            </div>
+          )}
+
+          {!isFullscreen && (
+            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>
+              {facingMode === "environment"
+                ? "📸 Back Camera (Tap Fullscreen for Group Photo) — Position workers across the frame"
+                : "📷 Front Camera (Portrait) — Position face clearly inside the frame"}
+              {" and click "}
+              <strong>Capture & Recognize</strong>.
+            </p>
+          )}
         </div>
       )}
 
@@ -355,11 +591,18 @@ export function FaceViewfinder({
               {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
             </button>
             <button
+              style={{ ...styles.btn, background: "#1e1b4b", color: "#c7d2fe", border: "1px solid #4338ca" }}
+              onClick={() => setIsFullscreen(true)}
+              title="Expand viewfinder to full mobile screen (great for group photos)"
+            >
+              ⛶ Expand Fullscreen
+            </button>
+            <button
               style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
               onClick={onToggleCamera}
               title="Switch between front and back camera"
             >
-              🔄 {facingMode === "user" ? "Use Back Cam (16:9)" : "Use Front Cam (Portrait)"}
+              🔄 {facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
             </button>
             <button
               style={{ ...styles.btn, background: "#fee2e2", color: "#991b1b" }}

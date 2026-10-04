@@ -14,7 +14,7 @@ const STEP_MESSAGES = [
 ];
 
 /* ─── Mobile detection helper ───────────────────────────────────────────── */
-function useIsMobile(breakpoint = 480): boolean {
+export function useIsMobile(breakpoint = 640): boolean {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= breakpoint,
   );

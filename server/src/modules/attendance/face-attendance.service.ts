@@ -70,33 +70,35 @@ export async function processFrame(
   // 1. Send image to FastAPI for face detection, quality, liveness, and embedding.
   const aiResult = await analyzeImage(imageBuffer, filename);
 
-  // 2. For each detected face, run pgvector search if embedding is available.
-  const faces: ProcessedFace[] = [];
+  // 2. Protect against overload: process at most the top 8 faces per frame concurrently
+  const candidateFaces = aiResult.faces.slice(0, 8);
 
-  for (const face of aiResult.faces) {
-    const status = deriveFaceStatus(face);
-    const qualityScore = face.quality?.quality_score ?? null;
-    const livenessScore = face.liveness?.score ?? null;
+  const faces: ProcessedFace[] = await Promise.all(
+    candidateFaces.map(async (face) => {
+      const status = deriveFaceStatus(face);
+      const qualityScore = face.quality?.quality_score ?? null;
+      const livenessScore = face.liveness?.score ?? null;
 
-    let candidates: CandidateMatch[] = [];
+      let candidates: CandidateMatch[] = [];
 
-    if (face.embedding && status === "LIVE") {
-      candidates = await searchByEmbedding(face.embedding, {
-        threshold: 0.40,
-        limit: 5,
-        farmId,
-      });
-    }
+      if (face.embedding && status === "LIVE") {
+        candidates = await searchByEmbedding(face.embedding, {
+          threshold: 0.40,
+          limit: 5,
+          farmId,
+        });
+      }
 
-    faces.push({
-      faceIndex: face.face_index,
-      bbox: face.bbox,
-      status,
-      qualityScore,
-      livenessScore,
-      candidates,
-    });
-  }
+      return {
+        faceIndex: face.face_index,
+        bbox: face.bbox,
+        status,
+        qualityScore,
+        livenessScore,
+        candidates,
+      };
+    }),
+  );
 
   return {
     imageWidth: aiResult.image_width,

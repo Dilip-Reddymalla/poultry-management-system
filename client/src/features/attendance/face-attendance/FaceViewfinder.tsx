@@ -148,16 +148,25 @@ export function FaceViewfinder({
 
                   const scale = Math.max(0.65, result.imageWidth / 900);
                   const strokeWidth = Math.max(3, result.imageWidth * 0.0035);
-                  const badgeHeight = 48 * scale;
-                  const avatarSize = 36 * scale;
-                  const fontSizeName = 15 * scale;
+                  const badgeHeight = 46 * scale;
+                  const avatarSize = 34 * scale;
+                  const fontSizeName = 14 * scale;
                   const fontSizeSub = 11 * scale;
                   const padding = 6 * scale;
-                  const badgeWidth = Math.max(x2 - x1, 220 * scale);
-                  const badgeX = Math.max(4, Math.min(x1, result.imageWidth - badgeWidth - 4));
+
+                  // Center the badge horizontally relative to the face bounding box
+                  const faceCenterX = (x1 + x2) / 2;
+                  const maxAllowedBadgeWidth = Math.max(120, result.imageWidth - 16);
+                  const desiredBadgeWidth = Math.max(x2 - x1 + 20 * scale, 210 * scale);
+                  const badgeWidth = Math.min(maxAllowedBadgeWidth, desiredBadgeWidth);
+
+                  // Keep badge strictly within camera frame bounds horizontally
+                  const badgeX = Math.max(8, Math.min(faceCenterX - badgeWidth / 2, result.imageWidth - badgeWidth - 8));
+
+                  // Position above face if space permits; otherwise flip below face
                   const badgeY =
-                    y1 - badgeHeight - 8 < 0
-                      ? Math.min(result.imageHeight - badgeHeight - 4, y2 + 8)
+                    y1 - badgeHeight - 8 < 4
+                      ? Math.min(result.imageHeight - badgeHeight - 8, y2 + 8)
                       : y1 - badgeHeight - 8;
 
                   return (
@@ -174,7 +183,7 @@ export function FaceViewfinder({
                         rx={8 * scale}
                       />
 
-                      {/* Floating Identity Badge */}
+                      {/* Floating Identity Badge (Centered on face box, clamped inside camera) */}
                       <g>
                         <defs>
                           <clipPath id={`avatar-clip-${face.faceIndex}`}>
@@ -182,6 +191,15 @@ export function FaceViewfinder({
                               cx={badgeX + padding + avatarSize / 2}
                               cy={badgeY + badgeHeight / 2}
                               r={avatarSize / 2}
+                            />
+                          </clipPath>
+                          <clipPath id={`badge-clip-${face.faceIndex}`}>
+                            <rect
+                              x={badgeX}
+                              y={badgeY}
+                              width={badgeWidth}
+                              height={badgeHeight}
+                              rx={8 * scale}
                             />
                           </clipPath>
                         </defs>
@@ -197,72 +215,75 @@ export function FaceViewfinder({
                           strokeWidth={Math.max(1.5, strokeWidth * 0.6)}
                         />
 
-                        {matched ? (
-                          <>
-                            {matched.photoUrl ? (
-                              <image
-                                href={matched.photoUrl}
-                                x={badgeX + padding}
-                                y={badgeY + (badgeHeight - avatarSize) / 2}
-                                width={avatarSize}
-                                height={avatarSize}
-                                clipPath={`url(#avatar-clip-${face.faceIndex})`}
-                                preserveAspectRatio="xMidYMid slice"
-                              />
-                            ) : (
-                              <circle
-                                cx={badgeX + padding + avatarSize / 2}
-                                cy={badgeY + badgeHeight / 2}
-                                r={avatarSize / 2}
-                                fill="#6366f1"
-                              />
-                            )}
-                            {!matched.photoUrl && (
+                        {/* Contents clipped strictly to badge boundary */}
+                        <g clipPath={`url(#badge-clip-${face.faceIndex})`}>
+                          {matched ? (
+                            <>
+                              {matched.photoUrl ? (
+                                <image
+                                  href={matched.photoUrl}
+                                  x={badgeX + padding}
+                                  y={badgeY + (badgeHeight - avatarSize) / 2}
+                                  width={avatarSize}
+                                  height={avatarSize}
+                                  clipPath={`url(#avatar-clip-${face.faceIndex})`}
+                                  preserveAspectRatio="xMidYMid slice"
+                                />
+                              ) : (
+                                <circle
+                                  cx={badgeX + padding + avatarSize / 2}
+                                  cy={badgeY + badgeHeight / 2}
+                                  r={avatarSize / 2}
+                                  fill="#6366f1"
+                                />
+                              )}
+                              {!matched.photoUrl && (
+                                <text
+                                  x={badgeX + padding + avatarSize / 2}
+                                  y={badgeY + badgeHeight / 2 + 5 * scale}
+                                  textAnchor="middle"
+                                  fill="#ffffff"
+                                  fontSize={fontSizeName * 0.9}
+                                  fontWeight="bold"
+                                >
+                                  {matched.name.charAt(0).toUpperCase()}
+                                </text>
+                              )}
+
+                              {/* Recognized Name */}
                               <text
-                                x={badgeX + padding + avatarSize / 2}
-                                y={badgeY + badgeHeight / 2 + 5 * scale}
-                                textAnchor="middle"
+                                x={badgeX + padding + avatarSize + 8 * scale}
+                                y={badgeY + padding + fontSizeName}
                                 fill="#ffffff"
-                                fontSize={fontSizeName * 0.9}
+                                fontSize={fontSizeName}
                                 fontWeight="bold"
                               >
-                                {matched.name.charAt(0).toUpperCase()}
+                                {matched.name.length > 18 ? `${matched.name.slice(0, 16)}…` : matched.name}
                               </text>
-                            )}
 
-                            {/* Recognized Name */}
+                              {/* Match percentage & role */}
+                              <text
+                                x={badgeX + padding + avatarSize + 8 * scale}
+                                y={badgeY + padding + fontSizeName + fontSizeSub + 3 * scale}
+                                fill={matched.similarity >= 0.6 ? "#34d399" : "#fbbf24"}
+                                fontSize={fontSizeSub}
+                                fontWeight="600"
+                              >
+                                {Math.round(matched.similarity * 100)}% Match • {matched.personType}
+                              </text>
+                            </>
+                          ) : (
                             <text
-                              x={badgeX + padding + avatarSize + 8 * scale}
-                              y={badgeY + padding + fontSizeName}
-                              fill="#ffffff"
-                              fontSize={fontSizeName}
+                              x={badgeX + 10 * scale}
+                              y={badgeY + badgeHeight / 2 + 5 * scale}
+                              fill={color}
+                              fontSize={fontSizeName * 0.95}
                               fontWeight="bold"
                             >
-                              {matched.name}
+                              Face #{face.faceIndex} — {face.status === "LIVE" ? "Unrecognized" : face.status}
                             </text>
-
-                            {/* Match percentage & role */}
-                            <text
-                              x={badgeX + padding + avatarSize + 8 * scale}
-                              y={badgeY + padding + fontSizeName + fontSizeSub + 4 * scale}
-                              fill={matched.similarity >= 0.6 ? "#34d399" : "#fbbf24"}
-                              fontSize={fontSizeSub}
-                              fontWeight="600"
-                            >
-                              {Math.round(matched.similarity * 100)}% Match • {matched.personType}
-                            </text>
-                          </>
-                        ) : (
-                          <text
-                            x={badgeX + 12 * scale}
-                            y={badgeY + badgeHeight / 2 + 5 * scale}
-                            fill={color}
-                            fontSize={fontSizeName}
-                            fontWeight="bold"
-                          >
-                            Face #{face.faceIndex} — {face.status === "LIVE" ? "Unrecognized" : face.status}
-                          </text>
-                        )}
+                          )}
+                        </g>
                       </g>
                     </g>
                   );

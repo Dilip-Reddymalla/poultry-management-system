@@ -289,13 +289,27 @@ export function FaceAttendancePage(): React.ReactElement {
         }
       }
 
-      canvas.width = sWidth;
-      canvas.height = sHeight;
+      // Cap maximum dimension to 1280 to prevent massive 4K/1080p uploads on mobile
+      const MAX_DIM = 1280;
+      let outWidth = sWidth;
+      let outHeight = sHeight;
+      if (outWidth > MAX_DIM || outHeight > MAX_DIM) {
+        if (outWidth > outHeight) {
+          outHeight = Math.round((outHeight * MAX_DIM) / outWidth);
+          outWidth = MAX_DIM;
+        } else {
+          outWidth = Math.round((outWidth * MAX_DIM) / outHeight);
+          outHeight = MAX_DIM;
+        }
+      }
+
+      canvas.width = outWidth;
+      canvas.height = outHeight;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+        ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, outWidth, outHeight);
         const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, "image/jpeg", 0.95),
+          canvas.toBlob(resolve, "image/jpeg", 0.85),
         );
         if (blob) {
           fileToProcess = new File([blob], "camera_capture.jpg", {
@@ -321,17 +335,54 @@ export function FaceAttendancePage(): React.ReactElement {
       const res = await processFrame(fileToProcess, selectedFarmId);
       setResult(res);
 
-      const sels: FaceSelection[] = res.faces.map((face) => {
-        const topCandidate = face.candidates[0];
-        if (topCandidate && topCandidate.similarity >= 0.4) {
+      // Smart Multi-Face Deduplication: ensure each person is assigned to at most one face
+      const assignedPersonIds = new Set<string>();
+
+      // Sort faces by highest confidence candidate first to prioritize best match
+      const faceMatchPriorities = res.faces
+        .map((face, originalIndex) => {
+          const top = face.candidates[0];
           return {
-            faceIndex: face.faceIndex,
-            personId: topCandidate.id,
-            personType: topCandidate.personType,
+            originalIndex,
+            face,
+            topSimilarity: top?.similarity ?? 0,
           };
+        })
+        .sort((a, b) => b.topSimilarity - a.topSimilarity);
+
+      const selectionsMap = new Map<number, FaceSelection>();
+
+      for (const item of faceMatchPriorities) {
+        const face = item.face;
+        // Find highest candidate not already assigned to another face
+        const eligible = face.candidates.find(
+          (c) => c.similarity >= 0.4 && !assignedPersonIds.has(c.id),
+        );
+
+        if (eligible) {
+          assignedPersonIds.add(eligible.id);
+          selectionsMap.set(face.faceIndex, {
+            faceIndex: face.faceIndex,
+            personId: eligible.id,
+            personType: eligible.personType,
+          });
+        } else {
+          selectionsMap.set(face.faceIndex, {
+            faceIndex: face.faceIndex,
+            personId: null,
+            personType: null,
+          });
         }
-        return { faceIndex: face.faceIndex, personId: null, personType: null };
-      });
+      }
+
+      const sels: FaceSelection[] = res.faces.map(
+        (f) =>
+          selectionsMap.get(f.faceIndex) || {
+            faceIndex: f.faceIndex,
+            personId: null,
+            personType: null,
+          },
+      );
       setSelections(sels);
     } catch (err: any) {
       const errMsg = err?.message || "";

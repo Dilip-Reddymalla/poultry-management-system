@@ -48,6 +48,21 @@ export interface SearchEmbeddingOptions {
  * Search both `employees` and `workers` tables for faces similar to the given
  * 512-D embedding using pgvector (or JS fallback if pgvector extension is absent).
  */
+let cachedHasPgVector: boolean | null = null;
+
+async function checkPgVector(): Promise<boolean> {
+  if (cachedHasPgVector !== null) return cachedHasPgVector;
+  try {
+    const ext = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT 1 FROM pg_extension WHERE extname = 'vector'`,
+    );
+    cachedHasPgVector = ext.length > 0;
+  } catch {
+    cachedHasPgVector = false;
+  }
+  return cachedHasPgVector;
+}
+
 export async function searchByEmbedding(
   embedding: number[],
   options: SearchEmbeddingOptions = {},
@@ -55,16 +70,7 @@ export async function searchByEmbedding(
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
   const limit = options.limit ?? DEFAULT_LIMIT;
 
-  // Check if pgvector extension is available in Postgres
-  let hasPgVector = false;
-  try {
-    const ext = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT 1 FROM pg_extension WHERE extname = 'vector'`,
-    );
-    hasPgVector = ext.length > 0;
-  } catch {
-    hasPgVector = false;
-  }
+  const hasPgVector = await checkPgVector();
 
   if (hasPgVector) {
     const vectorLiteral = `[${embedding.join(",")}]`;
@@ -85,7 +91,7 @@ export async function searchByEmbedding(
       WHERE e.face_embedding IS NOT NULL
         AND e.status = 'ACTIVE'
         AND (e.face_embedding <=> $1::vector) <= $2
-        ${options.farmId ? `AND e."farmId" = $4` : ""}
+        ${options.farmId ? `AND e."farmId" = $4::uuid` : ""}
       ORDER BY e.face_embedding <=> $1::vector ASC
       LIMIT $3
     `;
@@ -103,7 +109,7 @@ export async function searchByEmbedding(
       WHERE w.face_embedding IS NOT NULL
         AND w.status = 'ACTIVE'
         AND (w.face_embedding <=> $1::vector) <= $2
-        ${options.farmId ? `AND w."farmId" = $4` : ""}
+        ${options.farmId ? `AND w."farmId" = $4::uuid` : ""}
       ORDER BY w.face_embedding <=> $1::vector ASC
       LIMIT $3
     `;
@@ -117,16 +123,9 @@ export async function searchByEmbedding(
       prisma.$queryRawUnsafe<CandidateMatch[]>(workerQuery, ...params),
     ]);
 
-    const results = [...employeeResults, ...workerResults]
+    return [...employeeResults, ...workerResults]
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
-
-    if (results.length === 0 && options.farmId) {
-      const { farmId: _farmId, ...restOptions } = options;
-      return searchByEmbedding(embedding, restOptions);
-    }
-
-    return results;
   }
 
   // Fallback for local Postgres containers without pgvector extension
@@ -134,14 +133,14 @@ export async function searchByEmbedding(
     SELECT id, 'EMPLOYEE' AS "personType", "employeeId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
     FROM employees
     WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
-    ${options.farmId ? `AND "farmId" = $1` : ""}
+    ${options.farmId ? `AND "farmId" = $1::uuid` : ""}
   `;
 
   const fallbackWorkerQuery = `
     SELECT id, 'WORKER' AS "personType", "workerId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
     FROM workers
     WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
-    ${options.farmId ? `AND "farmId" = $1` : ""}
+    ${options.farmId ? `AND "farmId" = $1::uuid` : ""}
   `;
 
   const fallbackParams = options.farmId ? [options.farmId] : [];
@@ -172,12 +171,5 @@ export async function searchByEmbedding(
     }
   }
 
-  const sortedCandidates = candidates.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
-
-  if (sortedCandidates.length === 0 && options.farmId) {
-    const { farmId: _farmId, ...restOptions } = options;
-    return searchByEmbedding(embedding, restOptions);
-  }
-
-  return sortedCandidates;
+  return candidates.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
 }

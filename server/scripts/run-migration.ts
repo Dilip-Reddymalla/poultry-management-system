@@ -55,6 +55,27 @@ async function main() {
     console.log("employees.face_embedding note:", err.message);
   }
 
+  // 5b. Create HNSW Vector Cosine Indexes for sub-10ms similarity search
+  if (hasVector) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `CREATE INDEX IF NOT EXISTS "workers_face_embedding_hnsw_idx" ON "workers" USING hnsw ("face_embedding" vector_cosine_ops);`,
+      );
+      console.log("✓ Added HNSW index on workers.face_embedding.");
+    } catch (err: any) {
+      console.log("workers HNSW index note:", err.message);
+    }
+
+    try {
+      await prisma.$executeRawUnsafe(
+        `CREATE INDEX IF NOT EXISTS "employees_face_embedding_hnsw_idx" ON "employees" USING hnsw ("face_embedding" vector_cosine_ops);`,
+      );
+      console.log("✓ Added HNSW index on employees.face_embedding.");
+    } catch (err: any) {
+      console.log("employees HNSW index note:", err.message);
+    }
+  }
+
   // 6. Ensure employee:delete and worker:delete permissions and role assignments
   try {
     const deletePermissions = [

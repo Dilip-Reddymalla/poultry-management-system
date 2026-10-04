@@ -120,11 +120,11 @@ function spawnFaceAi() {
     shell: false,
     env: {
       ...process.env,
-      // Limit CPU threads so Face-AI doesn't monopolize container cores and starve Node.js
-      OMP_NUM_THREADS: "1",
-      OPENBLAS_NUM_THREADS: "1",
-      MKL_NUM_THREADS: "1",
-      ONNX_NUM_THREADS: "1",
+      // Allocate 2 threads for balanced SIMD/vector math without starving Node.js or crashing production
+      OMP_NUM_THREADS: "2",
+      OPENBLAS_NUM_THREADS: "2",
+      MKL_NUM_THREADS: "2",
+      ONNX_NUM_THREADS: "2",
     },
   });
 

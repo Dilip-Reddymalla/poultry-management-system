@@ -485,7 +485,7 @@ export function AttendanceKpiGrid({
             <span className="eyebrow" style={{ color: "var(--ink-soft)" }}>Manager Approvals</span>
             <span style={{ fontSize: "1.1rem" }}>✍️</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
               <span style={{ fontSize: "2rem", fontWeight: 700, color: metrics.pendingApprovalCount > 0 ? "var(--clay)" : "var(--moss)", lineHeight: 1 }}>
                 {metrics.pendingApprovalCount}
@@ -496,7 +496,7 @@ export function AttendanceKpiGrid({
               <button
                 type="button"
                 className="button button--secondary"
-                style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem", minHeight: "26px" }}
+                style={{ padding: "0.25rem 0.6rem", fontSize: "0.75rem", minHeight: "26px", flexShrink: 0, whiteSpace: "nowrap" }}
                 onClick={onApproveAllPending}
                 disabled={bulkApproving}
               >
@@ -526,7 +526,7 @@ export function AttendanceKpiGrid({
             <span className="eyebrow" style={{ color: "var(--ink-soft)" }}>IP Fallback Audit</span>
             <span style={{ fontSize: "1.1rem" }}>🌐</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
               <span style={{ fontSize: "2rem", fontWeight: 700, color: "#d97706", lineHeight: 1 }}>
                 {metrics.ipFallbackCount}
@@ -539,7 +539,7 @@ export function AttendanceKpiGrid({
               <button
                 type="button"
                 className="button button--secondary"
-                style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem", minHeight: "26px", borderColor: "#d97706", color: "#b45309" }}
+                style={{ padding: "0.25rem 0.6rem", fontSize: "0.75rem", minHeight: "26px", borderColor: "#d97706", color: "#b45309", flexShrink: 0, whiteSpace: "nowrap" }}
                 onClick={onApproveIpFallbackPending}
                 disabled={bulkApproving}
               >

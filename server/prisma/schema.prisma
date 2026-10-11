@@ -185,6 +185,9 @@ model User {
   recordedAttendances Attendance[]   @relation("AttendanceRecordedBy")
   approvedAttendances Attendance[]   @relation("AttendanceApprovedBy")
   refreshTokens       RefreshToken[]
+  pushSubscriptions   PushSubscription[]
+  notifications       Notification[]
+  systemErrorLogs     SystemErrorLog[]
 
   @@map("users")
 }
@@ -434,4 +437,97 @@ model RefreshToken {
   @@index([tokenHash])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// Push Subscriptions (multi-device support)
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  systemAdmin Boolean @default(false)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([systemAdmin])
+  @@map("push_subscriptions")
+}
+
+enum NotificationCategory {
+  IP_FALLBACK_AUDIT
+  SERVER_500_ERROR
+  ATTENDANCE_APPROVAL
+  SYSTEM_ALERT
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// In-app notifications
+model Notification {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String?              @db.Uuid
+  systemAdmin Boolean            @default(false)
+  category  NotificationCategory
+  priority  NotificationPriority @default(MEDIUM)
+  title     String
+  body      String
+  linkUrl   String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([systemAdmin, readAt])
+  @@index([category])
+  @@map("notifications")
+}
+
+// System Error Logs (Recorded on 500 errors exclusively for System Admin Inspection)
+model SystemErrorLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  requestId    String?   @unique
+  statusCode   Int       @default(500)
+  errorName    String
+  errorMessage String
+  stackTrace   String?
+  method       String
+  path         String
+  queryParams  Json?
+  requestBody  Json?
+  
+  // Who caused it
+  userId       String?   @db.Uuid
+  userName     String?
+  userEmail    String?
+  userRole     String?
+  
+  // Location & Network context
+  companyName  String?
+  farmName     String?
+  ipAddress    String?
+  userAgent    String?
+  
+  resolvedAt   DateTime?
+  resolvedBy   String?
+  createdAt    DateTime  @default(now())
+
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([errorName])
+  @@map("system_error_logs")
 }

@@ -862,18 +862,9 @@ export async function rotateRefreshToken(
   if (existingToken.revokedAt !== null) {
     const elapsedSinceRevocation = Date.now() - existingToken.revokedAt.getTime();
     if (elapsedSinceRevocation > ROTATION_GRACE_PERIOD_MS) {
-      // Past grace period: True reuse breach detected! Revoke all active tokens for this user/admin
-      if (existingToken.userId) {
-        await prisma.refreshToken.updateMany({
-          where: { userId: existingToken.userId, revokedAt: null },
-          data: { revokedAt: new Date() },
-        });
-      } else if (existingToken.systemAdmin) {
-        await prisma.refreshToken.updateMany({
-          where: { systemAdmin: true, revokedAt: null },
-          data: { revokedAt: new Date() },
-        });
-      }
+      // Past grace period: This specific token has been consumed and retired.
+      // Do not perform a global blanket wipe of other active devices (e.g. phone vs laptop),
+      // but ensure this stale token is rejected so only the current device logs out.
     }
     throw new AppError("Refresh token revoked. Please log in again.", 401);
   }

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../auth/use-auth.js";
 import {
+  BellIcon,
   CalendarIcon,
   CompanyIcon,
   DashboardIcon,
@@ -74,6 +75,11 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.auditLogs",
     systemAdminOnly: true,
     icon: CalendarIcon,
+  },
+  {
+    to: "/notifications",
+    labelKey: "Notifications",
+    icon: BellIcon,
   },
   { to: "/profile", labelKey: "nav.myProfile", icon: ProfileIcon },
 ];

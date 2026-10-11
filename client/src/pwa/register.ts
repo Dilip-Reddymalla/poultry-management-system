@@ -10,5 +10,10 @@ import { registerSW } from "virtual:pwa-register";
  * against a newer API.
  */
 export function registerServiceWorker(): void {
-  registerSW({ immediate: true });
+  // Only register the virtual vite-plugin-pwa in production so dev mode does not autoUpdate/reload
+  if (import.meta.env.PROD) {
+    registerSW({ immediate: true });
+  } else if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+  }
 }

@@ -61,6 +61,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
+        importScripts: ['/sw-push.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
@@ -85,8 +86,7 @@ export default defineConfig({
           },
         ],
       },
-      // The dev server stays a plain Vite server; the service worker only ships
-      // in production builds.
+      // In development, we use our dedicated /sw.js with sw-push.js to avoid Vite autoUpdate reload conflicts.
       devOptions: {
         enabled: false,
       },

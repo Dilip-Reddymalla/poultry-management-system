@@ -5,6 +5,7 @@ import { AppError } from "../../utils/app-error.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import { assertFarmWritable, farmScopedWhere, isFarmInScope } from "../auth/scope.js";
+import { enqueueIpFallbackAudit } from "../notifications/ip-fallback-aggregator.js";
 
 import type {
   CreateAttendanceInput,
@@ -444,6 +445,16 @@ export async function createAttendance(
     });
 
     const safeRecord = toSafeAttendance(record);
+
+    if (isFallback) {
+      enqueueIpFallbackAudit({
+        attendanceId: record.id,
+        farmId,
+        employeeName: safeRecord.person.name,
+        timestamp: Date.now(),
+      });
+    }
+
     void recordAuditLog({
       scope,
       action: "CREATE",
@@ -623,10 +634,20 @@ export async function bulkCreateAttendance(
         },
         select: attendanceSelect,
       });
-      
+
+      const safe = toSafeAttendance(record);
+      if (isFallback) {
+        enqueueIpFallbackAudit({
+          attendanceId: record.id,
+          farmId,
+          employeeName: safe.person.name,
+          timestamp: Date.now(),
+        });
+      }
+
       results.push({
         status: "fulfilled",
-        value: toSafeAttendance(record),
+        value: safe,
       });
     } catch (error: unknown) {
       if (

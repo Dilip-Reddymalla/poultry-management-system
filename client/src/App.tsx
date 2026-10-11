@@ -10,6 +10,7 @@ import { AnalyticsPage } from "./features/analytics/AnalyticsPage.js";
 import { FaceAiDemoPage } from "./features/face-ai/FaceAiDemoPage.js";
 import { AboutPage } from "./features/about/AboutPage.js";
 import { AuditLogsPage } from "./features/audit/AuditLogsPage.js";
+import { NotificationsDashboardPage } from "./features/notifications/NotificationsDashboardPage.js";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { OtpLoginPage } from "./features/auth/OtpLoginPage.js";
 import { ForgotPasswordPage } from "./features/auth/ForgotPasswordPage.js";
@@ -197,6 +198,7 @@ export default function App(): React.ReactElement {
               />
 
               <Route path="/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/notifications" element={<NotificationsDashboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>

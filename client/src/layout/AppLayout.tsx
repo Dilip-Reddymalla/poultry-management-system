@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "../i18n/LanguageSwitcher.js";
 import { initials } from "../lib/display.js";
 import { InstallButton } from "../pwa/InstallButton.js";
 import { OfflineNotice } from "../pwa/OfflineNotice.js";
+import { NotificationBell } from "../components/NotificationBell.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function AppLayout(): React.ReactElement {
@@ -68,6 +69,8 @@ export function AppLayout(): React.ReactElement {
           <div className="topbar__spacer" />
 
           <LanguageSwitcher />
+
+          <NotificationBell />
 
           <InstallButton />
 

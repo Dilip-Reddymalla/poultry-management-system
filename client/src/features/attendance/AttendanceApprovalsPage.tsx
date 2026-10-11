@@ -13,16 +13,14 @@ import { SHIFTS } from "../../api/types.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { useResource } from "../../hooks/useResource.js";
 import { useToast } from "../../components/use-toast.js";
-import { statusLabel, todayInputValue, formatDate } from "../../lib/display.js";
+import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button, Panel, StatusTag, EmptyState, TableSkeleton, ErrorState } from "../../components/ui.js";
 import { AttendanceAvatar } from "./AttendanceAvatar.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
-import { useTranslation } from "react-i18next";
 
 type SourceFilter = "ALL" | "IP_FALLBACK" | "MANUAL" | "GPS";
 
 export function AttendanceApprovalsPage(): React.ReactElement {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { notify } = useToast();
   const isMobile = useIsMobile();

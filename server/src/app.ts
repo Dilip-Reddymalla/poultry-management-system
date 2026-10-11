@@ -22,8 +22,14 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { tieredRateLimiter } from "./middlewares/rate-limit.middleware.js";
 import { analyticsRouter } from "./modules/analytics/analytics.routes.js";
 import { faceAiProxyRouter } from "./modules/face-ai/face-ai-proxy.routes.js";
+import { notificationRoutes } from "./modules/notifications/notification.routes.js";
+import { initializeWebPush } from "./modules/notifications/webpush.config.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { logger } from "./config/logger.js";
+
+import { systemErrorRouter } from "./modules/system-errors/system-error.routes.js";
+
+initializeWebPush();
 
 const app = express();
 
@@ -98,31 +104,55 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 
-app.get('/api/health',(_req,res)=>{
+// ---------------------------------------------------------------------------
+// Unified Versioned API Router (v1 & backward-compatible /api)
+// ---------------------------------------------------------------------------
+const apiRouter = express.Router();
+
+apiRouter.get('/health', (_req, res) => {
     res.status(200).json({
-        success:true,
-        message:"Poultry Management API is running"
+        success: true,
+        message: "Poultry Management API is running",
+        version: "1.0.0",
+        apiVersion: "v1",
+    });
+});
+
+apiRouter.get('/version', (_req, res) => {
+    res.status(200).json({
+        success: true,
+        version: "1.0.0",
+        apiVersion: "v1",
+        environment: env.NODE_ENV,
+        timestamp: new Date().toISOString(),
     });
 });
 
 // Public / Demo routers mounted before general rate limiter
-app.use("/api/analytics", analyticsRouter);
-app.use("/api/face-ai", faceAiProxyRouter);
+apiRouter.use("/analytics", analyticsRouter);
+apiRouter.use("/face-ai", faceAiProxyRouter);
 
 // Rate limiting: strict before-login limit, generous after-login limit
-app.use("/api", tieredRateLimiter);
+apiRouter.use(tieredRateLimiter);
 
-app.use("/api/auth",authRouter);
-app.use("/api/companies", companyRouter);
-app.use("/api/farms", farmRouter);
-app.use("/api/sheds", shedRouter);
-app.use("/api/employees", employeeRouter);
-app.use("/api/workers", workerRouter);
-app.use("/api/attendance", attendanceRouter);
-app.use("/api/audit-logs", auditRouter);
-app.use("/api/reference", referenceRouter);
-app.use("/api/designations", designationRouter);
-app.use("/api/roles", roleRouter);
+// Business domain routers
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/companies", companyRouter);
+apiRouter.use("/farms", farmRouter);
+apiRouter.use("/sheds", shedRouter);
+apiRouter.use("/employees", employeeRouter);
+apiRouter.use("/workers", workerRouter);
+apiRouter.use("/attendance", attendanceRouter);
+apiRouter.use("/audit-logs", auditRouter);
+apiRouter.use("/system-errors", systemErrorRouter);
+apiRouter.use("/reference", referenceRouter);
+apiRouter.use("/designations", designationRouter);
+apiRouter.use("/roles", roleRouter);
+apiRouter.use("/notifications", notificationRoutes);
+
+// Mount API version 1 and root /api
+app.use("/api/v1", apiRouter);
+app.use("/api", apiRouter);
 
 if (env.NODE_ENV === "production") {
     const __filename = fileURLToPath(import.meta.url);

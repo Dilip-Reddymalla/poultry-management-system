@@ -64,6 +64,11 @@ const envSchema = z
       .optional()
       .default("http://127.0.0.1:8000"),
 
+    // Web Push (VAPID)
+    VAPID_PUBLIC_KEY: z.string().trim().optional().default("BBWpW-R8aWUR5jVnKHQKWKXiPfJT7tTWdrXhphnzvuGHNdZD7Qu6jbu3Pt3dkq4s020mUnmBa-Oep3mbGmBzSvI"),
+    VAPID_PRIVATE_KEY: z.string().trim().optional().default("pJRfoDwQNLXx3Y8oIq5vEgY87j4CM8YmuAS-ihEqYJE"),
+    VAPID_SUBJECT: z.string().trim().optional().default("mailto:admin@poultryops.com"),
+
     // Neon Database Backups (automated branching API)
     // NEON_API_KEY: z.string().trim().min(1).optional(),
     // NEON_PROJECT_ID: z.string().trim().min(1).optional(),

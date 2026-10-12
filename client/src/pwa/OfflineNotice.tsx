@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { OfflineIcon } from "../components/icons.js";
 import { useOnlineStatus } from "./useOnlineStatus.js";
+import "./Pwa.css";
 
 /**
  * A single quiet line, shown only while the device reports no network. The shell

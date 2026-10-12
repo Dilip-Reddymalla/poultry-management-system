@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button, type ButtonVariant } from "./ui.js";
+import "./Dialog.css";
 
 interface DialogProps {
   title: string;

@@ -1,0 +1,106 @@
+/*
+ * Tables and responsive card transformation.
+ */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--step-0);
+  text-align: left;
+}
+
+.table th {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line-strong);
+  background-color: var(--surface-sunk);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background-color: rgb(22 33 28 / 2%);
+}
+
+.table td.numeric,
+.table th.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table__sub {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+}
+
+.table--dense th,
+.table--dense td {
+  padding: var(--space-2) var(--space-4);
+}
+
+/*
+ * Responsive Card Transformation ------------------------------------------
+ * At 700px, table rows become cards with data-label pseudo elements.
+ */
+@media (max-width: 700px) {
+  .table-scroll {
+    overflow-x: visible;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody tr {
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .table td {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 0;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .table td.numeric {
+    text-align: left;
+  }
+}

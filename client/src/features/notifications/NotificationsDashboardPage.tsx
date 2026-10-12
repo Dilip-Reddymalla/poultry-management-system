@@ -15,6 +15,7 @@ import { usePushSubscription } from "../../hooks/usePushSubscription.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { Panel, Button, EmptyState } from "../../components/ui.js";
+import "./NotificationsDashboardPage.css";
 
 export function NotificationsDashboardPage(): React.ReactElement {
   const { user } = useAuth();
@@ -80,50 +81,35 @@ export function NotificationsDashboardPage(): React.ReactElement {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div className="notification-dashboard">
       <PageHeader
         title="Notification Center"
         description="Unified audit notifications, IP Fallback approvals, and real-time system alerts."
         actions={
-          unreadCount > 0 && (
+          unreadCount > 0 ? (
             <Button variant="secondary" onClick={handleMarkAllRead}>
               <CheckCircle size={15} style={{ marginRight: 6 }} /> Mark All Read
             </Button>
-          )
+          ) : undefined
         }
       />
 
       {/* Push Subscription Management Banner */}
       <Panel>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "1rem",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+        <div className="push-banner">
+          <div className="push-banner__content">
             <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: isSubscribed ? "rgba(22, 163, 74, 0.12)" : "rgba(217, 119, 6, 0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: isSubscribed ? "#16a34a" : "#d97706",
-              }}
+              className={`push-banner__icon ${
+                isSubscribed ? "push-banner__icon--active" : "push-banner__icon--inactive"
+              }`}
             >
               <Smartphone size={22} />
             </div>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>
+            <div className="push-banner__text">
+              <div className="push-banner__title">
                 {isSubscribed ? "Push Notifications Active" : "Push Notifications Inactive"}
               </div>
-              <div style={{ fontSize: "0.82rem", color: "var(--ink-soft)" }}>
+              <div className="push-banner__desc">
                 {isSubscribed
                   ? "This device receives instant audit and system notifications even when the app is closed."
                   : isSupported
@@ -131,14 +117,14 @@ export function NotificationsDashboardPage(): React.ReactElement {
                     : "Push notifications are not supported on this browser."}
               </div>
               {pushError && (
-                <div style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: 4 }}>
+                <div className="push-banner__error">
                   ⚠️ {pushError}
                 </div>
               )}
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div className="push-banner__actions">
             <Button
               variant="secondary"
               onClick={async () => {
@@ -189,7 +175,7 @@ export function NotificationsDashboardPage(): React.ReactElement {
                 }
               }}
             >
-              🔊 Test Banner & Sound
+              🔊 Test Sound & Banner
             </Button>
 
             {isSupported && (
@@ -208,16 +194,7 @@ export function NotificationsDashboardPage(): React.ReactElement {
       </Panel>
 
       {/* Tabs Filter */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          borderBottom: "1px solid var(--line)",
-          paddingBottom: "0.5rem",
-          overflowX: "auto",
-        }}
-      >
+      <div className="notification-tabs">
         {[
           { id: "ALL", label: `All (${total})` },
           { id: "UNREAD", label: `Unread (${unreadCount})` },
@@ -227,17 +204,9 @@ export function NotificationsDashboardPage(): React.ReactElement {
           <button
             key={tab.id}
             type="button"
-            className="button"
-            style={{
-              padding: "0.35rem 0.85rem",
-              fontSize: "0.82rem",
-              borderRadius: "20px",
-              background: activeTab === tab.id ? "var(--moss)" : "transparent",
-              color: activeTab === tab.id ? "#fff" : "var(--ink-soft)",
-              border: activeTab === tab.id ? "1px solid var(--moss)" : "1px solid var(--line)",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            className={`button notification-tab-btn ${
+              activeTab === tab.id ? "notification-tab-btn--active" : ""
+            }`}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
           >
             {tab.label}
@@ -258,13 +227,13 @@ export function NotificationsDashboardPage(): React.ReactElement {
           description="You are all caught up! New alerts will appear here."
         />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="notification-cards-list">
           {notifications.map((item) => {
             const isUnread = !item.readAt;
             const is500 = item.category === "SERVER_500_ERROR";
             const isIp = item.category === "IP_FALLBACK_AUDIT";
 
-            const borderColor = is500
+            const accentColor = is500
               ? "#ef4444"
               : isIp
                 ? "#d97706"
@@ -273,50 +242,27 @@ export function NotificationsDashboardPage(): React.ReactElement {
             return (
               <div
                 key={item.id}
+                className="notification-card"
                 style={{
-                  background: "var(--surface)",
-                  border: `1px solid ${isUnread ? borderColor : "var(--line)"}`,
-                  borderLeft: `4px solid ${borderColor}`,
-                  borderRadius: "var(--radius-lg)",
-                  padding: "1rem 1.25rem",
-                  boxShadow: isUnread ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.6rem",
+                  border: `1px solid ${isUnread ? accentColor : "var(--line)"}`,
+                  borderLeft: `4px solid ${accentColor}`,
+                  boxShadow: isUnread ? "0 2px 8px rgba(0, 0, 0, 0.05)" : "none",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <span style={{ fontSize: "1.2rem" }}>
+                <div className="notification-card__main-row">
+                  <div className="notification-card__header-left">
+                    <span className="notification-card__category-icon">
                       {is500 ? "🚨" : isIp ? "🌐" : "ℹ️"}
                     </span>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "0.95rem",
-                          fontWeight: isUnread ? 700 : 600,
-                          color: "var(--ink)",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <span>{item.title}</span>
+                    <div className="notification-card__title-group">
+                      <div className="notification-card__title-line">
+                        <strong style={{ fontWeight: isUnread ? 700 : 600 }}>
+                          {item.title}
+                        </strong>
                         {isUnread && (
                           <span
+                            className="notification-card__badge-new"
                             style={{
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              padding: "1px 6px",
-                              borderRadius: 4,
                               background: is500 ? "#fee2e2" : "#fef3c7",
                               color: is500 ? "#b91c1c" : "#b45309",
                             }}
@@ -325,18 +271,18 @@ export function NotificationsDashboardPage(): React.ReactElement {
                           </span>
                         )}
                       </div>
-                      <span style={{ fontSize: "0.74rem", color: "var(--ink-soft)" }}>
+                      <span className="notification-card__timestamp">
                         {new Date(item.createdAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div className="notification-card__actions">
                     {isUnread && (
                       <button
                         type="button"
                         className="button button--ghost"
-                        style={{ fontSize: "0.76rem", padding: "0.2rem 0.5rem" }}
+                        style={{ fontSize: "0.76rem", padding: "0.25rem 0.5rem" }}
                         onClick={() => void handleMarkRead(item.id)}
                       >
                         Mark as read
@@ -366,75 +312,32 @@ export function NotificationsDashboardPage(): React.ReactElement {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--ink)",
-                    lineHeight: 1.4,
-                    paddingLeft: "2rem",
-                  }}
-                >
+                <div className="notification-card__body">
                   {item.body}
                 </div>
 
                 {/* Metadata Pill Breakdown (if present) */}
                 {item.metadata && (
-                  <div
-                    style={{
-                      paddingLeft: "2rem",
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "0.5rem",
-                    }}
-                  >
+                  <div className="notification-card__metadata">
                     {item.metadata.farmName && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          background: "var(--slate-soft)",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          color: "var(--ink-soft)",
-                        }}
-                      >
+                      <span className="notification-card__pill">
                         Farm: <strong>{String(item.metadata.farmName)}</strong>
                       </span>
                     )}
                     {item.metadata.newCount !== undefined && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          background: "var(--slate-soft)",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          color: "var(--ink-soft)",
-                        }}
-                      >
+                      <span className="notification-card__pill">
                         New check-ins: <strong>{String(item.metadata.newCount)}</strong>
                       </span>
                     )}
                     {item.metadata.backlogCount !== undefined && Number(item.metadata.backlogCount) > 0 && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          background: "var(--slate-soft)",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          color: "var(--ink-soft)",
-                        }}
-                      >
-                        Prior pending backlog: <strong>{String(item.metadata.backlogCount)}</strong>
+                      <span className="notification-card__pill">
+                        Prior backlog: <strong>{String(item.metadata.backlogCount)}</strong>
                       </span>
                     )}
                     {item.metadata.requestId && (
                       <span
-                        style={{
-                          fontSize: "0.72rem",
-                          background: "#fee2e2",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          color: "#991b1b",
-                        }}
+                        className="notification-card__pill"
+                        style={{ background: "#fee2e2", color: "#991b1b" }}
                       >
                         Req ID: <code>{String(item.metadata.requestId)}</code>
                       </span>

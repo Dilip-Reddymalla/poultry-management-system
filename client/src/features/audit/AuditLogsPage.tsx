@@ -15,7 +15,8 @@ import {
   type SystemErrorItem,
 } from "../../api/system-errors.js";
 import { SystemErrorInspectorModal } from "./SystemErrorInspectorModal.js";
-import { AlertTriangle, ShieldCheck, ExternalLink, CheckCircle } from "lucide-react";
+import { AlertTriangle, ShieldCheck, ExternalLink, CheckCircle, RotateCcw } from "lucide-react";
+import "./AuditLogsPage.css";
 
 const PAGE_SIZE = 25;
 const ENTITIES = ["Employee", "Farm", "Shed", "Attendance", "Company", "Worker", "User"];
@@ -46,6 +47,18 @@ export function AuditLogsPage(): React.ReactElement {
   const errorIdParam = params.get("errorId") || "";
 
   const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
+
+  const clearAllFilters = useCallback(() => {
+    setSearchInput("");
+    setParams((prev) => {
+      const next = new URLSearchParams();
+      const currentTab = prev.get("tab");
+      if (currentTab) next.set("tab", currentTab);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  const hasActiveFilters = Boolean(search || entity || action || from || to);
 
   // Sync tab with URL parameter changes
   useEffect(() => {
@@ -186,26 +199,15 @@ export function AuditLogsPage(): React.ReactElement {
       />
 
       {/* Primary Tab Switcher */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.6rem",
-          borderBottom: "2px solid var(--line, #e2e8f0)",
-          paddingBottom: "0.6rem",
-        }}
-      >
+      <div className="audit-page-tabs">
         <button
           type="button"
           onClick={() => handleTabChange("activity")}
-          className={`button ${activeTab === "activity" ? "button--primary" : "button--secondary"}`}
+          className={`button audit-page-tab-btn ${
+            activeTab === "activity" ? "button--primary" : "button--secondary"
+          }`}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: "0.88rem",
             fontWeight: activeTab === "activity" ? 700 : 500,
-            cursor: "pointer",
-            padding: "0.45rem 0.95rem",
           }}
         >
           <ShieldCheck size={17} /> Activity Audit Logs
@@ -214,15 +216,11 @@ export function AuditLogsPage(): React.ReactElement {
         <button
           type="button"
           onClick={() => handleTabChange("system-errors")}
-          className={`button ${activeTab === "system-errors" ? "button--primary" : "button--secondary"}`}
+          className={`button audit-page-tab-btn ${
+            activeTab === "system-errors" ? "button--primary" : "button--secondary"
+          }`}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: "0.88rem",
             fontWeight: activeTab === "system-errors" ? 700 : 500,
-            cursor: "pointer",
-            padding: "0.45rem 0.95rem",
             color: activeTab === "system-errors" ? "#ffffff" : "#dc2626",
             borderColor: activeTab === "system-errors" ? "#ef4444" : "rgba(239, 68, 68, 0.35)",
             background: activeTab === "system-errors" ? "#ef4444" : "rgba(239, 68, 68, 0.06)",
@@ -237,8 +235,8 @@ export function AuditLogsPage(): React.ReactElement {
       {/* ------------------------------------------------------------- */}
       {activeTab === "activity" && (
         <Panel bleed>
-          <div className="filters" style={{ flexWrap: "wrap" }}>
-            <label className="filters__field">
+          <div className="audit-filters">
+            <label className="audit-filters__field audit-filters__field--search">
               <span className="label">{t("common.search")}</span>
               <input
                 type="text"
@@ -249,7 +247,7 @@ export function AuditLogsPage(): React.ReactElement {
               />
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">Entity</span>
               <select
                 className="input select"
@@ -263,7 +261,7 @@ export function AuditLogsPage(): React.ReactElement {
               </select>
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">Action</span>
               <select
                 className="input select"
@@ -277,7 +275,7 @@ export function AuditLogsPage(): React.ReactElement {
               </select>
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">From Date</span>
               <input
                 type="date"
@@ -287,7 +285,7 @@ export function AuditLogsPage(): React.ReactElement {
               />
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">To Date</span>
               <input
                 type="date"
@@ -296,6 +294,14 @@ export function AuditLogsPage(): React.ReactElement {
                 onChange={(e) => { setParam("to", e.target.value); setPage(1); }}
               />
             </label>
+
+            {hasActiveFilters && (
+              <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: "2px" }}>
+                <Button variant="ghost" onClick={clearAllFilters} style={{ fontSize: "0.82rem", height: "38px" }}>
+                  <RotateCcw size={14} style={{ marginRight: 4 }} /> Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
 
           {auditResource.loading ? (
@@ -358,7 +364,7 @@ export function AuditLogsPage(): React.ReactElement {
                           <span className="table__sub numeric">{log.entityId.slice(0, 8)}...</span>
                         ) : null}
                       </td>
-                      <td data-label="Summary" style={{ maxWidth: "300px" }}>
+                      <td data-label="Summary" style={{ maxWidth: "340px", wordBreak: "break-word" }}>
                         {log.summary}
                       </td>
                       <td data-label="Details">
@@ -388,8 +394,8 @@ export function AuditLogsPage(): React.ReactElement {
       {/* ------------------------------------------------------------- */}
       {activeTab === "system-errors" && (
         <Panel bleed>
-          <div className="filters" style={{ flexWrap: "wrap" }}>
-            <label className="filters__field">
+          <div className="audit-filters">
+            <label className="audit-filters__field audit-filters__field--search">
               <span className="label">Search Errors</span>
               <input
                 type="text"
@@ -400,7 +406,7 @@ export function AuditLogsPage(): React.ReactElement {
               />
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">From Date</span>
               <input
                 type="date"
@@ -410,7 +416,7 @@ export function AuditLogsPage(): React.ReactElement {
               />
             </label>
 
-            <label className="filters__field">
+            <label className="audit-filters__field">
               <span className="label">To Date</span>
               <input
                 type="date"
@@ -419,6 +425,14 @@ export function AuditLogsPage(): React.ReactElement {
                 onChange={(e) => { setParam("to", e.target.value); setPage(1); }}
               />
             </label>
+
+            {hasActiveFilters && (
+              <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: "2px" }}>
+                <Button variant="ghost" onClick={clearAllFilters} style={{ fontSize: "0.82rem", height: "38px" }}>
+                  <RotateCcw size={14} style={{ marginRight: 4 }} /> Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
 
           {systemErrorsLoading ? (
@@ -447,71 +461,65 @@ export function AuditLogsPage(): React.ReactElement {
                 <tbody>
                   {systemErrors.map((err) => (
                     <tr key={err.id}>
-                      <td className="numeric" style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}>
+                      <td className="numeric" data-label="Timestamp" style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}>
                         {new Date(err.createdAt).toLocaleString()}
                       </td>
 
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span
-                            style={{
-                              background: "#ef4444",
-                              color: "#ffffff",
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              padding: "0.1rem 0.4rem",
-                              borderRadius: "0.2rem",
-                            }}
-                          >
-                            500
-                          </span>
-                          <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>
-                            {err.errorName}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.78rem",
-                            color: "var(--ink-soft)",
-                            maxWidth: "280px",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {err.errorMessage}
+                      <td data-label="Status & Error">
+                        <div className="system-error-title-cell">
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span
+                              style={{
+                                background: "#ef4444",
+                                color: "#ffffff",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                padding: "0.1rem 0.4rem",
+                                borderRadius: "0.2rem",
+                                flexShrink: 0,
+                              }}
+                            >
+                              500
+                            </span>
+                            <span style={{ fontWeight: 600, fontSize: "0.88rem", wordBreak: "break-word" }}>
+                              {err.errorName}
+                            </span>
+                          </div>
+                          <div className="system-error-msg-preview">
+                            {err.errorMessage}
+                          </div>
                         </div>
                       </td>
 
-                      <td style={{ fontSize: "0.84rem" }}>
+                      <td data-label="Endpoint" style={{ fontSize: "0.84rem" }}>
                         <span style={{ fontWeight: 600, marginRight: 4 }}>{err.method}</span>
-                        <code style={{ fontSize: "0.78rem" }}>{err.path}</code>
+                        <code style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{err.path}</code>
                         {err.requestId && (
-                          <div style={{ fontSize: "0.72rem", color: "var(--ink-soft)" }}>
+                          <div style={{ fontSize: "0.72rem", color: "var(--ink-soft)", wordBreak: "break-all" }}>
                             #{err.requestId}
                           </div>
                         )}
                       </td>
 
-                      <td>
+                      <td data-label="Actor">
                         <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>
                           {err.userName || (err.userId ? "Authenticated User" : "Anonymous")}
                         </div>
                         {err.userEmail && (
-                          <div style={{ fontSize: "0.76rem", color: "var(--ink-soft)" }}>
+                          <div style={{ fontSize: "0.76rem", color: "var(--ink-soft)", wordBreak: "break-all" }}>
                             {err.userEmail}
                           </div>
                         )}
                       </td>
 
-                      <td style={{ fontSize: "0.82rem" }}>
+                      <td data-label="Role & Org" style={{ fontSize: "0.82rem" }}>
                         <div>{err.userRole || "—"}</div>
                         <div style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>
                           {err.farmName || err.companyName || "System Scope"}
                         </div>
                       </td>
 
-                      <td>
+                      <td data-label="Status">
                         {err.resolvedAt ? (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "#16a34a", fontSize: "0.78rem", fontWeight: 600 }}>
                             <CheckCircle size={13} /> Resolved
@@ -523,7 +531,7 @@ export function AuditLogsPage(): React.ReactElement {
                         )}
                       </td>
 
-                      <td>
+                      <td data-label="Actions">
                         <Button
                           variant="secondary"
                           onClick={() => setSelectedErrorLog(err)}
@@ -557,7 +565,9 @@ export function AuditLogsPage(): React.ReactElement {
               borderRadius: "6px",
               maxHeight: "350px",
               overflow: "auto",
-              fontSize: "0.85rem",
+              fontSize: "0.82rem",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
             }}>
               {JSON.stringify(selectedChanges, null, 2)}
             </pre>

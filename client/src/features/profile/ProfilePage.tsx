@@ -8,6 +8,7 @@ import { ProfileAttendanceStats } from "./ProfileAttendanceStats.js";
 import { ProfilePermissionsPanel } from "./ProfilePermissionsPanel.js";
 import { ProfileDocumentsPanel } from "./ProfileDocumentsPanel.js";
 import { ChangePasswordDialog } from "./ChangePasswordDialog.js";
+import "./ProfilePage.css";
 
 export function ProfilePage(): React.ReactElement {
   const { t } = useTranslation();

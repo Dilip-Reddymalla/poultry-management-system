@@ -23,6 +23,7 @@ import {
   StatusTag,
   TableSkeleton,
 } from "../../components/ui.js";
+import "./Attendance.css";
 import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";

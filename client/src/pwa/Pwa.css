@@ -1,0 +1,41 @@
+/* Offline and install ----------------------------------------------------- */
+
+/*
+ * The shell is cached, business data never is. When the network drops the app
+ * still opens, so it has to say plainly that what is on screen is going nowhere
+ * until the connection returns.
+ */
+.offline-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--clay) 35%, var(--line));
+  border-left-width: 3px;
+  border-left-color: var(--clay);
+  border-radius: var(--radius);
+  background-color: var(--clay-soft);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.offline-notice__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--clay);
+}
+
+.content > .offline-notice {
+  margin-bottom: var(--space-5);
+}
+
+.signin__install {
+  margin-top: var(--space-5);
+}
+
+/* Nothing is rendered when the browser has not offered installation. */
+.signin__install:empty {
+  display: none;
+}
+

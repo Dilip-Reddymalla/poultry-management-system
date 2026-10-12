@@ -5,6 +5,7 @@ import {
   type Toast,
   type ToastTone,
 } from "./toast-context.js";
+import "./Toast.css";
 
 const DISMISS_AFTER_MS = 5000;
 

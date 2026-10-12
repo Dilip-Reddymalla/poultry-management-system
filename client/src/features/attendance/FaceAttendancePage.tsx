@@ -23,6 +23,7 @@ import { FaceAttendanceControls } from "./face-attendance/FaceAttendanceControls
 import { FaceViewfinder } from "./face-attendance/FaceViewfinder.js";
 import { FaceAttendanceFeedback } from "./face-attendance/FaceAttendanceFeedback.js";
 import { FaceCard } from "./face-attendance/FaceCard.js";
+import "./Attendance.css";
 
 export function FaceAttendancePage(): React.ReactElement {
   const { user } = useAuth();

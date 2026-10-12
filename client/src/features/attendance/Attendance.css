@@ -1,0 +1,156 @@
+/* Face attendance controls */
+.face-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Face capture action buttons under camera feed */
+.face-capture-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+
+/* Segmented, status choice, notices -------------------------------------- */
+
+/* Person-type toggle inside the attendance entry form. */
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background-color: var(--surface-sunk);
+}
+
+.segmented__item {
+  flex: 1 1 0;
+  min-height: 34px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.segmented__item:hover:not(.segmented__item--active) {
+  color: var(--ink);
+}
+
+.segmented__item--active {
+  background-color: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(22 33 28 / 12%);
+}
+
+/*
+ * Status picker for a single attendance record. The chosen status wears its own
+ * colour so a present day and an absent day never look alike. The tone rides on
+ * a data attribute: an attribute selector outranks the base rule, so the colour
+ * wins no matter where this block sits relative to the tag styles.
+ */
+.statuschoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.statuschoice__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: 1 1 6.5rem;
+  min-height: 38px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease,
+    color 120ms ease;
+}
+
+.statuschoice__item:hover {
+  border-color: var(--ink-faint);
+}
+
+.statuschoice__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentcolor;
+  opacity: 0.4;
+}
+
+.statuschoice__item--active .statuschoice__dot {
+  opacity: 1;
+}
+
+.statuschoice__item--active[data-tone="running"] {
+  border-color: color-mix(in srgb, var(--moss) 45%, var(--line));
+  background-color: var(--moss-soft);
+  color: var(--moss);
+}
+
+.statuschoice__item--active[data-tone="busy"] {
+  border-color: color-mix(in srgb, var(--clay) 45%, var(--line));
+  background-color: var(--clay-soft);
+  color: var(--clay);
+}
+
+.statuschoice__item--active[data-tone="attention"] {
+  border-color: color-mix(in srgb, var(--rust) 45%, var(--line));
+  background-color: var(--rust-soft);
+  color: var(--rust);
+}
+
+.statuschoice__item--active[data-tone="idle"] {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Two dependent inputs on one line, e.g. check-in and check-out. */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* A scoped-context banner sitting above a panel. */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-left-width: 3px;
+  border-left-color: var(--clay);
+  border-radius: var(--radius);
+  background-color: var(--surface-sunk);
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.notice__link {
+  margin-left: auto;
+  color: var(--moss);
+  font-weight: 600;
+}
+

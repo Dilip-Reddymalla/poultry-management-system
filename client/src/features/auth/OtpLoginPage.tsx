@@ -16,6 +16,7 @@ import { PhoneField } from "../../components/PhoneField.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
+import "./AuthPages.css";
 
 type Step =
   | { name: "phone" }

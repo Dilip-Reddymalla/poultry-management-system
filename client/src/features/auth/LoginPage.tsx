@@ -10,6 +10,7 @@ import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { InstallButton } from "../../pwa/InstallButton.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
+import "./AuthPages.css";
 
 interface LocationState {
   from?: string;

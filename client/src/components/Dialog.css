@@ -1,0 +1,48 @@
+/* Dialogs ----------------------------------------------------------------- */
+
+.dialog {
+  width: min(520px, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+}
+
+.dialog::backdrop {
+  background-color: rgb(22 33 28 / 45%);
+}
+
+.dialog__inner {
+  padding: var(--space-5);
+}
+
+.dialog__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+}
+
+.dialog__title {
+  font-size: var(--step-2);
+}
+
+.dialog__description {
+  color: var(--ink-soft);
+}
+
+.dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+

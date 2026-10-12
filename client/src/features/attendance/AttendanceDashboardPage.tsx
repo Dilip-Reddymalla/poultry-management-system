@@ -21,6 +21,7 @@ import { useToast } from "../../components/use-toast.js";
 import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button } from "../../components/ui.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
+import "./Attendance.css";
 
 // Extracted Subcomponents & Types
 import { AttendanceAvatar } from "./AttendanceAvatar.js";

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -8,6 +8,22 @@ import {
   type NotificationItem,
 } from "../api/notifications.js";
 import { usePushSubscription } from "../hooks/usePushSubscription.js";
+import "./NotificationBell.css";
+
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = Date.now();
+    const diffSec = Math.floor((now - date.getTime()) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
 
 export function NotificationBell(): React.ReactElement {
   const [open, setOpen] = useState(false);
@@ -35,17 +51,26 @@ export function NotificationBell(): React.ReactElement {
     return () => clearInterval(interval);
   }, []);
 
-  // Close when clicking outside
+  // Close when clicking outside or pressing Escape
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   const handleMarkAll = async () => {
@@ -73,131 +98,94 @@ export function NotificationBell(): React.ReactElement {
   };
 
   return (
-    <div style={{ position: "relative" }} ref={dropdownRef}>
+    <div className="notification-bell" ref={dropdownRef}>
       <button
         type="button"
-        className="button button--ghost"
-        style={{
-          position: "relative",
-          padding: "0.5rem",
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "38px",
-          width: "38px",
-        }}
+        className="button button--ghost notification-bell__trigger"
         onClick={() => {
           setOpen((o) => !o);
           if (!open) void loadLatest();
         }}
         aria-label="Notifications"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         title="Notifications"
       >
         <Bell size={18} style={{ color: "var(--ink)" }} />
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: 2,
-              right: 2,
-              background: "#ef4444",
-              color: "#fff",
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              borderRadius: "10px",
-              minWidth: "18px",
-              height: "18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 4px",
-              lineHeight: 1,
-              boxShadow: "0 0 0 2px var(--surface)",
-            }}
-          >
+          <span className="notification-bell__badge">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
+      {/* Mobile backdrop scrim */}
       {open && (
         <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
-            width: "340px",
-            maxWidth: "90vw",
-            background: "var(--surface)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--radius-lg)",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-            zIndex: 1000,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
+          className="notification-bell__scrim"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {open && (
+        <div
+          className="notification-bell__dropdown"
+          role="dialog"
+          aria-label="Notifications preview"
         >
           {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.75rem 1rem",
-              borderBottom: "1px solid var(--line)",
-              background: "var(--slate-soft)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Notifications</span>
+          <div className="notification-bell__header">
+            <div className="notification-bell__header-title">
+              <span>Notifications</span>
               {unreadCount > 0 && (
-                <span
-                  style={{
-                    fontSize: "0.75rem",
-                    padding: "1px 6px",
-                    borderRadius: 12,
-                    background: "var(--clay)",
-                    color: "#fff",
-                  }}
-                >
+                <span className="notification-bell__unread-chip">
                   {unreadCount} unread
                 </span>
               )}
             </div>
-            {unreadCount > 0 && (
+
+            <div className="notification-bell__header-actions">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  style={{ fontSize: "0.75rem", padding: "2px 6px", height: "auto", minHeight: 0 }}
+                  onClick={handleMarkAll}
+                  disabled={loading}
+                >
+                  Mark all read
+                </button>
+              )}
               <button
                 type="button"
-                className="button button--ghost"
-                style={{ fontSize: "0.75rem", padding: "2px 6px", height: "auto", minHeight: 0 }}
-                onClick={handleMarkAll}
-                disabled={loading}
+                className="notification-bell__close-btn"
+                onClick={() => setOpen(false)}
+                aria-label="Close notifications"
+                title="Close"
               >
-                Mark all read
+                <X size={18} />
               </button>
-            )}
+            </div>
           </div>
 
           {/* Quick Push Subscribe status banner */}
           {!isSubscribed && (
-            <div
-              style={{
-                padding: "0.6rem 1rem",
-                background: "#fef3c7",
-                borderBottom: "1px solid #fde68a",
-                fontSize: "0.78rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.5rem",
-              }}
-            >
-              <span>🔔 Enable push alerts for closed app</span>
+            <div className="notification-bell__push-alert">
+              <span className="notification-bell__push-text">
+                🔔 Enable push alerts for closed app
+              </span>
               <button
                 type="button"
                 className="button button--secondary"
-                style={{ padding: "2px 8px", fontSize: "0.72rem", height: "auto", minHeight: "22px" }}
+                style={{
+                  padding: "3px 8px",
+                  fontSize: "0.72rem",
+                  height: "auto",
+                  minHeight: "24px",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
                 onClick={() => void subscribe()}
                 disabled={pushBusy}
               >
@@ -207,9 +195,9 @@ export function NotificationBell(): React.ReactElement {
           )}
 
           {/* Notification List preview */}
-          <div style={{ maxHeight: "320px", overflowY: "auto" }}>
+          <div className="notification-bell__list">
             {notifications.length === 0 ? (
-              <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--ink-soft)", fontSize: "0.85rem" }}>
+              <div className="notification-bell__empty">
                 🎉 You're all caught up! No notifications.
               </div>
             ) : (
@@ -218,71 +206,41 @@ export function NotificationBell(): React.ReactElement {
                 const isError = item.category === "SERVER_500_ERROR";
                 const isIpFallback = item.category === "IP_FALLBACK_AUDIT";
 
-                  const targetUrl = item.linkUrl
-                    ? item.linkUrl.startsWith("/audit/logs")
-                      ? item.linkUrl.replace("/audit/logs", "/audit-logs?tab=system-errors")
-                      : item.linkUrl
-                    : "/notifications";
+                const targetUrl = item.linkUrl
+                  ? item.linkUrl.startsWith("/audit/logs")
+                    ? item.linkUrl.replace("/audit/logs", "/audit-logs?tab=system-errors")
+                    : item.linkUrl
+                  : "/notifications";
 
-                  return (
-                    <Link
-                      key={item.id}
-                      to={targetUrl}
-                      onClick={() => void handleItemClick(item)}
-                    style={{
-                      display: "block",
-                      padding: "0.75rem 1rem",
-                      borderBottom: "1px solid var(--line)",
-                      background: isUnread ? "rgba(234, 88, 12, 0.04)" : "transparent",
-                      textDecoration: "none",
-                      color: "inherit",
-                      transition: "background 0.15s ease",
-                    }}
+                return (
+                  <Link
+                    key={item.id}
+                    to={targetUrl}
+                    onClick={() => void handleItemClick(item)}
+                    className={`notification-bell__item ${
+                      isUnread ? "notification-bell__item--unread" : ""
+                    }`}
                   >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                      <span style={{ fontSize: "1rem" }}>
+                    <div className="notification-bell__item-row">
+                      <span className="notification-bell__item-icon">
                         {isError ? "🚨" : isIpFallback ? "🌐" : "ℹ️"}
                       </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: "0.82rem",
-                            fontWeight: isUnread ? 700 : 500,
-                            color: "var(--ink)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                          }}
-                        >
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div className="notification-bell__item-content">
+                        <div className="notification-bell__item-top">
+                          <div
+                            className="notification-bell__item-title"
+                            style={{ fontWeight: isUnread ? 700 : 500 }}
+                          >
                             {item.title}
-                          </span>
-                          {isUnread && (
-                            <span
-                              style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
-                                background: "#ea580c",
-                                flexShrink: 0,
-                              }}
-                            />
+                          </div>
+                          {item.createdAt && (
+                            <span className="notification-bell__item-time">
+                              {formatRelativeTime(item.createdAt)}
+                            </span>
                           )}
+                          {isUnread && <span className="notification-bell__item-dot" />}
                         </div>
-                        <p
-                          style={{
-                            fontSize: "0.76rem",
-                            color: "var(--ink-soft)",
-                            margin: "2px 0 0 0",
-                            lineHeight: 1.3,
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {item.body}
-                        </p>
+                        <p className="notification-bell__item-body">{item.body}</p>
                       </div>
                     </div>
                   </Link>
@@ -292,23 +250,11 @@ export function NotificationBell(): React.ReactElement {
           </div>
 
           {/* Footer View All link */}
-          <div
-            style={{
-              padding: "0.6rem 1rem",
-              background: "var(--surface)",
-              borderTop: "1px solid var(--line)",
-              textAlign: "center",
-            }}
-          >
+          <div className="notification-bell__footer">
             <Link
               to="/notifications"
               onClick={() => setOpen(false)}
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "var(--moss)",
-                textDecoration: "none",
-              }}
+              className="notification-bell__footer-link"
             >
               Go to Notification Dashboard →
             </Link>

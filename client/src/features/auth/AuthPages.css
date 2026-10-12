@@ -1,0 +1,149 @@
+/* Sign-in ----------------------------------------------------------------- */
+
+.signin {
+  display: grid;
+  grid-template-columns: minmax(320px, 42%) 1fr;
+  min-height: 100vh;
+}
+
+.signin--single {
+  grid-template-columns: 1fr;
+}
+
+.signin__aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-7) var(--space-6);
+  background-color: var(--ink);
+  color: var(--paper);
+}
+
+.signin__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+}
+
+.signin__brand strong {
+  font-weight: 700;
+}
+
+.signin__brand--dark {
+  color: var(--ink);
+}
+
+.signin__mark {
+  width: 24px;
+  height: 24px;
+  color: var(--clay);
+}
+
+.signin__lede {
+  max-width: 24ch;
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* Six sheds in a row: the shape of the thing being managed. */
+.signin__motif {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.signin__shed {
+  height: 46px;
+  flex: 1;
+  border-top: 3px solid var(--clay);
+  background-color: rgb(242 240 233 / 8%);
+  border-radius: 2px;
+}
+
+.signin__shed:nth-child(3) {
+  border-top-color: var(--moss);
+}
+
+.signin__shed:nth-child(5) {
+  border-top-color: rgb(242 240 233 / 30%);
+}
+
+.signin__foot {
+  color: rgb(242 240 233 / 45%);
+}
+
+.signin__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.signin__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(380px, 100%);
+}
+
+.signin__title {
+  font-size: var(--step-2);
+}
+
+.signin__subtitle {
+  color: var(--ink-soft);
+}
+
+.signin__alt {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.accountlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accountlist__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.accountlist__item:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.accountlist__item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.accountlist__name {
+  font-weight: 600;
+}
+
+.accountlist__meta {
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+}
+
+
+@media (max-width: 860px) { .signin { grid-template-columns: 1fr; } .signin__aside { padding: var(--space-5) var(--space-4); } .signin__lede { font-size: var(--step-2); } .signin__motif { margin-top: var(--space-4); } .signin__shed { height: 28px; } }

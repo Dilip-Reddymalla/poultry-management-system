@@ -14,6 +14,7 @@ import {
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
+import "./DashboardPage.css";
 
 function Kpi({
   label,

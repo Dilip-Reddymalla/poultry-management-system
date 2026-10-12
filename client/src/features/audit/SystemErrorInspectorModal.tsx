@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { type SystemErrorItem, resolveSystemError } from "../../api/system-errors.js";
 import { Button } from "../../components/ui.js";
+import "./AuditLogsPage.css";
 
 interface SystemErrorInspectorModalProps {
   errorItem: SystemErrorItem | null;
@@ -62,49 +63,15 @@ export function SystemErrorInspectorModal({
     <div
       role="dialog"
       aria-modal="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        background: "rgba(15, 23, 42, 0.75)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-        overflowY: "auto",
-      }}
+      className="inspector-modal-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
-        style={{
-          background: "var(--surface, #ffffff)",
-          color: "var(--ink, #0f172a)",
-          borderRadius: "1rem",
-          maxWidth: "850px",
-          width: "100%",
-          maxHeight: "90vh",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
-          border: "1px solid var(--line, #e2e8f0)",
-          overflow: "hidden",
-        }}
-      >
+      <div className="inspector-modal-dialog">
         {/* Modal Header */}
-        <div
-          style={{
-            padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--line, #e2e8f0)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "rgba(239, 68, 68, 0.05)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div className="inspector-modal-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1 }}>
             <div
               style={{
                 width: 36,
@@ -115,12 +82,13 @@ export function SystemErrorInspectorModal({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#ef4444",
+                flexShrink: 0,
               }}
             >
               <AlertTriangle size={20} />
             </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                 <span
                   style={{
                     fontSize: "0.75rem",
@@ -130,15 +98,29 @@ export function SystemErrorInspectorModal({
                     background: "#ef4444",
                     color: "#ffffff",
                     letterSpacing: "0.05em",
+                    flexShrink: 0,
                   }}
                 >
                   HTTP {errorItem.statusCode}
                 </span>
-                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "1.05rem",
+                    wordBreak: "break-word",
+                  }}
+                >
                   {errorItem.errorName}
                 </span>
               </div>
-              <div style={{ fontSize: "0.82rem", color: "var(--ink-soft, #64748b)" }}>
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--ink-soft, #64748b)",
+                  wordBreak: "break-all",
+                  marginTop: 2,
+                }}
+              >
                 {errorItem.method} {errorItem.path}
               </div>
             </div>
@@ -147,6 +129,7 @@ export function SystemErrorInspectorModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close error inspector"
             style={{
               background: "transparent",
               border: "none",
@@ -154,6 +137,7 @@ export function SystemErrorInspectorModal({
               padding: "0.5rem",
               borderRadius: "0.375rem",
               color: "var(--ink-soft, #64748b)",
+              flexShrink: 0,
             }}
           >
             <X size={20} />
@@ -161,15 +145,7 @@ export function SystemErrorInspectorModal({
         </div>
 
         {/* Modal Body */}
-        <div
-          style={{
-            padding: "1.5rem",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.25rem",
-          }}
-        >
+        <div className="inspector-modal-body">
           {/* Error Message Box */}
           <div
             style={{
@@ -181,19 +157,14 @@ export function SystemErrorInspectorModal({
               fontWeight: 600,
               fontSize: "0.92rem",
               wordBreak: "break-word",
+              lineHeight: 1.4,
             }}
           >
             {errorItem.errorMessage}
           </div>
 
           {/* Grid: Who Caused It & Location / Network Context */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "1rem",
-            }}
-          >
+          <div className="inspector-modal-grid">
             {/* Culprit / Initiator */}
             <div
               style={{
@@ -217,7 +188,7 @@ export function SystemErrorInspectorModal({
               >
                 <User size={14} /> Initiated By (Culprit Context)
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.86rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.86rem", wordBreak: "break-word" }}>
                 <div>
                   <span style={{ color: "var(--ink-soft, #64748b)" }}>User: </span>
                   <strong>{errorItem.userName || (errorItem.userId ? "Authenticated User" : "Anonymous / Unauthenticated")}</strong>
@@ -225,7 +196,7 @@ export function SystemErrorInspectorModal({
                 {errorItem.userEmail && (
                   <div>
                     <span style={{ color: "var(--ink-soft, #64748b)" }}>Email: </span>
-                    <code>{errorItem.userEmail}</code>
+                    <code style={{ wordBreak: "break-all" }}>{errorItem.userEmail}</code>
                   </div>
                 )}
                 <div>
@@ -238,6 +209,7 @@ export function SystemErrorInspectorModal({
                       borderRadius: "0.25rem",
                       fontSize: "0.78rem",
                       fontWeight: 600,
+                      display: "inline-block",
                     }}
                   >
                     {errorItem.userRole || "GUEST / UNASSIGNED"}
@@ -245,7 +217,7 @@ export function SystemErrorInspectorModal({
                 </div>
                 {errorItem.userId && (
                   <div style={{ fontSize: "0.78rem", color: "var(--ink-soft, #64748b)" }}>
-                    User ID: <code>{errorItem.userId}</code>
+                    User ID: <code style={{ wordBreak: "break-all" }}>{errorItem.userId}</code>
                   </div>
                 )}
               </div>
@@ -274,7 +246,7 @@ export function SystemErrorInspectorModal({
               >
                 <MapPin size={14} /> Farm Location & Network
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.86rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.86rem", wordBreak: "break-word" }}>
                 <div>
                   <span style={{ color: "var(--ink-soft, #64748b)" }}>Company: </span>
                   <span>{errorItem.companyName || "Global / System"}</span>
@@ -324,11 +296,11 @@ export function SystemErrorInspectorModal({
               {errorItem.requestId && (
                 <div>
                   <span style={{ color: "var(--ink-soft)" }}>Request ID: </span>
-                  <code>#{errorItem.requestId}</code>
+                  <code style={{ wordBreak: "break-all" }}>#{errorItem.requestId}</code>
                 </div>
               )}
               {errorItem.userAgent && (
-                <div style={{ maxWidth: "100%", wordBreak: "break-all" }}>
+                <div style={{ width: "100%", wordBreak: "break-all" }}>
                   <span style={{ color: "var(--ink-soft)" }}>Device / User-Agent: </span>
                   <span style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>{errorItem.userAgent}</span>
                 </div>
@@ -350,6 +322,8 @@ export function SystemErrorInspectorModal({
                     border: "1px solid var(--line)",
                     margin: "0.3rem 0 0",
                     overflowX: "auto",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
                   }}
                 >
                   {JSON.stringify(errorItem.queryParams, null, 2)}
@@ -372,6 +346,8 @@ export function SystemErrorInspectorModal({
                     border: "1px solid var(--line)",
                     margin: "0.3rem 0 0",
                     overflowX: "auto",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-all",
                   }}
                 >
                   {JSON.stringify(errorItem.requestBody, null, 2)}
@@ -388,6 +364,7 @@ export function SystemErrorInspectorModal({
                 alignItems: "center",
                 justifyContent: "space-between",
                 marginBottom: "0.4rem",
+                gap: "0.5rem",
               }}
             >
               <div
@@ -418,6 +395,7 @@ export function SystemErrorInspectorModal({
                     padding: "0.2rem 0.5rem",
                     cursor: "pointer",
                     color: "var(--ink)",
+                    flexShrink: 0,
                   }}
                 >
                   {copiedTrace ? <Check size={12} color="#16a34a" /> : <Copy size={12} />}
@@ -431,10 +409,10 @@ export function SystemErrorInspectorModal({
                 background: "#0f172a",
                 color: "#f8fafc",
                 borderRadius: "0.5rem",
-                padding: "1rem",
+                padding: "0.85rem",
                 fontFamily: "monospace",
-                fontSize: "0.8rem",
-                lineHeight: 1.5,
+                fontSize: "0.78rem",
+                lineHeight: 1.45,
                 maxHeight: "220px",
                 overflowY: "auto",
                 border: "1px solid #334155",
@@ -452,23 +430,14 @@ export function SystemErrorInspectorModal({
         </div>
 
         {/* Modal Footer */}
-        <div
-          style={{
-            padding: "1rem 1.5rem",
-            borderTop: "1px solid var(--line, #e2e8f0)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "var(--surface-sunken, #f8fafc)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="inspector-modal-footer">
+          <div className="inspector-modal-footer__group">
             <Button variant="secondary" onClick={handleCopyJson}>
               {copiedJson ? <Check size={14} style={{ marginRight: 4 }} /> : <Copy size={14} style={{ marginRight: 4 }} />}
-              {copiedJson ? "Copied Diagnostic JSON" : "Copy Full Diagnostics"}
+              {copiedJson ? "Copied Diagnostics" : "Copy Diagnostics"}
             </Button>
             {errorItem.resolvedAt ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#16a34a", fontSize: "0.84rem", fontWeight: 600 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#16a34a", fontSize: "0.82rem", fontWeight: 600, padding: "0.3rem 0" }}>
                 <CheckCircle size={15} /> Resolved ({new Date(errorItem.resolvedAt).toLocaleTimeString()})
               </span>
             ) : (

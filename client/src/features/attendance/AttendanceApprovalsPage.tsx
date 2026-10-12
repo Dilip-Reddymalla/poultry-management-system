@@ -17,6 +17,7 @@ import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button, Panel, StatusTag, EmptyState, TableSkeleton, ErrorState } from "../../components/ui.js";
 import { AttendanceAvatar } from "./AttendanceAvatar.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
+import "./Attendance.css";
 
 type SourceFilter = "ALL" | "IP_FALLBACK" | "MANUAL" | "GPS";
 

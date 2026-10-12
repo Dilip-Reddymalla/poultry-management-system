@@ -9,6 +9,7 @@ import { EggIcon } from "../../components/icons.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
+import "./AuthPages.css";
 
 const MIN_LENGTH = 8;
 

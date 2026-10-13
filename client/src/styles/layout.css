@@ -317,6 +317,20 @@
   height: 14px;
 }
 
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.page-header__actions > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* Responsive Layout Media Queries ---------------------------------------- */
 
 @media (max-width: 860px) {

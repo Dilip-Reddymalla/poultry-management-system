@@ -461,7 +461,7 @@ export function AuditLogsPage(): React.ReactElement {
                 <tbody>
                   {systemErrors.map((err) => (
                     <tr key={err.id}>
-                      <td className="numeric" data-label="Timestamp" style={{ fontSize: "0.82rem", whiteSpace: "nowrap" }}>
+                      <td className="numeric audit-timestamp-cell" data-label="Timestamp">
                         {new Date(err.createdAt).toLocaleString()}
                       </td>
 

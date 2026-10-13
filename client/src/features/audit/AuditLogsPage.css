@@ -104,6 +104,24 @@
   }
 }
 
+/* Audit log timestamp formatting to prevent card overflow */
+.audit-timestamp-cell {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .audit-timestamp-cell,
+  .table td.numeric[data-label="Timestamp"],
+  .table td[data-label="Timestamp"] {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+}
+
 /* Error Inspector Modal Responsive */
 .inspector-modal-overlay {
   position: fixed;

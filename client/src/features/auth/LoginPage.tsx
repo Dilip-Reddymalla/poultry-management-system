@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff } from "lucide-react";
 
 import { signIn } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
@@ -35,6 +36,7 @@ export function LoginPage(): React.ReactElement {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -138,7 +140,7 @@ export function LoginPage(): React.ReactElement {
           <TextField
             id="password"
             label={t("auth.login.password")}
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
             value={password}
@@ -146,6 +148,17 @@ export function LoginPage(): React.ReactElement {
             onChange={(event) => {
               setPassword(event.target.value);
             }}
+            endAdornment={
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                title={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            }
           />
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.5rem" }}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff } from "lucide-react";
 
 import { setPassword } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
@@ -25,6 +26,7 @@ export function SetPasswordPage(): React.ReactElement {
 
   const [password, setPasswordValue] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [mismatch, setMismatch] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -89,7 +91,7 @@ export function SetPasswordPage(): React.ReactElement {
             <TextField
               id="new-password"
               label={t("auth.setPassword.newPassword")}
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               required
               minLength={MIN_LENGTH}
@@ -100,12 +102,23 @@ export function SetPasswordPage(): React.ReactElement {
                 setPasswordValue(event.target.value);
                 setMismatch(false);
               }}
+              endAdornment={
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                  title={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <TextField
               id="confirm-password"
               label={t("auth.setPassword.confirmPassword")}
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               required
               value={confirm}
@@ -114,6 +127,17 @@ export function SetPasswordPage(): React.ReactElement {
                 setConfirm(event.target.value);
                 setMismatch(false);
               }}
+              endAdornment={
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                  title={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <Button type="submit" variant="primary" busy={busy}>

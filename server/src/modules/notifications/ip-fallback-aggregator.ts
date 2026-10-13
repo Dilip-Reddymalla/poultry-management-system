@@ -69,7 +69,7 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
     const totalPending = await prisma.attendance.count({
       where: {
         farmId,
-        locationSource: "IP_FALLBACK",
+        locationSource: { in: ["IP_FALLBACK", "FARM_DEFAULT"] },
         approvedAt: null,
       },
     });
@@ -90,18 +90,35 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
     // 4. Find all eligible approvers for this farm
     const approverIds = await findApproversForFarm(farmId);
 
-    if (approverIds.length === 0) {
-      logger.info({ farmId }, "No active approvers found for IP fallback notification");
-      return;
-    }
-
     const title = "⚠️ IP Fallback Attendance Audit";
-    const linkUrl = `/attendance/approvals?filter=IP_FALLBACK&farmId=${farmId}`;
+    const linkUrl = `/attendance/approvals?source=IP_FALLBACK&farmId=${farmId}`;
     const tag = `farm-ip-fallback-${farmId}`;
+    const metadata = {
+      farmId,
+      farmName,
+      newCount,
+      backlogCount,
+      totalPending,
+      batchAttendanceIds: queueEntry.items.map((i) => i.attendanceId),
+    };
 
-    // 5. Send single consolidated notification to each approver
-    await Promise.allSettled(
-      approverIds.map((userId) =>
+    // 5. Build dispatch list: System Admin is always notified of all farm IP fallbacks in production,
+    // plus any local farm-level approvers found.
+    const dispatchPromises: Promise<void>[] = [
+      createAndSendNotification({
+        isSystemAdmin: true,
+        category: "IP_FALLBACK_AUDIT",
+        priority: "HIGH",
+        title,
+        body: bodyText,
+        linkUrl,
+        tag: `admin-ip-fallback-${farmId}`,
+        metadata,
+      }),
+    ];
+
+    for (const userId of approverIds) {
+      dispatchPromises.push(
         createAndSendNotification({
           userId,
           category: "IP_FALLBACK_AUDIT",
@@ -110,20 +127,22 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
           body: bodyText,
           linkUrl,
           tag,
-          metadata: {
-            farmId,
-            farmName,
-            newCount,
-            backlogCount,
-            totalPending,
-            batchAttendanceIds: queueEntry.items.map((i) => i.attendanceId),
-          },
+          metadata,
         }),
-      ),
-    );
+      );
+    }
+
+    await Promise.allSettled(dispatchPromises);
 
     logger.info(
-      { farmId, newCount, backlogCount, totalPending, approverCount: approverIds.length },
+      {
+        farmId,
+        newCount,
+        backlogCount,
+        totalPending,
+        approverCount: approverIds.length,
+        systemAdminNotified: true,
+      },
       "Consolidated IP Fallback notification dispatched successfully",
     );
   } catch (error) {

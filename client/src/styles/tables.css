@@ -26,10 +26,55 @@
   white-space: nowrap;
 }
 
+.table__sort-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-sm, 4px);
+  transition: color 0.15s ease;
+}
+
+.table__sort-btn:hover,
+.table__sort-btn:focus-visible {
+  color: var(--ink, #0f172a);
+  outline: none;
+}
+
+.table__sort-btn--active {
+  color: var(--ink, #0f172a);
+  font-weight: 600;
+}
+
+.table__sort-icon {
+  display: inline-flex;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.35;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.table__sort-btn:hover .table__sort-icon {
+  opacity: 0.7;
+}
+
+.table__sort-btn--active .table__sort-icon {
+  opacity: 1;
+  color: #10b981;
+}
+
 .table td {
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--line);
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .table tbody tr:last-child td {
@@ -37,13 +82,25 @@
 }
 
 .table tbody tr:hover {
-  background-color: rgb(22 33 28 / 2%);
+  background-color: var(--surface-sunk);
 }
 
 .table td.numeric,
 .table th.numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.table__link {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.table__link:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--clay);
+  text-decoration-thickness: 2px;
 }
 
 .table__sub {
@@ -55,6 +112,10 @@
 .table--dense th,
 .table--dense td {
   padding: var(--space-2) var(--space-4);
+}
+
+.muted {
+  color: var(--ink-faint);
 }
 
 /*
@@ -88,6 +149,9 @@
     gap: var(--space-3);
     padding: var(--space-1) 0;
     border-bottom: 0;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .table td::before {
@@ -102,5 +166,16 @@
 
   .table td.numeric {
     text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .table tbody tr {
+    padding: var(--space-4);
+  }
+
+  .table td {
+    grid-template-columns: 7rem 1fr;
+    gap: var(--space-2);
   }
 }

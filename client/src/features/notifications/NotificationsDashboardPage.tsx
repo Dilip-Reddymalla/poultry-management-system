@@ -13,12 +13,14 @@ import {
 } from "../../api/notifications.js";
 import { usePushSubscription } from "../../hooks/usePushSubscription.js";
 import { useAuth } from "../../auth/use-auth.js";
+import { useToast } from "../../components/use-toast.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { Panel, Button, EmptyState } from "../../components/ui.js";
 import "./NotificationsDashboardPage.css";
 
 export function NotificationsDashboardPage(): React.ReactElement {
   const { user } = useAuth();
+  const { notify } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -95,7 +97,7 @@ export function NotificationsDashboardPage(): React.ReactElement {
       />
 
       {/* Push Subscription Management Banner */}
-      <Panel>
+      <Panel className="push-banner-panel">
         <div className="push-banner">
           <div className="push-banner__content">
             <div
@@ -128,50 +130,99 @@ export function NotificationsDashboardPage(): React.ReactElement {
             <Button
               variant="secondary"
               onClick={async () => {
+                // 1. Play pleasant notification chime
                 try {
-                  // Play pleasant notification chime
-                  try {
-                    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = "sine";
-                    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.45);
-                  } catch {
-                    // ignore audio failure
-                  }
+                  const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.type = "sine";
+                  osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                  osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
+                  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.start();
+                  osc.stop(ctx.currentTime + 0.45);
+                } catch {
+                  // ignore audio failure
+                }
 
-                  if (Notification.permission !== "granted") {
-                    const perm = await Notification.requestPermission();
-                    if (perm !== "granted") {
-                      alert("Please allow notification permission in your browser URL bar.");
-                      return;
+                const notifTitle = "🚨 Server Alert: IP Fallback Audit";
+                const notifBody = "10 attendance records require audit confirmation at Green Valley Farm.";
+
+                // 2. Always display instant in-app banner for visible foreground feedback
+                notify("info", `${notifTitle} — ${notifBody}`);
+
+                // 3. Check and request native OS notification permissions
+                try {
+                  if (typeof window !== "undefined" && "Notification" in window) {
+                    if (Notification.permission !== "granted") {
+                      const perm = await Notification.requestPermission();
+                      if (perm !== "granted") {
+                        alert(
+                          "Notification permission is not granted. Please enable notifications in your browser URL bar or device settings to receive system pop-ups."
+                        );
+                        return;
+                      }
                     }
                   }
 
+                  // 4. Safely acquire service worker registration without hanging
+                  let reg: ServiceWorkerRegistration | null = null;
                   if ("serviceWorker" in navigator) {
-                    const reg = await navigator.serviceWorker.ready;
-                    await reg.showNotification("🚨 Server Alert: IP Fallback Audit", {
-                      body: "10 attendance records require audit confirmation at Green Valley Farm.",
-                      icon: "/icons/icon-192.png",
-                      badge: "/icons/icon-192.png",
-                      tag: `test-toast-${Date.now()}`,
-                      data: { url: "/notifications" },
-                    });
-                  } else {
-                    new Notification("🚨 Server Alert: IP Fallback Audit", {
-                      body: "10 attendance records require audit confirmation at Green Valley Farm.",
-                      icon: "/icons/icon-192.png",
-                    });
+                    try {
+                      reg = (await navigator.serviceWorker.getRegistration()) || null;
+                      if (!reg) {
+                        reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+                      }
+                      if (reg && !reg.active) {
+                        await Promise.race([
+                          navigator.serviceWorker.ready,
+                          new Promise<void>((res) => setTimeout(res, 1200)),
+                        ]);
+                      }
+                    } catch (swErr) {
+                      console.warn("Service worker lookup notice:", swErr);
+                    }
+                  }
+
+                  const notifTag = `test-toast-${Date.now()}`;
+                  const notifOptions: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
+                    body: notifBody,
+                    icon: "/icons/icon-192.png",
+                    badge: "/icons/icon-192.png",
+                    tag: notifTag,
+                    renotify: true,
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200],
+                    data: { url: "/notifications" },
+                  };
+
+                  let nativeDispatched = false;
+                  if (reg && typeof reg.showNotification === "function") {
+                    try {
+                      await reg.showNotification(notifTitle, notifOptions as NotificationOptions);
+                      nativeDispatched = true;
+                    } catch (showErr) {
+                      console.warn("ServiceWorker showNotification failed:", showErr);
+                    }
+                  }
+
+                  if (!nativeDispatched && typeof window !== "undefined" && "Notification" in window) {
+                    try {
+                      new Notification(notifTitle, {
+                        body: notifBody,
+                        icon: "/icons/icon-192.png",
+                        badge: "/icons/icon-192.png",
+                        tag: notifTag,
+                      });
+                    } catch {
+                      // Ignored on Android Chrome where constructor is restricted
+                    }
                   }
                 } catch (e) {
-                  alert("Could not display notification: " + (e instanceof Error ? e.message : String(e)));
+                  console.error("Native notification delivery notice:", e);
                 }
               }}
             >

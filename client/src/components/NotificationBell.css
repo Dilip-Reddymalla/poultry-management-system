@@ -7,19 +7,30 @@
 
 .notification-bell__trigger {
   position: relative;
-  padding: 0.5rem;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  padding: 0 !important;
   border-radius: 50%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  width: 38px;
+  flex-shrink: 0;
   cursor: pointer;
+  border: 1px solid transparent;
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .notification-bell__trigger:hover {
   background-color: var(--surface-sunk, #f7f6f1);
+}
+
+.notification-bell__trigger svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .notification-bell__badge {

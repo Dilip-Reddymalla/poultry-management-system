@@ -46,7 +46,10 @@ export function AttendanceApprovalsPage(): React.ReactElement {
   const date = params.get("date") || todayInputValue();
   const farmId = params.get("farmId") || "";
   const shift = (params.get("shift") || "") as Shift | "";
-  const sourceFilter = (params.get("source") || "ALL") as SourceFilter;
+  const rawSource = params.get("source") || params.get("filter") || "ALL";
+  const sourceFilter = (["ALL", "IP_FALLBACK", "MANUAL", "GPS"].includes(rawSource)
+    ? rawSource
+    : "ALL") as SourceFilter;
   const approvalTab = (params.get("tab") || "PENDING") as "PENDING" | "APPROVED" | "ALL";
   const search = params.get("q") || "";
   const page = Number(params.get("page")) || 1;

@@ -1,3 +1,4 @@
+
 import { useTranslation } from "react-i18next";
 
 import type { ApiError } from "../api/client.js";
@@ -43,6 +44,7 @@ interface PanelProps {
   eyebrow?: string;
   actions?: React.ReactNode;
   bleed?: boolean;
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -51,10 +53,11 @@ export function Panel({
   eyebrow,
   actions,
   bleed = false,
+  className,
   children,
 }: PanelProps): React.ReactElement {
   return (
-    <section className="panel">
+    <section className={["panel", className].filter(Boolean).join(" ")}>
       {title || actions ? (
         <header className="panel__head">
           <div>
@@ -125,6 +128,7 @@ interface TextFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   hint?: string | undefined;
   errors?: string[] | undefined;
+  endAdornment?: React.ReactNode | undefined;
 }
 
 export function TextField({
@@ -133,19 +137,48 @@ export function TextField({
   hint,
   errors,
   className,
+  endAdornment,
   ...rest
 }: TextFieldProps): React.ReactElement {
   return (
     <FieldShell id={id} label={label} hint={hint} errors={errors} required={rest.required}>
-      <input
-        {...rest}
-        id={id}
-        className={["input", errors?.length ? "input--invalid" : "", className]
-          .filter(Boolean)
-          .join(" ")}
-        aria-invalid={errors?.length ? true : undefined}
-        aria-describedby={errors?.length ? `${id}-error` : undefined}
-      />
+      {endAdornment ? (
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <input
+            {...rest}
+            id={id}
+            className={["input", errors?.length ? "input--invalid" : "", className]
+              .filter(Boolean)
+              .join(" ")}
+            style={{ width: "100%", paddingRight: "2.5rem", ...rest.style }}
+            aria-invalid={errors?.length ? true : undefined}
+            aria-describedby={errors?.length ? `${id}-error` : undefined}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: "0.5rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+              zIndex: 1,
+            }}
+          >
+            {endAdornment}
+          </div>
+        </div>
+      ) : (
+        <input
+          {...rest}
+          id={id}
+          className={["input", errors?.length ? "input--invalid" : "", className]
+            .filter(Boolean)
+            .join(" ")}
+          aria-invalid={errors?.length ? true : undefined}
+          aria-describedby={errors?.length ? `${id}-error` : undefined}
+        />
+      )}
     </FieldShell>
   );
 }

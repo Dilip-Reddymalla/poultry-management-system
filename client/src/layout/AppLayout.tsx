@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,40 @@ export function AppLayout(): React.ReactElement {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  // Listen for push notifications forwarded by service worker
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    function handleSwMessage(event: MessageEvent) {
+      if (event.data && event.data.type === "PUSH_NOTIFICATION_RECEIVED") {
+        const payload = event.data.payload || {};
+        // Play notification chime
+        try {
+          const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.18, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.45);
+        } catch {
+          // ignore audio failure
+        }
+        notify("info", `${payload.title || "Notification"}: ${payload.body || "New update received"}`);
+      }
+    }
+
+    navigator.serviceWorker.addEventListener("message", handleSwMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleSwMessage);
+    };
+  }, [notify]);
 
   async function handleSignOut(): Promise<void> {
     setSigningOut(true);

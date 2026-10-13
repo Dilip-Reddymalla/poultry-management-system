@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff } from "lucide-react";
 
 import {
   requestOtp,
@@ -31,6 +32,7 @@ export function OtpLoginPage(): React.ReactElement {
   const [step, setStep] = useState<Step>({ name: "phone" });
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -175,7 +177,7 @@ export function OtpLoginPage(): React.ReactElement {
               <TextField
                 id="phone-password"
                 label={t("auth.otpLogin.passwordOptional")}
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 value={password}
                 hint={t("auth.otpLogin.passwordHint")}
@@ -183,6 +185,17 @@ export function OtpLoginPage(): React.ReactElement {
                 onChange={(event) => {
                   setPassword(event.target.value);
                 }}
+                endAdornment={
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                    title={showPassword ? t("common.hidePasswords") : t("common.showPasswords")}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                }
               />
 
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.25rem" }}>

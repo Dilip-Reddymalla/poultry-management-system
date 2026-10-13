@@ -10,6 +10,7 @@ import {
 import type { AuthScope } from "../auth/scope.js";
 import { assertFarmWritable, farmScopedWhere } from "../auth/scope.js";
 import type { BulkMarkFaceAttendanceInput } from "./face-attendance.schema.js";
+import { enqueueIpFallbackAudit } from "../notifications/ip-fallback-aggregator.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -146,7 +147,13 @@ export async function bulkMarkFaceAttendance(
       const personType = record.employeeId ? "employee" : "worker";
       const person = await (prisma as any)[personType].findUnique({
         where: { id: record.employeeId ?? record.workerId! },
-        select: { id: true, status: true, farmId: true, farm: { select: { companyId: true } } },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          farmId: true,
+          farm: { select: { companyId: true, name: true } },
+        },
       });
 
       if (!person) {
@@ -177,7 +184,11 @@ export async function bulkMarkFaceAttendance(
         finalShedId = acShed.id;
       }
 
-      await prisma.attendance.create({
+      const isFallback =
+        record.locationSource === "IP_FALLBACK" ||
+        record.locationSource === "FARM_DEFAULT";
+
+      const created = await prisma.attendance.create({
         data: {
           date: record.date,
           farmId: person.farmId,
@@ -197,10 +208,20 @@ export async function bulkMarkFaceAttendance(
           accuracy: record.accuracy ?? null,
           ipAddress: record.ipAddress ?? null,
           recordedById: scope.userId,
-          approvedById: (record.locationSource === "IP_FALLBACK" || record.locationSource === "FARM_DEFAULT") ? null : scope.userId,
-          approvedAt: (record.locationSource === "IP_FALLBACK" || record.locationSource === "FARM_DEFAULT") ? null : new Date(),
+          approvedById: isFallback ? null : scope.userId,
+          approvedAt: isFallback ? null : new Date(),
         },
       });
+
+      if (isFallback) {
+        enqueueIpFallbackAudit({
+          attendanceId: created.id,
+          farmId: person.farmId,
+          farmName: person.farm?.name,
+          employeeName: person.name,
+          timestamp: Date.now(),
+        });
+      }
 
       markedCount++;
     } catch (error: unknown) {

@@ -146,4 +146,27 @@
 }
 
 
+.password-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, #64748b);
+  padding: 6px;
+  cursor: pointer;
+  border-radius: var(--radius, 4px);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.password-toggle-btn:hover {
+  color: var(--ink);
+  background-color: var(--line-strong, rgba(0, 0, 0, 0.06));
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid var(--moss, #2e5c38);
+  outline-offset: 1px;
+}
+
 @media (max-width: 860px) { .signin { grid-template-columns: 1fr; } .signin__aside { padding: var(--space-5) var(--space-4); } .signin__lede { font-size: var(--step-2); } .signin__motif { margin-top: var(--space-4); } .signin__shed { height: 28px; } }

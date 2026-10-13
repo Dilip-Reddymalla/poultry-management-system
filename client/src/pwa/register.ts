@@ -14,6 +14,14 @@ export function registerServiceWorker(): void {
   if (import.meta.env.PROD) {
     registerSW({ immediate: true });
   } else if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((reg) => {
+        console.log("Service Worker registered with scope:", reg.scope);
+        return reg.update();
+      })
+      .catch((err) => {
+        console.error("Service Worker registration failed:", err);
+      });
   }
 }

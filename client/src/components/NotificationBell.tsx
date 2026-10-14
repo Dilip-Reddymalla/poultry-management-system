@@ -205,6 +205,10 @@ export function NotificationBell(): React.ReactElement {
                 const isUnread = !item.readAt;
                 const isError = item.category === "SERVER_500_ERROR";
                 const isIpFallback = item.category === "IP_FALLBACK_AUDIT";
+                const isResolved =
+                  item.title.startsWith("[Resolved]") ||
+                  (item.metadata as any)?.status === "RESOLVED" ||
+                  (item.metadata as any)?.remainingPending === 0;
 
                 const targetUrl = item.linkUrl
                   ? item.linkUrl.startsWith("/audit/logs")
@@ -223,7 +227,7 @@ export function NotificationBell(): React.ReactElement {
                   >
                     <div className="notification-bell__item-row">
                       <span className="notification-bell__item-icon">
-                        {isError ? "🚨" : isIpFallback ? "🌐" : "ℹ️"}
+                        {isError ? "🚨" : isResolved ? "✅" : isIpFallback ? "🌐" : "ℹ️"}
                       </span>
                       <div className="notification-bell__item-content">
                         <div className="notification-bell__item-top">
@@ -232,6 +236,22 @@ export function NotificationBell(): React.ReactElement {
                             style={{ fontWeight: isUnread ? 700 : 500 }}
                           >
                             {item.title}
+                            {isResolved && (
+                              <span
+                                style={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 700,
+                                  background: "#dcfce7",
+                                  color: "#15803d",
+                                  padding: "1px 6px",
+                                  borderRadius: 10,
+                                  marginLeft: 6,
+                                  verticalAlign: "middle",
+                                }}
+                              >
+                                RESOLVED
+                              </span>
+                            )}
                           </div>
                           {item.createdAt && (
                             <span className="notification-bell__item-time">

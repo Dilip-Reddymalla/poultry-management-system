@@ -74,6 +74,8 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
       },
     });
 
+    if (totalPending === 0) return;
+
     const backlogCount = Math.max(0, totalPending - newCount);
 
     // 3. Format consolidated message
@@ -99,6 +101,7 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
       newCount,
       backlogCount,
       totalPending,
+      remainingPending: totalPending,
       batchAttendanceIds: queueEntry.items.map((i) => i.attendanceId),
     };
 
@@ -147,5 +150,98 @@ async function flushFarmIpFallbackQueue(farmId: string): Promise<void> {
     );
   } catch (error) {
     logger.error({ error, farmId }, "Error processing IP Fallback notification flush");
+  }
+}
+
+/**
+ * Automatically synchronize and resolve IP Fallback notifications when attendance records
+ * on a farm are approved or audited.
+ */
+export async function syncIpFallbackAuditResolution(
+  farmId: string,
+  approverName?: string,
+): Promise<void> {
+  try {
+    const farm = await prisma.farm.findUnique({
+      where: { id: farmId },
+      select: { name: true },
+    });
+    const farmName = farm?.name || "Farm";
+
+    // Count remaining unapproved fallback records across ALL dates
+    const remainingPending = await prisma.attendance.count({
+      where: {
+        farmId,
+        locationSource: { in: ["IP_FALLBACK", "FARM_DEFAULT"] },
+        approvedAt: null,
+      },
+    });
+
+    // Find all IP_FALLBACK_AUDIT notifications for this farm
+    const notifs = await prisma.notification.findMany({
+      where: {
+        category: "IP_FALLBACK_AUDIT",
+        metadata: {
+          path: ["farmId"],
+          equals: farmId,
+        },
+      },
+    });
+
+    if (notifs.length === 0) return;
+
+    if (remainingPending === 0) {
+      const now = new Date();
+      for (const n of notifs) {
+        const meta =
+          n.metadata && typeof n.metadata === "object"
+            ? (n.metadata as Record<string, unknown>)
+            : {};
+
+        await prisma.notification.update({
+          where: { id: n.id },
+          data: {
+            title: `[Resolved] ⚠️ IP Fallback Attendance Audit`,
+            body: approverName
+              ? `All IP Fallback records for ${farmName} have been audited and approved by ${approverName}.`
+              : `All IP Fallback records for ${farmName} have been audited and approved.`,
+            readAt: n.readAt || now,
+            metadata: {
+              ...meta,
+              status: "RESOLVED",
+              resolved: true,
+              remainingPending: 0,
+              totalPending: 0,
+              resolvedAt: now.toISOString(),
+              resolvedBy: approverName || "Approver",
+            },
+          },
+        });
+      }
+      logger.info({ farmId, approverName }, "Marked IP Fallback notifications as resolved");
+    } else {
+      for (const n of notifs) {
+        const meta =
+          n.metadata && typeof n.metadata === "object"
+            ? (n.metadata as Record<string, unknown>)
+            : {};
+
+        await prisma.notification.update({
+          where: { id: n.id },
+          data: {
+            body: `${remainingPending} attendance record(s) require confirmation at ${farmName} (${approverName ? `updated by ${approverName}` : "partially audited"}).`,
+            metadata: {
+              ...meta,
+              status: "PENDING",
+              remainingPending,
+              totalPending: remainingPending,
+            },
+          },
+        });
+      }
+      logger.info({ farmId, remainingPending }, "Updated IP Fallback notification pending count");
+    }
+  } catch (error) {
+    logger.error({ error, farmId }, "Error syncing IP fallback audit resolution");
   }
 }

@@ -43,13 +43,25 @@ export function AttendanceApprovalsPage(): React.ReactElement {
   );
 
   // Filters
-  const date = params.get("date") || todayInputValue();
-  const farmId = params.get("farmId") || "";
-  const shift = (params.get("shift") || "") as Shift | "";
   const rawSource = params.get("source") || params.get("filter") || "ALL";
   const sourceFilter = (["ALL", "IP_FALLBACK", "MANUAL", "GPS"].includes(rawSource)
     ? rawSource
     : "ALL") as SourceFilter;
+
+  // Smart Date Filter: If explicitly passed in URL, respect it.
+  // If navigated from an IP Fallback notification (source=IP_FALLBACK) and no date is specified in params,
+  // default to "" (All Dates / Sessions) so past sessions and yesterday's records are immediately visible!
+  // Otherwise default to todayInputValue().
+  const dateParam = params.get("date");
+  const date =
+    dateParam !== null
+      ? dateParam
+      : sourceFilter === "IP_FALLBACK"
+        ? ""
+        : todayInputValue();
+
+  const farmId = params.get("farmId") || "";
+  const shift = (params.get("shift") || "") as Shift | "";
   const approvalTab = (params.get("tab") || "PENDING") as "PENDING" | "APPROVED" | "ALL";
   const search = params.get("q") || "";
   const page = Number(params.get("page")) || 1;
@@ -72,14 +84,14 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     (signal) =>
       fetchAttendance(
         {
-          date,
+          ...(date ? { date } : {}),
           ...(farmId ? { farmId } : {}),
           ...(shift ? { shift } : {}),
           ...(sourceFilter !== "ALL"
             ? sourceFilter === "GPS"
               ? { locationSource: "GPS_EXACT" }
               : sourceFilter === "MANUAL"
-                ? {} // No filter for manual (just search manually via location source not being IP)
+                ? {} // No filter for manual
                 : { locationSource: sourceFilter as any }
             : {}),
           ...(approvalTab === "PENDING"
@@ -95,20 +107,42 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       ),
   );
 
-  const records: Attendance[] = attendanceResource.data?.attendance ?? [];
+  // Overview resource without approval status tab filter to calculate true KPI counts
+  const overviewResource = useResource<AttendanceListResponse>(
+    `approvals-overview:${date}:${farmId}:${shift}:${sourceFilter}`,
+    (signal) =>
+      fetchAttendance(
+        {
+          ...(date ? { date } : {}),
+          ...(farmId ? { farmId } : {}),
+          ...(shift ? { shift } : {}),
+          ...(sourceFilter !== "ALL"
+            ? sourceFilter === "GPS"
+              ? { locationSource: "GPS_EXACT" }
+              : sourceFilter === "MANUAL"
+                ? {}
+                : { locationSource: sourceFilter as any }
+            : {}),
+          limit: 500,
+        },
+        signal,
+      ),
+  );
 
-  // KPI Metrics
+  const records: Attendance[] = attendanceResource.data?.attendance ?? [];
+  const overviewRecords: Attendance[] = overviewResource.data?.attendance ?? records;
+
+  // Accurate KPI Metrics across current filters (does not collapse when switching tabs)
   const kpis = useMemo(() => {
-    const all = records;
     return {
-      totalShown: all.length,
-      pending: all.filter((r) => !r.approvedAt).length,
-      ipFallback: all.filter(
+      totalShown: records.length,
+      pending: overviewRecords.filter((r) => !r.approvedAt).length,
+      ipFallback: overviewRecords.filter(
         (r) => r.locationSource === "IP_FALLBACK" && !r.approvedAt,
       ).length,
-      approved: all.filter((r) => r.approvedAt).length,
+      approved: overviewRecords.filter((r) => r.approvedAt).length,
     };
-  }, [records]);
+  }, [overviewRecords, records]);
 
   // Selection helpers
   const pendingRecords = useMemo(
@@ -142,6 +176,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       await approveAttendance(id);
       notify("success", "Attendance record approved.");
       attendanceResource.reload();
+      overviewResource.reload();
       setSelectedIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
@@ -171,6 +206,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       notify("success", `Approved ${res.approvedCount} record(s).`);
       setSelectedIds(new Set());
       attendanceResource.reload();
+      overviewResource.reload();
     } catch (err: any) {
       notify("error", err?.message || "Failed to approve.");
     } finally {
@@ -183,7 +219,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     if (pendingRecords.length === 0) return;
     if (
       !window.confirm(
-        `Approve ALL ${pendingRecords.length} pending record(s) for ${date}?`,
+        `Approve ALL ${pendingRecords.length} pending record(s) for ${date || "all sessions"}?`,
       )
     )
       return;
@@ -196,6 +232,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       notify("success", `Approved ${res.approvedCount} record(s).`);
       setSelectedIds(new Set());
       attendanceResource.reload();
+      overviewResource.reload();
     } catch (err: any) {
       notify("error", err?.message || "Failed to approve.");
     } finally {
@@ -357,17 +394,53 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               alignItems: "center",
             }}
           >
-            <input
-              type="date"
-              className="input"
-              value={date}
-              onChange={(e) => setParam("date", e.target.value === todayInputValue() ? "" : e.target.value)}
-              style={{
-                padding: "0.3rem 0.5rem",
-                fontSize: "0.82rem",
-                width: isMobile ? "100%" : "auto",
-              }}
-            />
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="date"
+                className="input"
+                value={date}
+                onChange={(e) => setParam("date", e.target.value)}
+                style={{
+                  padding: "0.3rem 0.5rem",
+                  fontSize: "0.82rem",
+                  width: isMobile ? "100%" : "auto",
+                }}
+              />
+              {date ? (
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  onClick={() => setParam("date", "")}
+                  title="View all dates and past sessions"
+                  style={{
+                    fontSize: "0.72rem",
+                    padding: "0.2rem 0.45rem",
+                    minHeight: "28px",
+                    height: "auto",
+                    color: "var(--ink-soft)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ✕ All Dates
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setParam("date", todayInputValue())}
+                  title="Filter to today only"
+                  style={{
+                    fontSize: "0.72rem",
+                    padding: "0.2rem 0.5rem",
+                    minHeight: "28px",
+                    height: "auto",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  📅 Today
+                </button>
+              )}
+            </div>
             {showFarm && (
               <select
                 className="input"
@@ -548,18 +621,60 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           </div>
         ) : records.length === 0 ? (
           <div className="panel__pad">
-            <EmptyState
-              title={
-                approvalTab === "PENDING"
-                  ? "No pending records"
-                  : "No records found"
-              }
-              description={
-                approvalTab === "PENDING"
-                  ? "All attendance records for this date have been approved."
-                  : "No records match the current filters."
-              }
-            />
+            {approvalTab === "PENDING" && kpis.approved > 0 ? (
+              <div
+                style={{
+                  padding: "1.25rem 1.5rem",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "var(--radius)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: "1.5rem" }}>✅</span>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.95rem" }}>
+                      All {sourceFilter === "IP_FALLBACK" ? "IP Fallback " : ""}attendance records have been audited!
+                    </div>
+                    <div style={{ color: "#15803d", fontSize: "0.82rem", marginTop: 3 }}>
+                      {kpis.approved} record(s) have already been verified and approved.
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setParam("tab", "APPROVED")}
+                  style={{
+                    borderColor: "#86efac",
+                    color: "#166534",
+                    fontSize: "0.82rem",
+                    padding: "0.35rem 0.75rem",
+                  }}
+                >
+                  View Approved Records ({kpis.approved}) →
+                </Button>
+              </div>
+            ) : (
+              <EmptyState
+                title={
+                  approvalTab === "PENDING"
+                    ? "No pending records"
+                    : "No records found"
+                }
+                description={
+                  approvalTab === "PENDING"
+                    ? date
+                      ? `All attendance records for ${date} have been approved.`
+                      : "All attendance records across all sessions have been approved."
+                    : "No records match the current filters."
+                }
+              />
+            )}
           </div>
         ) : (
           <div className="table-scroll">

@@ -283,12 +283,18 @@ export function NotificationsDashboardPage(): React.ReactElement {
             const isUnread = !item.readAt;
             const is500 = item.category === "SERVER_500_ERROR";
             const isIp = item.category === "IP_FALLBACK_AUDIT";
+            const isResolved =
+              item.title.startsWith("[Resolved]") ||
+              (item.metadata as any)?.status === "RESOLVED" ||
+              (item.metadata as any)?.remainingPending === 0;
 
-            const accentColor = is500
-              ? "#ef4444"
-              : isIp
-                ? "#d97706"
-                : "var(--line)";
+            const accentColor = isResolved
+              ? "#16a34a"
+              : is500
+                ? "#ef4444"
+                : isIp
+                  ? "#d97706"
+                  : "var(--line)";
 
             return (
               <div
@@ -303,14 +309,24 @@ export function NotificationsDashboardPage(): React.ReactElement {
                 <div className="notification-card__main-row">
                   <div className="notification-card__header-left">
                     <span className="notification-card__category-icon">
-                      {is500 ? "🚨" : isIp ? "🌐" : "ℹ️"}
+                      {isResolved ? "✅" : is500 ? "🚨" : isIp ? "🌐" : "ℹ️"}
                     </span>
                     <div className="notification-card__title-group">
                       <div className="notification-card__title-line">
                         <strong style={{ fontWeight: isUnread ? 700 : 600 }}>
                           {item.title}
                         </strong>
-                        {isUnread && (
+                        {isResolved ? (
+                          <span
+                            className="notification-card__badge-new"
+                            style={{
+                              background: "#dcfce7",
+                              color: "#15803d",
+                            }}
+                          >
+                            RESOLVED
+                          </span>
+                        ) : isUnread ? (
                           <span
                             className="notification-card__badge-new"
                             style={{
@@ -320,7 +336,7 @@ export function NotificationsDashboardPage(): React.ReactElement {
                           >
                             NEW
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <span className="notification-card__timestamp">
                         {new Date(item.createdAt).toLocaleString()}
@@ -356,7 +372,11 @@ export function NotificationsDashboardPage(): React.ReactElement {
                           gap: 4,
                         }}
                       >
-                        {isIp ? "Review in Approvals" : "Inspect Logs"}{" "}
+                        {isResolved
+                          ? "View in Approvals"
+                          : isIp
+                            ? "Review in Approvals"
+                            : "Inspect Logs"}{" "}
                         <ExternalLink size={12} />
                       </Link>
                     )}
@@ -375,12 +395,25 @@ export function NotificationsDashboardPage(): React.ReactElement {
                         Farm: <strong>{String(item.metadata.farmName)}</strong>
                       </span>
                     )}
-                    {item.metadata.newCount !== undefined && (
+                    {item.metadata.resolvedBy && (
+                      <span
+                        className="notification-card__pill"
+                        style={{ background: "#dcfce7", color: "#15803d" }}
+                      >
+                        Audited by: <strong>{String(item.metadata.resolvedBy)}</strong>
+                      </span>
+                    )}
+                    {item.metadata.remainingPending !== undefined && !isResolved && (
+                      <span className="notification-card__pill">
+                        Pending remaining: <strong>{String(item.metadata.remainingPending)}</strong>
+                      </span>
+                    )}
+                    {item.metadata.newCount !== undefined && !isResolved && (
                       <span className="notification-card__pill">
                         New check-ins: <strong>{String(item.metadata.newCount)}</strong>
                       </span>
                     )}
-                    {item.metadata.backlogCount !== undefined && Number(item.metadata.backlogCount) > 0 && (
+                    {item.metadata.backlogCount !== undefined && Number(item.metadata.backlogCount) > 0 && !isResolved && (
                       <span className="notification-card__pill">
                         Prior backlog: <strong>{String(item.metadata.backlogCount)}</strong>
                       </span>

@@ -5,7 +5,10 @@ import { AppError } from "../../utils/app-error.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import { assertFarmWritable, farmScopedWhere, isFarmInScope } from "../auth/scope.js";
-import { enqueueIpFallbackAudit } from "../notifications/ip-fallback-aggregator.js";
+import {
+  enqueueIpFallbackAudit,
+  syncIpFallbackAuditResolution,
+} from "../notifications/ip-fallback-aggregator.js";
 
 import type {
   CreateAttendanceInput,
@@ -556,6 +559,25 @@ export async function approveAttendance(
     },
   });
 
+  // Resolve / sync IP Fallback notifications
+  void (async () => {
+    try {
+      let approverName: string | undefined;
+      if (scope.userId) {
+        const u = await prisma.user.findUnique({
+          where: { id: scope.userId },
+          include: { employee: { select: { name: true } } },
+        });
+        approverName = u?.employee?.name || "Manager";
+      } else if (scope.isSystemAdmin) {
+        approverName = "System Admin";
+      }
+      await syncIpFallbackAuditResolution(record.farmId, approverName);
+    } catch {
+      // Background sync error ignored
+    }
+  })();
+
   return safeRecord;
 }
 
@@ -570,7 +592,7 @@ export async function bulkApproveAttendance(
       ...farmScopedWhere(scope),
       approvedAt: null,
     },
-    select: { id: true },
+    select: { id: true, farmId: true },
   });
 
   const validIds = unapproved.map((r) => r.id);
@@ -596,6 +618,28 @@ export async function bulkApproveAttendance(
       approvedAt: new Date(),
     },
   });
+
+  // Resolve / sync IP Fallback notifications across all affected farms
+  void (async () => {
+    try {
+      let approverName: string | undefined;
+      if (scope.userId) {
+        const u = await prisma.user.findUnique({
+          where: { id: scope.userId },
+          include: { employee: { select: { name: true } } },
+        });
+        approverName = u?.employee?.name || "Manager";
+      } else if (scope.isSystemAdmin) {
+        approverName = "System Admin";
+      }
+      const distinctFarmIds = Array.from(new Set(unapproved.map((r) => r.farmId)));
+      for (const fId of distinctFarmIds) {
+        await syncIpFallbackAuditResolution(fId, approverName);
+      }
+    } catch {
+      // Background sync error ignored
+    }
+  })();
 
   return { approvedCount: result.count };
 }

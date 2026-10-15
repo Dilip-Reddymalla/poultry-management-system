@@ -79,6 +79,47 @@ export const errorMiddleware: ErrorRequestHandler = (
     }
   }
 
+  // Handle client-initiated connection aborts (e.g. mobile camera frame upload cancelled)
+  const isClientAbort =
+    (err as Error)?.message === "Request aborted" ||
+    (err as { code?: string })?.code === "ECONNABORTED" ||
+    (err as { code?: string })?.code === "ERR_HTTP_REQUEST_ABORTED";
+
+  if (isClientAbort) {
+    reqLogger.warn(
+      { path: req?.originalUrl || req?.url },
+      "Client aborted request mid-flight",
+    );
+
+    if (!res.headersSent) {
+      res.status(400).json({
+        success: false,
+        message: "Client closed connection before request could complete",
+      });
+    }
+
+    return;
+  }
+
+  // Handle database connection timeouts (e.g. Neon serverless wake-up)
+  const isDbConnectionTimeout =
+    typeof (err as Error)?.message === "string" &&
+    (err as Error).message.includes("timeout exceeded when trying to connect");
+
+  if (isDbConnectionTimeout) {
+    reqLogger.error(
+      { err, path: req?.originalUrl || req?.url },
+      "Database connection timed out during serverless wake-up / high load",
+    );
+
+    res.status(503).json({
+      success: false,
+      message: "Database temporarily unavailable while connecting. Please retry.",
+    });
+
+    return;
+  }
+
   // Only genuinely unexpected failures are logged, so the log stays a signal of
   // real defects rather than a stream of ordinary validation/permission noise.
   reqLogger.error({ err, path: req?.originalUrl || req?.url }, "Unhandled internal server error");

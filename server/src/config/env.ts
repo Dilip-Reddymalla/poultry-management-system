@@ -11,6 +11,19 @@ const envSchema = z
     PORT: z.coerce.number().int().positive(),
 
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+    PRODUCTION_DATABASE_URI: z.string().trim().optional(),
+    production_database_uri: z.string().trim().optional(),
+    USE_PRODUCTION_DB: z
+      .preprocess((val) => val === "true" || val === true, z.boolean())
+      .optional()
+      .default(false),
+    DB_SSL_REJECT_UNAUTHORIZED: z
+      .preprocess(
+        (val) => (val === undefined ? true : val !== "false" && val !== false),
+        z.boolean(),
+      )
+      .optional()
+      .default(true),
 
     JWT_SECRET: z
       .string()

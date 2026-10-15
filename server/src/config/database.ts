@@ -4,28 +4,54 @@ import { Pool } from "pg";
 
 import { env } from "./env.js";
 
+// Determine active connection string:
+// If USE_PRODUCTION_DB is enabled or NODE_ENV === "production" and a production URI is provided, use that;
+// otherwise use DATABASE_URL.
 let connectionString = env.DATABASE_URL;
-// Remove any restrictive verify-full parameter that causes slow certificate negotiation on cloud providers
-if (connectionString.includes("sslmode=verify-full")) {
-  connectionString = connectionString.replace("sslmode=verify-full", "sslmode=no-verify");
+const productionUri = env.PRODUCTION_DATABASE_URI || env.production_database_uri;
+
+if ((env.USE_PRODUCTION_DB || env.NODE_ENV === "production") && productionUri) {
+  connectionString = productionUri;
 }
 
-const isSslDisabled = connectionString.includes("sslmode=disable") || connectionString.includes("localhost") || connectionString.includes("127.0.0.1");
+// Clean up any legacy or malformed SSL parameters if present
+if (connectionString.includes("sslmode=no-verify")) {
+  connectionString = connectionString.replace("sslmode=no-verify", "sslmode=require");
+}
+
+const isLocalhost =
+  connectionString.includes("localhost") ||
+  connectionString.includes("127.0.0.1") ||
+  connectionString.includes("sslmode=disable");
+
+// Configure SSL properly for Neon / Cloud Postgres:
+// For local databases: SSL is disabled (false).
+// For Neon / Cloud Postgres: SSL certificate verification against trusted root CAs is enforced by default
+// (rejectUnauthorized: true) for secure transport encryption.
+const sslConfig = isLocalhost
+  ? false
+  : {
+      rejectUnauthorized: env.DB_SSL_REJECT_UNAUTHORIZED !== false,
+    };
 
 const pool = new Pool({
   connectionString,
   max: 20,
-  min: 4,
-  idleTimeoutMillis: 300000, // 5 minutes to keep pool connections warm
-  connectionTimeoutMillis: 10000,
+  // For serverless databases like Neon, min: 0 prevents stale sockets when compute scales to zero.
+  // pg-pool will open connections on demand without clogging during cold starts.
+  min: 0,
+  // Keep connections idle for up to 1 minute, avoiding Neon proxy / PgBouncer 5-minute disconnect errors.
+  idleTimeoutMillis: 60000,
+  // 30-second timeout accommodates Neon serverless cold-start wake-up times (typically 3-12s)
+  connectionTimeoutMillis: 30000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
-  ssl: isSslDisabled ? false : { rejectUnauthorized: false },
+  ssl: sslConfig,
 });
 
 pool.on("error", (err) => {
-  // Prevent unhandled error crashes when idle connections are pruned by cloud firewalls
-  console.error("[PG Pool] Idle client connection pruned:", err.message);
+  // Prevent unhandled error crashes when idle connections are pruned by cloud firewalls or serverless proxies
+  console.error("[PG Pool] Client connection error / idle socket pruned:", err.message);
 });
 
 const adapter = new PrismaPg(pool);

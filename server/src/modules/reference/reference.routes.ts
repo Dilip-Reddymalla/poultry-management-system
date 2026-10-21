@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   listDesignationsController,
+  listPermissionsController,
   listRolesController,
 } from "./reference.controller.js";
 
@@ -30,7 +31,7 @@ roleRouter.get(
   listRolesController,
 );
 
-// Unified reference router for /api/reference/designations and /api/reference/roles
+// Unified reference router for /api/reference/designations, /api/reference/roles, and /api/reference/permissions
 export const referenceRouter = Router();
 
 referenceRouter.get(
@@ -44,3 +45,10 @@ referenceRouter.get(
   requirePermission("user:create", "user:update-role"),
   listRolesController,
 );
+
+referenceRouter.get(
+  "/permissions",
+  requirePermission("farm:update", "company:update", "user:create", "user:update-role"),
+  listPermissionsController,
+);
+

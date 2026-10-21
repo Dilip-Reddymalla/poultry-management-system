@@ -217,7 +217,7 @@ export async function createActor(
     },
   });
 
-  const role = await prisma.role.findUnique({
+  const role = await prisma.role.findFirst({
     where: {
       name: roleName,
     },

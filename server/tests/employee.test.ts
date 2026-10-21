@@ -44,7 +44,7 @@ describe("employee module", () => {
 
     designationId = await getDesignationId();
 
-    const role = await prisma.role.findUniqueOrThrow({
+    const role = await prisma.role.findFirstOrThrow({
       where: { name: "Supervisor" },
       select: { id: true },
     });
@@ -403,7 +403,7 @@ describe("employee module", () => {
       .set("Cookie", dgm.cookie)
       .send({ email, roleId: supervisorRoleId });
 
-    const accountantRole = await prisma.role.findUniqueOrThrow({ where: { name: "Accountant" } });
+    const accountantRole = await prisma.role.findFirstOrThrow({ where: { name: "Accountant" } });
     const patch = await request(app)
       .patch(`/api/employees/${employee.id}/user/role`)
       .set("Cookie", dgm.cookie)
@@ -422,7 +422,7 @@ describe("employee module", () => {
       .set("Cookie", dgm.cookie)
       .send({ email, roleId: supervisorRoleId });
 
-    const companyAdminRole = await prisma.role.findUniqueOrThrow({ where: { name: "Company Admin" } });
+    const companyAdminRole = await prisma.role.findFirstOrThrow({ where: { name: "Company Admin" } });
     const patch = await request(app)
       .patch(`/api/employees/${employee.id}/user/role`)
       .set("Cookie", dgm.cookie)

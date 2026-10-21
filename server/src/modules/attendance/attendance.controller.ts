@@ -14,6 +14,7 @@ import {
   markUnmarkedAbsent,
 } from "./attendance.service.js";
 import { exportAttendance } from "./attendance.export.js";
+import { getEnterpriseAttendanceReport } from "./attendance-report.service.js";
 import {
   attendanceIdParamSchema,
   createAttendanceSchema,
@@ -25,6 +26,7 @@ import {
   unmarkedSummaryQuerySchema,
   markUnmarkedAbsentSchema,
   exportAttendanceQuerySchema,
+  attendanceReportQuerySchema,
 } from "./attendance.schema.js";
 import {
   extractClientIp,
@@ -197,3 +199,17 @@ export async function exportAttendanceController(
   const query = exportAttendanceQuerySchema.parse(req.query);
   await exportAttendance(getScope(req), query, res);
 }
+
+export async function getAttendanceReportController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const query = attendanceReportQuerySchema.parse(req.query);
+  const report = await getEnterpriseAttendanceReport(getScope(req), query);
+
+  res.status(200).json({
+    success: true,
+    data: report,
+  });
+}
+

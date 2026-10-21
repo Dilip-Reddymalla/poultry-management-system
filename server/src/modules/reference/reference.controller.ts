@@ -1,12 +1,14 @@
 import type { Request, Response } from "express";
 
-import { listDesignations, listRoles } from "./reference.service.js";
+import { listDesignations, listPermissions, listRoles } from "./reference.service.js";
 
 export async function listDesignationsController(
-  _req: Request,
+  req: Request,
   res: Response,
 ): Promise<void> {
-  const designations = await listDesignations();
+  const farmId = typeof req.query.farmId === "string" ? req.query.farmId : undefined;
+  const companyId = typeof req.query.companyId === "string" ? req.query.companyId : undefined;
+  const designations = await listDesignations(farmId, companyId);
 
   res.status(200).json({
     success: true,
@@ -15,13 +17,28 @@ export async function listDesignationsController(
 }
 
 export async function listRolesController(
-  _req: Request,
+  req: Request,
   res: Response,
 ): Promise<void> {
-  const roles = await listRoles();
+  const farmId = typeof req.query.farmId === "string" ? req.query.farmId : undefined;
+  const companyId = typeof req.query.companyId === "string" ? req.query.companyId : undefined;
+  const roles = await listRoles(farmId, companyId);
 
   res.status(200).json({
     success: true,
     roles,
   });
 }
+
+export async function listPermissionsController(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  const permissions = await listPermissions();
+
+  res.status(200).json({
+    success: true,
+    permissions,
+  });
+}
+

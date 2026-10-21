@@ -15,6 +15,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { ShiftChoice } from "./ShiftChoice.js";
 import { LocationStatusAlert } from "./LocationStatusAlert.js";
+import { getCurrentShift } from "../../lib/shift-timing.js";
 import { ApiError } from "../../api/client.js";
 
 interface MarkUnmarkedAbsentDialogProps {
@@ -28,7 +29,7 @@ interface MarkUnmarkedAbsentDialogProps {
 export function MarkUnmarkedAbsentDialog({
   defaultDate,
   defaultFarmId,
-  defaultShift = "MORNING_SHIFT",
+  defaultShift = getCurrentShift(),
   onClose,
   onSaved,
 }: MarkUnmarkedAbsentDialogProps): React.ReactElement {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/use-auth.js";
 import {
   fetchAttendance,
@@ -20,6 +20,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { useToast } from "../../components/use-toast.js";
 import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button } from "../../components/ui.js";
+import { getCurrentShift } from "../../lib/shift-timing.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import "./Attendance.css";
 
@@ -56,8 +57,16 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const { notify } = useToast();
   const navigate = useNavigate();
 
-  // URL-synced filter state — enables shareable links, back/forward, and refresh persistence
   const [params, setParams] = useSearchParams();
+
+  // If user is Company Admin or System Admin and has NOT selected a specific farm to inspect,
+  // redirect to the consolidated Attendance Report. If they clicked a farm name from the report,
+  // let them view that farm's detailed operational dashboard.
+  const isExecutive = Boolean(user?.isSystemAdmin || user?.scope.level === "COMPANY" || user?.role === "Company Admin");
+  const targetedFarmId = params.get("farmId");
+  if (isExecutive && !targetedFarmId) {
+    return <Navigate to="/attendance/reports" replace />;
+  }
 
   const setParam = useCallback((key: string, value: string) => {
     setParams((prev) => {
@@ -100,7 +109,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const [showUnmarkedAbsentDialog, setShowUnmarkedAbsentDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
 
-  const showFarmFilter = user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
+  const showFarmFilter = user?.scope?.level === "GLOBAL";
   const isSupervisor = user?.role === "SUPERVISOR" || (user?.roles && user.roles.includes("SUPERVISOR"));
 
   // Fetch Farms
@@ -789,7 +798,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
         <MarkUnmarkedAbsentDialog
           defaultDate={date}
           defaultFarmId={selectedFarmId || null}
-          defaultShift={dashboardShift || "MORNING_SHIFT"}
+          defaultShift={dashboardShift || getCurrentShift()}
           onClose={() => setShowUnmarkedAbsentDialog(false)}
           onSaved={() => {
             setShowUnmarkedAbsentDialog(false);

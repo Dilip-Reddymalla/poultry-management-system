@@ -27,6 +27,7 @@ import { formatDate } from "../../lib/display.js";
 import { EmployeeFormDialog } from "./EmployeeFormDialog.js";
 import { ProvisionUserDialog } from "./ProvisionUserDialog.js";
 import { ChangeRoleDialog } from "./ChangeRoleDialog.js";
+import { getActorRank, ROLE_HIERARCHY } from "./roles-hierarchy.js";
 
 export function EmployeeDetailPage(): React.ReactElement {
   const { t } = useTranslation();
@@ -54,43 +55,12 @@ export function EmployeeDetailPage(): React.ReactElement {
   const record = employee.data;
   const active = record?.status === "ACTIVE";
 
-  const ROLE_HIERARCHY: Record<string, number> = {
-    "System Admin": 100,
-    "Company Admin": 90,
-    "DGM": 80,
-    "Assistant Manager": 70,
-    "Super Incharge": 65,
-    "Incharge": 60,
-    "Asst Incharge": 55,
-    "Accountant": 50,
-    "Accounts Assistant": 45,
-    "Stores Executive": 45,
-    "Senior Supervisor": 40,
-    "Supervisor": 35,
-    "AC Supervisor": 35,
-    "Maintenance Supervisor": 35,
-    "Grading Supervisor": 35,
-    "Supervisor - Litter Maintenance": 35,
-    "Security Supervisor": 35,
-    "Asst Supervisor": 30,
-    "AC Asst Supervisor": 30,
-    "Asst Supervisor General": 30,
-    "Asst Supervisor - Technical": 30,
-    "Asst Supervisor - Electrical": 30,
-    "Security Head Guard": 20,
-    "Senior Driver": 18,
-    "Security Guard": 15,
-    "Driver": 15,
-    "Worker": 10,
-  };
-
   const canDelete = (() => {
     if (!can("employee:delete")) return false;
     if (!record) return false;
     if (user?.employeeId === record.id) return false;
     if (user?.isSystemAdmin) return true;
-    const userRoles = user?.roles ?? [];
-    const userRank = Math.max(...userRoles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+    const userRank = getActorRank(user);
     const targetRank = ROLE_HIERARCHY[record.designation.name] ?? 0;
     return userRank >= targetRank;
   })();

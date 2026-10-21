@@ -9,6 +9,7 @@ import {
   createAttendanceController,
   exportAttendanceController,
   getAttendanceByIdController,
+  getAttendanceReportController,
   getCurrentLocationController,
   getMarkedPersonIdsController,
   getUnmarkedSummaryController,
@@ -28,6 +29,13 @@ router.get(
   "/export",
   requirePermission("report:export"),
   exportAttendanceController,
+);
+
+// Cross-Farm & Enterprise Attendance Report (Company Admin, System Admin)
+router.get(
+  "/reports/summary",
+  requirePermission("report:view"),
+  getAttendanceReportController,
 );
 
 // Read

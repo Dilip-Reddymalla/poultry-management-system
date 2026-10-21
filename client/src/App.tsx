@@ -15,6 +15,9 @@ import {
 const AttendanceDashboardPage = lazy(() =>
   import("./features/attendance/AttendanceDashboardPage.js").then((m) => ({ default: m.AttendanceDashboardPage }))
 );
+const AttendanceReportPage = lazy(() =>
+  import("./features/attendance/CompanyAttendanceReportPage.js").then((m) => ({ default: m.AttendanceReportPage }))
+);
 const AttendanceApprovalsPage = lazy(() =>
   import("./features/attendance/AttendanceApprovalsPage.js").then((m) => ({ default: m.AttendanceApprovalsPage }))
 );
@@ -239,6 +242,14 @@ export default function App(): React.ReactElement {
                   }
                 />
 
+                <Route
+                  path="/attendance/reports"
+                  element={
+                    <RequirePermission permission="report:view">
+                      <AttendanceReportPage />
+                    </RequirePermission>
+                  }
+                />
                 <Route
                   path="/attendance/dashboard"
                   element={

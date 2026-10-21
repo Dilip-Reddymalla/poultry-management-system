@@ -6,6 +6,8 @@ export interface SafeCompany {
   id: string;
   name: string;
   code: string;
+  logoUrl?: string | null;
+  website?: string | null;
   farmCount: number;
 }
 

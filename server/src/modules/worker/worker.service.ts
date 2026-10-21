@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
+import { deleteImageByUrl } from "../../services/cloudinary.service.js";
 import { AppError } from "../../utils/app-error.js";
 import { normalizePhone } from "../../utils/phone.js";
 import type { AuthScope } from "../auth/scope.js";
@@ -18,7 +19,11 @@ import type {
 } from "./worker.schema.js";
 
 import { getFarmById } from "../farm/farm.service.js";
-import { createEmployeeId, getEmployeeById } from "../employee/employee.service.js";
+import {
+  assertDesignationUsable,
+  createEmployeeId,
+  getEmployeeById,
+} from "../employee/employee.service.js";
 import type { SafeEmployee } from "../employee/employee.types.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 
@@ -311,6 +316,7 @@ export async function updateWorker(
     select: {
       id: true,
       farmId: true,
+      photoUrl: true,
       farm: { select: { companyId: true } },
     },
   });
@@ -338,6 +344,15 @@ export async function updateWorker(
       },
       select: workerSelect,
     });
+
+    // If photo was replaced or removed, delete old asset from Cloudinary
+    if (
+      faceData.photoUrl !== undefined &&
+      existingWorker.photoUrl &&
+      existingWorker.photoUrl !== faceData.photoUrl
+    ) {
+      void deleteImageByUrl(existingWorker.photoUrl);
+    }
 
     // Update face embedding via raw SQL.
     if (faceData.faceEmbedding) {
@@ -540,14 +555,11 @@ export async function promoteWorker(
     );
   }
 
-  const designation = await prisma.designation.findUnique({
-    where: { id: input.designationId },
-    select: { id: true, name: true },
-  });
-
-  if (!designation) {
-    throw new AppError("Designation not found", 404);
-  }
+  const designation = await assertDesignationUsable(
+    scope,
+    existingWorker.farmId,
+    input.designationId,
+  );
 
   const resolvedEmployeeId = input.employeeId?.trim()
     ? input.employeeId.trim()

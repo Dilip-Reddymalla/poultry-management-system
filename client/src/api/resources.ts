@@ -13,6 +13,7 @@ import type {
   ShedStatus,
   Worker,
   WorkerStatus,
+  EnterpriseAttendanceReportResponse,
 } from "./types.js";
 
 // -- Companies --
@@ -30,6 +31,8 @@ export interface CompanyListResponse {
 export interface CompanyInput {
   name: string;
   code: string;
+  logoUrl?: string | null;
+  website?: string | null;
   gstin?: string;
   pan?: string;
   address?: string;
@@ -217,14 +220,34 @@ export interface ExportAttendanceQuery {
 }
 
 import { apiClient, API_BASE_URL, ApiError } from "./client.js";
-import type { Designation, Role, ManageableShedStatus } from "./types.js";
+import type {
+  Designation,
+  Role,
+  ManageableShedStatus,
+  ShiftTimingItem,
+  Permission,
+  CustomRoleConfigItem,
+  FarmRolesConfigResponse,
+  CompanyRolesConfigResponse,
+} from "./types.js";
 
 // -- Reference Data --
-export function fetchDesignations(): Promise<Designation[]> {
-  return apiClient.get("/reference/designations").then((res: any) => res.designations);
+export function fetchDesignations(farmId?: string, companyId?: string): Promise<Designation[]> {
+  const query: Record<string, string> = {};
+  if (farmId) query.farmId = farmId;
+  if (companyId) query.companyId = companyId;
+  const options = Object.keys(query).length > 0 ? { query } : undefined;
+  return apiClient.get("/reference/designations", options).then((res: any) => res.designations);
 }
-export function fetchRoles(): Promise<Role[]> {
-  return apiClient.get("/reference/roles").then((res: any) => res.roles);
+export function fetchRoles(farmId?: string, companyId?: string): Promise<Role[]> {
+  const query: Record<string, string> = {};
+  if (farmId) query.farmId = farmId;
+  if (companyId) query.companyId = companyId;
+  const options = Object.keys(query).length > 0 ? { query } : undefined;
+  return apiClient.get("/reference/roles", options).then((res: any) => res.roles);
+}
+export function fetchPermissions(): Promise<Permission[]> {
+  return apiClient.get("/reference/permissions").then((res: any) => res.permissions);
 }
 
 // -- Employees --
@@ -343,10 +366,50 @@ export function fetchCompanies(signal?: AbortSignal): Promise<Company[]> {
 export function fetchCompany(id: string): Promise<Company> {
   return apiClient.get(`/companies/${id}`).then((res: any) => res.company);
 }
-export function createCompany(data: CompanyInput): Promise<Company> {
+export function createCompany(data: CompanyInput, photo?: File | Blob | null): Promise<Company> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "company-logo.jpg");
+    return fetch(`${API_BASE_URL}/companies`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to create company", payload.errors, payload.formErrors);
+      }
+      return payload.company;
+    });
+  }
   return apiClient.post("/companies", data).then((res: any) => res.company);
 }
-export function updateCompany(id: string, data: Partial<CompanyInput>): Promise<Company> {
+export function updateCompany(id: string, data: Partial<CompanyInput>, photo?: File | Blob | null): Promise<Company> {
+  if (photo) {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    formData.append("photo", photo, "company-logo.jpg");
+    return fetch(`${API_BASE_URL}/companies/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      body: formData,
+    }).then(async (res) => {
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(res.status, payload.message || "Failed to update company", payload.errors, payload.formErrors);
+      }
+      return payload.company;
+    });
+  }
   return apiClient.patch(`/companies/${id}`, data).then((res: any) => res.company);
 }
 
@@ -814,5 +877,107 @@ export async function analyzeDemoFrame(
 
   return data;
 }
+
+// -- Farm Shift Timings --
+export function fetchFarmShiftTimings(farmId: string): Promise<ShiftTimingItem[]> {
+  return apiClient.get(`/farms/${farmId}/shift-timings`).then((res: any) => res.shifts);
+}
+
+export function updateFarmShiftTiming(
+  farmId: string,
+  shift: Shift,
+  input: { label?: string; startHour: number; startMinute: number; endHour: number; endMinute: number; crossesMidnight?: boolean; isEnabled?: boolean },
+): Promise<ShiftTimingItem> {
+  return apiClient.put(`/farms/${farmId}/shift-timings/${shift}`, input).then((res: any) => res.timing);
+}
+
+export function resetFarmShiftTiming(farmId: string, shift: Shift): Promise<ShiftTimingItem> {
+  return apiClient.delete(`/farms/${farmId}/shift-timings/${shift}`).then((res: any) => res.timing);
+}
+
+// -- Company Shift Timings --
+export function fetchCompanyShiftTimings(companyId: string): Promise<ShiftTimingItem[]> {
+  return apiClient.get(`/companies/${companyId}/shift-timings`).then((res: any) => res.shifts);
+}
+
+export function updateCompanyShiftTiming(
+  companyId: string,
+  shift: Shift,
+  input: { label?: string; startHour: number; startMinute: number; endHour: number; endMinute: number; crossesMidnight?: boolean; isEnabled?: boolean },
+): Promise<ShiftTimingItem> {
+  return apiClient.put(`/companies/${companyId}/shift-timings/${shift}`, input).then((res: any) => res.timing);
+}
+
+// -- Farm Roles Configuration & Custom Roles --
+export function fetchFarmRolesConfig(farmId: string): Promise<FarmRolesConfigResponse> {
+  return apiClient.get(`/farms/${farmId}/roles-config`).then((res: any) => res);
+}
+
+export function toggleFarmSystemRole(farmId: string, roleId: string, isEnabled: boolean): Promise<any> {
+  return apiClient.patch(`/farms/${farmId}/roles/${roleId}/toggle`, { isEnabled });
+}
+
+export function createFarmCustomRole(
+  farmId: string,
+  input: { name: string; description?: string; permissionIds: string[]; rank?: number },
+): Promise<CustomRoleConfigItem> {
+  return apiClient.post(`/farms/${farmId}/roles`, input).then((res: any) => res.role);
+}
+
+export function updateFarmCustomRole(
+  farmId: string,
+  roleId: string,
+  input: { name?: string; description?: string; permissionIds?: string[]; rank?: number; isActive?: boolean },
+): Promise<CustomRoleConfigItem> {
+  return apiClient.patch(`/farms/${farmId}/roles/${roleId}`, input).then((res: any) => res.role);
+}
+
+export function deleteFarmCustomRole(farmId: string, roleId: string): Promise<any> {
+  return apiClient.delete(`/farms/${farmId}/roles/${roleId}`);
+}
+
+// -- Company Roles Configuration --
+export function fetchCompanyRolesConfig(companyId: string): Promise<CompanyRolesConfigResponse> {
+  return apiClient.get(`/companies/${companyId}/roles-config`).then((res: any) => res);
+}
+
+export function toggleCompanyRole(companyId: string, roleId: string, isEnabled: boolean): Promise<any> {
+  return apiClient.patch(`/companies/${companyId}/roles/${roleId}/toggle`, { isEnabled });
+}
+
+export function updateCompanyRole(
+  companyId: string,
+  roleId: string,
+  input: { isEnabled?: boolean; customRank?: number | null },
+): Promise<any> {
+  return apiClient.patch(`/companies/${companyId}/roles/${roleId}`, input);
+}
+
+export function bulkToggleCompanyRoles(companyId: string, enabled: boolean): Promise<any> {
+  return apiClient.patch(`/companies/${companyId}/roles/bulk`, { enabled });
+}
+
+// -- Enterprise & Cross-Farm Attendance Reports --
+export function fetchAttendanceReport(query: {
+  date?: string;
+  from?: string;
+  to?: string;
+  companyId?: string;
+  farmId?: string;
+  shift?: Shift;
+}, signal?: AbortSignal): Promise<EnterpriseAttendanceReportResponse> {
+  const params = new URLSearchParams();
+  if (query.date) params.set("date", query.date);
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  if (query.companyId) params.set("companyId", query.companyId);
+  if (query.farmId) params.set("farmId", query.farmId);
+  if (query.shift) params.set("shift", query.shift);
+
+  const qs = params.toString();
+  return apiClient.get(`/attendance/reports/summary${qs ? `?${qs}` : ""}`, { signal }).then((res: any) => res.data);
+}
+
+
 
 

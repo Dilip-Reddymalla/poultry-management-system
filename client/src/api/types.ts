@@ -57,7 +57,12 @@ export interface SessionUser {
     joiningDate?: string | null;
     phone?: string | null;
   };
-
+  company?: {
+    id: string;
+    name: string;
+    code: string;
+    logoUrl?: string | null;
+  } | null;
 }
 
 export interface AuthResponse {
@@ -68,6 +73,8 @@ export interface Company {
   id: string;
   name: string;
   code: string;
+  logoUrl?: string | null;
+  website?: string | null;
   gstin?: string;
   pan?: string;
   address?: string;
@@ -227,6 +234,7 @@ export interface Role {
   id: string;
   name: string;
   description?: string;
+  rank?: number;
 }
 
 export type ManageableShedStatus = "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "INACTIVE";
@@ -263,3 +271,140 @@ export interface AuditLog {
   userAgent: string | null;
   createdAt: string;
 }
+
+export interface ShiftTimingItem {
+  shift: Shift;
+  label: string;
+  timeRange: string;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+  crossesMidnight?: boolean;
+  isEnabled?: boolean;
+  source?: "FARM" | "COMPANY" | "DEFAULT";
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export interface SystemRoleConfigItem {
+  id: string;
+  name: string;
+  description: string | null;
+  scopeLevel: string;
+  rank: number;
+  isEnabled: boolean;
+  companyEnabled?: boolean;
+  permissionCount: number;
+}
+
+export interface CustomRoleConfigItem {
+  id: string;
+  name: string;
+  description: string | null;
+  scopeLevel: string;
+  rank: number;
+  isActive: boolean;
+  permissions: Permission[];
+  userCount: number;
+}
+
+export interface FarmRolesConfigResponse {
+  farmId: string;
+  systemRoles: SystemRoleConfigItem[];
+  customRoles: CustomRoleConfigItem[];
+}
+
+export interface CompanyRoleConfigItem {
+  id: string;
+  name: string;
+  description: string | null;
+  scopeLevel: string;
+  rank: number;
+  defaultRank: number;
+  customRank: number | null;
+  isEnabled: boolean;
+  isCompulsory: boolean;
+  permissionCount: number;
+}
+
+export interface CompanyRolesConfigResponse {
+  companyId: string;
+  systemRoles: CompanyRoleConfigItem[];
+}
+
+export interface FarmAttendanceReportSummary {
+  farmId: string;
+  farmCode: string;
+  farmName: string;
+  companyId: string;
+  companyName: string;
+  totalWorkforce: number;
+  totalEmployees: number;
+  totalWorkers: number;
+  presentCount: number;
+  absentCount: number;
+  halfDayCount: number;
+  leaveCount: number;
+  unmarkedCount: number;
+  attendanceRate: number;
+  shiftsBreakdown: Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>;
+  flaggedIpFallbacks: number;
+  pendingApprovals: number;
+}
+
+export interface DailyTrendItem {
+  date: string;
+  dayLabel: string;
+  present: number;
+  absent: number;
+  halfDay: number;
+  leave: number;
+  attendanceRate: number;
+}
+
+export interface FarmComparisonItem {
+  farmId: string;
+  farmCode: string;
+  farmName: string;
+  companyName: string;
+  attendanceRate: number;
+  deltaFromAvg: number;
+  rank: number;
+  totalWorkforce: number;
+  presentCount: number;
+  absentCount: number;
+  isBest: boolean;
+  isWorst: boolean;
+}
+
+export interface EnterpriseAttendanceReportResponse {
+  dateRange: {
+    from: string;
+    to: string;
+    isSingleDay: boolean;
+  };
+  isSystemAdmin: boolean;
+  scopeLevel: string;
+  overview: {
+    totalCompanies: number;
+    totalFarms: number;
+    totalWorkforce: number;
+    overallAttendanceRate: number;
+    totalPresent: number;
+    totalAbsent: number;
+    totalHalfDay: number;
+    totalLeave: number;
+    totalUnmarked: number;
+    totalPendingApprovals: number;
+    totalFlaggedIpFallbacks: number;
+  };
+  farms: FarmAttendanceReportSummary[];
+  trends: DailyTrendItem[];
+  farmComparison: FarmComparisonItem[] | null;
+}
+

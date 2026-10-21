@@ -11,7 +11,7 @@ import {
   type FrameProcessResult,
   type FaceAttendanceRecord,
 } from "../../api/face-attendance.api.js";
-import { validateShiftTiming } from "../../lib/shift-timing.js";
+import { getCurrentShift, validateShiftTiming } from "../../lib/shift-timing.js";
 
 import type { FaceSelection } from "./face-attendance/face-attendance.types.js";
 import { styles } from "./face-attendance/face-attendance.styles.js";
@@ -66,8 +66,8 @@ export function FaceAttendancePage(): React.ReactElement {
   const [sheds, setSheds] = useState<Shed[]>([]);
   const [selectedShedId, setSelectedShedId] = useState<string>("");
 
-  // Shift Selection
-  const [selectedShift, setSelectedShift] = useState<Shift>("MORNING_SHIFT");
+  // Shift Selection auto-initialized to current real-time window
+  const [selectedShift, setSelectedShift] = useState<Shift>(() => getCurrentShift());
 
   // Camera State
   const [cameraActive, setCameraActive] = useState<boolean>(false);

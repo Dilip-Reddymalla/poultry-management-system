@@ -10,4 +10,11 @@ export interface SafeRole {
   id: string;
   name: string;
   description: string | null;
+  rank: number;
+}
+
+export interface SafePermission {
+  id: string;
+  name: string;
+  description: string | null;
 }

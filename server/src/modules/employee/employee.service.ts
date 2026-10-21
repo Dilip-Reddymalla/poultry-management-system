@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
+import { deleteImageByUrl } from "../../services/cloudinary.service.js";
 import { AppError } from "../../utils/app-error.js";
 import { recordAuditLog, RecordAuditParams } from "../audit/audit.service.js";
 import { normalizePhone } from "../../utils/phone.js";
@@ -134,19 +135,98 @@ function toWriteError(error: unknown): unknown {
   return error;
 }
 
-async function assertDesignationExists(designationId: string): Promise<void> {
+function getActorMaxRank(scope: AuthScope): number {
+  if (scope.isSystemAdmin) return 100;
+  return Math.max(...scope.roles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+}
+
+export async function assertDesignationUsable(
+  scope: AuthScope,
+  farmId: string,
+  designationId: string,
+): Promise<{ id: string; name: string }> {
   const designation = await prisma.designation.findUnique({
     where: {
       id: designationId,
     },
     select: {
       id: true,
+      name: true,
     },
   });
 
   if (!designation) {
     throw new AppError("Designation not found", 404);
   }
+
+  // 1. Hierarchy enforcement: Operator cannot create or assign a designation above their own level
+  const actorMaxRank = getActorMaxRank(scope);
+  const designationRank = ROLE_HIERARCHY[designation.name] ?? 0;
+  if (designationRank > actorMaxRank) {
+    throw new AppError(
+      `You cannot assign a designation higher than your own role level (${designation.name})`,
+      403,
+    );
+  }
+
+  const farm = await prisma.farm.findUnique({
+    where: { id: farmId },
+    select: { id: true, companyId: true },
+  });
+  if (!farm) {
+    throw new AppError("Farm not found", 404);
+  }
+
+  // 2. Check if the corresponding role exists and is deactivated or disabled for this company/farm
+  const role = await prisma.role.findFirst({
+    where: {
+      name: designation.name,
+      OR: [
+        { isSystem: true },
+        { farmId },
+        { companyId: farm.companyId, farmId: null },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      isActive: true,
+      isSystem: true,
+      companySettings: {
+        where: { companyId: farm.companyId },
+        select: { isEnabled: true },
+      },
+      farmSettings: {
+        where: { farmId },
+        select: { isEnabled: true },
+      },
+    },
+  });
+
+  if (role) {
+    if (!role.isActive) {
+      throw new AppError(
+        `The role "${role.name}" is currently deactivated and cannot be assigned`,
+        400,
+      );
+    }
+    if (role.isSystem && role.name !== "Company Admin") {
+      if (role.companySettings.length > 0 && role.companySettings[0]?.isEnabled === false) {
+        throw new AppError(
+          `The role "${role.name}" is not enabled for this company and cannot be assigned`,
+          400,
+        );
+      }
+    }
+    if (role.farmSettings.length > 0 && role.farmSettings[0]?.isEnabled === false) {
+      throw new AppError(
+        `The role "${role.name}" is disabled on this farm and cannot be assigned`,
+        400,
+      );
+    }
+  }
+
+  return designation;
 }
 
 // The target farm must exist and be writable by the caller (403 otherwise). Used
@@ -287,7 +367,7 @@ export async function createEmployee(
 ): Promise<SafeEmployee> {
   await assertFarmWritableById(scope, input.farmId);
 
-  await assertDesignationExists(input.designationId);
+  await assertDesignationUsable(scope, input.farmId, input.designationId);
 
   const trimmedEmployeeId = input.employeeId?.trim();
   const employeeId = trimmedEmployeeId
@@ -375,6 +455,26 @@ export async function updateEmployee(
     },
     select: {
       id: true,
+      photoUrl: true,
+      farmId: true,
+      designation: {
+        select: {
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          roles: {
+            select: {
+              role: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
       farm: { select: { id: true, companyId: true } },
     },
   });
@@ -389,8 +489,21 @@ export async function updateEmployee(
     id: existingEmployee.farm.id,
   });
 
+  // Hierarchy check on target employee: cannot modify an employee whose current level exceeds caller's
+  if (!scope.isSystemAdmin) {
+    const actorMaxRank = getActorMaxRank(scope);
+    const targetRoles = [
+      existingEmployee.designation.name,
+      ...(existingEmployee.user?.roles.map((r) => r.role.name) ?? []),
+    ];
+    const targetMaxRank = Math.max(...targetRoles.map((r) => ROLE_HIERARCHY[r] ?? 0), 0);
+    if (targetMaxRank > actorMaxRank) {
+      throw new AppError("You cannot modify an employee with a higher role than your own", 403);
+    }
+  }
+
   if (input.designationId !== undefined) {
-    await assertDesignationExists(input.designationId);
+    await assertDesignationUsable(scope, existingEmployee.farmId, input.designationId);
   }
 
   // Use photoUrl from face enrollment (Cloudinary) if provided, otherwise
@@ -419,6 +532,15 @@ export async function updateEmployee(
       },
       select: employeeSelect,
     });
+
+    // If photo was replaced or removed, delete old asset from Cloudinary
+    if (
+      resolvedPhotoUrl !== undefined &&
+      existingEmployee.photoUrl &&
+      existingEmployee.photoUrl !== resolvedPhotoUrl
+    ) {
+      void deleteImageByUrl(existingEmployee.photoUrl);
+    }
 
     // Update face embedding via raw SQL.
     if (faceData.faceEmbedding) {
@@ -539,6 +661,14 @@ const provisionEmployeeSelect = {
     select: {
       id: true,
       companyId: true,
+      company: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          logoUrl: true,
+        },
+      },
     },
   },
   designation: {
@@ -606,6 +736,19 @@ export async function provisionEmployeeUser(
       id: true,
       name: true,
       scopeLevel: true,
+      isActive: true,
+      isSystem: true,
+      farmId: true,
+      companyId: true,
+      rank: true,
+      companySettings: {
+        where: { companyId: employee.farm.companyId },
+        select: { isEnabled: true },
+      },
+      farmSettings: {
+        where: { farmId: employee.farmId },
+        select: { isEnabled: true },
+      },
       permissions: {
         select: {
           permission: {
@@ -620,6 +763,39 @@ export async function provisionEmployeeUser(
 
   if (!role) {
     throw new AppError("Role not found", 404);
+  }
+
+  if (!role.isActive) {
+    throw new AppError(`The role "${role.name}" is deactivated and cannot be assigned`, 400);
+  }
+
+  if (role.isSystem && role.name !== "Company Admin") {
+    if (role.companySettings.length > 0 && role.companySettings[0]?.isEnabled === false) {
+      throw new AppError(
+        `The role "${role.name}" is not enabled for this company and cannot be assigned`,
+        400,
+      );
+    }
+  }
+
+  if (role.farmSettings.length > 0 && role.farmSettings[0]?.isEnabled === false) {
+    throw new AppError(`The role "${role.name}" is disabled on this farm and cannot be assigned`, 400);
+  }
+
+  if (!role.isSystem && role.farmId && role.farmId !== employee.farmId) {
+    throw new AppError(
+      `The role "${role.name}" does not belong to this farm and cannot be assigned`,
+      400,
+    );
+  }
+
+  // Caller cannot assign a role higher than their own rank
+  if (!scope.isSystemAdmin) {
+    const actorMaxRank = getActorMaxRank(scope);
+    const targetRoleRank = ROLE_HIERARCHY[role.name] ?? role.rank ?? 0;
+    if (targetRoleRank > actorMaxRank) {
+      throw new AppError("You cannot assign a role higher than your own level", 403);
+    }
   }
 
   try {
@@ -667,6 +843,14 @@ export async function provisionEmployeeUser(
         companyId: employee.farm.companyId,
         farmId: employee.farmId,
       },
+      company: employee.farm?.company
+        ? {
+            id: employee.farm.company.id,
+            name: employee.farm.company.name,
+            code: employee.farm.company.code,
+            logoUrl: employee.farm.company.logoUrl ?? null,
+          }
+        : null,
       employee: {
         id: employee.id,
         name: employee.name,
@@ -710,7 +894,9 @@ export async function provisionEmployeeUser(
 export const ROLE_HIERARCHY: Record<string, number> = {
   // Global / Executive
   "System Admin": 100,
+  "CEO": 95,
   "Company Admin": 90,
+  "GM": 85,
   "DGM": 80,
   "Assistant Manager": 70,
 
@@ -812,6 +998,18 @@ export async function updateEmployeeUserRole(
       id: true,
       name: true,
       scopeLevel: true,
+      isActive: true,
+      isSystem: true,
+      farmId: true,
+      rank: true,
+      companySettings: {
+        where: { companyId: employee.farm.companyId },
+        select: { isEnabled: true },
+      },
+      farmSettings: {
+        where: { farmId: employee.farm.id },
+        select: { isEnabled: true },
+      },
     },
   });
 
@@ -819,7 +1017,31 @@ export async function updateEmployeeUserRole(
     throw new AppError("Role not found", 404);
   }
 
-  const targetRoleRank = ROLE_HIERARCHY[role.name] ?? 0;
+  if (!role.isActive) {
+    throw new AppError(`The role "${role.name}" is deactivated and cannot be assigned`, 400);
+  }
+
+  if (role.isSystem && role.name !== "Company Admin") {
+    if (role.companySettings.length > 0 && role.companySettings[0]?.isEnabled === false) {
+      throw new AppError(
+        `The role "${role.name}" is not enabled for this company and cannot be assigned`,
+        400,
+      );
+    }
+  }
+
+  if (role.farmSettings.length > 0 && role.farmSettings[0]?.isEnabled === false) {
+    throw new AppError(`The role "${role.name}" is disabled on this farm and cannot be assigned`, 400);
+  }
+
+  if (!role.isSystem && role.farmId && role.farmId !== employee.farm.id) {
+    throw new AppError(
+      `The role "${role.name}" does not belong to this farm and cannot be assigned`,
+      400,
+    );
+  }
+
+  const targetRoleRank = ROLE_HIERARCHY[role.name] ?? role.rank ?? 0;
 
   // Caller cannot assign a role higher than their own rank
   if (targetRoleRank > actorMaxRank) {

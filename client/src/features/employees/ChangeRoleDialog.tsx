@@ -25,7 +25,7 @@ export function ChangeRoleDialog({
   onSaved,
 }: ChangeRoleDialogProps): React.ReactElement {
   const { user } = useAuth();
-  const roles = useResource<Role[]>("roles", () => fetchRoles());
+  const roles = useResource<Role[]>(`roles:${employee.farm?.id ?? "all"}`, () => fetchRoles(employee.farm?.id));
 
   const currentRoleId = employee.user?.roles?.[0]?.id ?? "";
   const [roleId, setRoleId] = useState(currentRoleId);

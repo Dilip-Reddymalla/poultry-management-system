@@ -434,7 +434,10 @@ describe("worker module", () => {
       expect(duplicatePromotion.status).toBe(409);
 
       // The promoted individual is a standard employee: a login can now be provisioned via the employee user endpoint
-      const role = await prisma.role.findFirst({ select: { id: true } });
+      const role = await prisma.role.findFirst({
+        where: { name: "Supervisor" },
+        select: { id: true },
+      });
       const provisionResponse = await request(app)
         .post(`/api/employees/${response.body.employee.id}/user`)
         .set("Cookie", dgm.cookie)

@@ -23,6 +23,12 @@ export interface SafeUser {
   // /auth/me, /auth/logout and /auth/set-password; every business endpoint 403s.
   mustSetPassword: boolean;
   scope: SafeUserScope;
+  company?: {
+    id: string;
+    name: string;
+    code: string;
+    logoUrl?: string | null;
+  } | null;
   employee: {
     id: string;
     name: string;

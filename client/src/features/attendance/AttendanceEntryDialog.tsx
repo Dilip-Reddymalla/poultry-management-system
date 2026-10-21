@@ -21,6 +21,7 @@ import type {
   PersonType,
 } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
+import { getCurrentShift } from "../../lib/shift-timing.js";
 import { Dialog } from "../../components/Dialog.js";
 import {
   Button,
@@ -58,7 +59,7 @@ export function AttendanceEntryDialog({
     user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
 
   const [date, setDate] = useState(defaultDate);
-  const [shift, setShift] = useState<Shift>("MORNING_SHIFT");
+  const [shift, setShift] = useState<Shift>(() => getCurrentShift());
   const [personType, setPersonType] = useState<PersonType>("EMPLOYEE");
   const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
   const [personId, setPersonId] = useState("");

@@ -78,7 +78,7 @@ describe("first-login provisioning flow", () => {
 
     farmId = farm.id;
 
-    const supervisorRole = await prisma.role.findUniqueOrThrow({
+    const supervisorRole = await prisma.role.findFirstOrThrow({
       where: { name: "Supervisor" },
       select: { id: true },
     });

@@ -87,6 +87,14 @@ const sessionUserSelect = {
       farm: {
         select: {
           companyId: true,
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              logoUrl: true,
+            },
+          },
         },
       },
       designation: {
@@ -149,6 +157,14 @@ function toSafeUser(user: SessionUserRecord): SafeUser {
       companyId: user.employee.farm.companyId,
       farmId: user.employee.farmId,
     },
+    company: user.employee.farm?.company
+      ? {
+          id: user.employee.farm.company.id,
+          name: user.employee.farm.company.name,
+          code: user.employee.farm.company.code,
+          logoUrl: user.employee.farm.company.logoUrl ?? null,
+        }
+      : null,
     employee: {
       id: user.employee.id,
       name: user.employee.name,

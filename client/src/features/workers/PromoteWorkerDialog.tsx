@@ -32,8 +32,8 @@ export function PromoteWorkerDialog({
 }: PromoteWorkerDialogProps): React.ReactElement {
   const { t } = useTranslation();
 
-  const designations = useResource<Designation[]>("designations", () =>
-    fetchDesignations(),
+  const designations = useResource<Designation[]>(`designations:${worker.farmId}`, () =>
+    fetchDesignations(worker.farmId),
   );
 
   const [name, setName] = useState(worker.name);

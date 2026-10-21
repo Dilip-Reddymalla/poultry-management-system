@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../config/database.js";
+import { deleteImageByUrl } from "../../services/cloudinary.service.js";
 import { AppError } from "../../utils/app-error.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
@@ -20,6 +21,8 @@ const companySelect = {
   id: true,
   name: true,
   code: true,
+  logoUrl: true,
+  website: true,
   _count: {
     select: {
       farms: true,
@@ -36,6 +39,8 @@ function toSafeCompany(company: CompanyRecord): SafeCompany {
     id: company.id,
     name: company.name,
     code: company.code,
+    logoUrl: company.logoUrl ?? null,
+    website: company.website ?? null,
     farmCount: company._count.farms,
   };
 }
@@ -101,6 +106,8 @@ export async function createCompany(
       data: {
         name: input.name,
         code: input.code,
+        ...(input.logoUrl !== undefined && { logoUrl: input.logoUrl }),
+        ...(input.website !== undefined && { website: input.website }),
       },
       select: companySelect,
     });
@@ -136,6 +143,7 @@ export async function updateCompany(
     },
     select: {
       id: true,
+      logoUrl: true,
     },
   });
 
@@ -154,9 +162,20 @@ export async function updateCompany(
       data: {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.code !== undefined && { code: input.code }),
+        ...(input.logoUrl !== undefined && { logoUrl: input.logoUrl }),
+        ...(input.website !== undefined && { website: input.website }),
       },
       select: companySelect,
     });
+
+    // If logo was replaced or removed, delete the old logo asset from Cloudinary
+    if (
+      input.logoUrl !== undefined &&
+      existingCompany.logoUrl &&
+      existingCompany.logoUrl !== input.logoUrl
+    ) {
+      void deleteImageByUrl(existingCompany.logoUrl);
+    }
 
     const safeCompany = toSafeCompany(company);
 

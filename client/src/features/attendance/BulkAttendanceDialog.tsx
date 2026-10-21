@@ -23,6 +23,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { statusLabel } from "../../lib/display.js";
+import { getCurrentShift } from "../../lib/shift-timing.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { ShiftChoice } from "./ShiftChoice.js";
 import { LocationStatusAlert } from "./LocationStatusAlert.js";
@@ -45,7 +46,7 @@ export function BulkAttendanceDialog({
   const showFarm = user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
 
   const [date, setDate] = useState(defaultDate);
-  const [shift, setShift] = useState<Shift>("MORNING_SHIFT");
+  const [shift, setShift] = useState<Shift>(() => getCurrentShift());
   const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
   const [shedId, setShedId] = useState("");
   const [status, setStatus] = useState<AttendanceStatus>("PRESENT");

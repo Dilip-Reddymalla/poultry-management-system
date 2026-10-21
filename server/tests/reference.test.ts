@@ -76,6 +76,7 @@ describe("reference data endpoints", () => {
       "description",
       "id",
       "name",
+      "rank",
     ]);
     expect(containsSensitiveFields(response.body)).toBe(false);
   });

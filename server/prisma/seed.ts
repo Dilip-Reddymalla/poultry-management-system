@@ -23,7 +23,9 @@ async function main() {
   // DESIGNATIONS ------------------------------------------------------------
 
   const designations = [
+    "CEO",
     "Company Admin",
+    "GM",
     "DGM",
     "Assistant Manager",
     "Super Incharge",
@@ -65,26 +67,41 @@ async function main() {
   // ROLES -------------------------------------------------------------------
   //
   // scopeLevel is WHERE the role's permissions apply, relative to the user's own
-  // company/farm. Company Admin is COMPANY-wide; operational roles are
+  // company/farm. Company Admin, CEO, GM are COMPANY-wide; operational roles are
   // FARM-scoped. The System Admin is env-based and global, so no role is GLOBAL.
 
-  const roles: { name: string; description: string; scopeLevel: ScopeLevel }[] =
+  const roles: { name: string; description: string; scopeLevel: ScopeLevel; rank: number }[] =
     [
       // Executive / Farm Management
+      {
+        name: "CEO",
+        description: "Chief Executive Officer with full enterprise authority",
+        scopeLevel: "COMPANY",
+        rank: 95,
+      },
       {
         name: "Company Admin",
         description: "Manages their company and all of its farms",
         scopeLevel: "COMPANY",
+        rank: 90,
+      },
+      {
+        name: "GM",
+        description: "General Manager overseeing regional farm operations",
+        scopeLevel: "COMPANY",
+        rank: 85,
       },
       {
         name: "DGM",
         description: "Full authority within their own farm",
         scopeLevel: "FARM",
+        rank: 80,
       },
       {
         name: "Assistant Manager",
         description: "Broad operational management, workforce oversight & approvals within farm",
         scopeLevel: "FARM",
+        rank: 70,
       },
 
       // Finance & Administration
@@ -92,16 +109,19 @@ async function main() {
         name: "Accountant",
         description: "Administrative, workforce management and accounting access",
         scopeLevel: "FARM",
+        rank: 50,
       },
       {
         name: "Accounts Assistant",
         description: "Assists with accounting, record keeping and reporting",
         scopeLevel: "FARM",
+        rank: 45,
       },
       {
         name: "Stores Executive",
         description: "Farm inventory, stores and supplies oversight",
         scopeLevel: "FARM",
+        rank: 45,
       },
 
       // Incharge Level
@@ -109,16 +129,19 @@ async function main() {
         name: "Super Incharge",
         description: "Broad farm operational access and department oversight",
         scopeLevel: "FARM",
+        rank: 65,
       },
       {
         name: "Incharge",
         description: "Operational department incharge with workforce supervision",
         scopeLevel: "FARM",
+        rank: 60,
       },
       {
         name: "Asst Incharge",
         description: "Assistant incharge for operational workflows",
         scopeLevel: "FARM",
+        rank: 55,
       },
 
       // Supervisory Level
@@ -126,41 +149,49 @@ async function main() {
         name: "Senior Supervisor",
         description: "Senior operational supervisor overseeing sheds and farm staff",
         scopeLevel: "FARM",
+        rank: 40,
       },
       {
         name: "Supervisor",
         description: "Assigned shed and workforce operational supervision",
         scopeLevel: "FARM",
+        rank: 35,
       },
       {
         name: "AC Supervisor",
         description: "Supervises climate control, AC and shed ventilation systems",
         scopeLevel: "FARM",
+        rank: 35,
       },
       {
         name: "AC Asst Supervisor",
         description: "Assists with climate control and AC systems maintenance",
         scopeLevel: "FARM",
+        rank: 30,
       },
       {
         name: "Maintenance Supervisor",
         description: "Supervises mechanical, electrical and structural maintenance",
         scopeLevel: "FARM",
+        rank: 35,
       },
       {
         name: "Grading Supervisor",
         description: "Supervises poultry and egg grading operations",
         scopeLevel: "FARM",
+        rank: 35,
       },
       {
         name: "Supervisor - Litter Maintenance",
         description: "Supervises shed sanitation and litter maintenance",
         scopeLevel: "FARM",
+        rank: 35,
       },
       {
         name: "Security Supervisor",
         description: "Supervises farm perimeter and facility security operations",
         scopeLevel: "FARM",
+        rank: 35,
       },
 
       // Assistant Supervisors
@@ -168,21 +199,25 @@ async function main() {
         name: "Asst Supervisor",
         description: "General assistant supervisor for farm operations",
         scopeLevel: "FARM",
+        rank: 30,
       },
       {
         name: "Asst Supervisor General",
         description: "Assists with general shed and farm operations",
         scopeLevel: "FARM",
+        rank: 30,
       },
       {
         name: "Asst Supervisor - Technical",
         description: "Assists with technical machinery and automation systems",
         scopeLevel: "FARM",
+        rank: 30,
       },
       {
         name: "Asst Supervisor - Electrical",
         description: "Assists with electrical equipment and power infrastructure",
         scopeLevel: "FARM",
+        rank: 30,
       },
 
       // Security & Transport Staff Roles
@@ -190,33 +225,51 @@ async function main() {
         name: "Security Head Guard",
         description: "Lead security guard for farm gates and premises",
         scopeLevel: "FARM",
+        rank: 20,
       },
       {
         name: "Security Guard",
         description: "Security personnel for farm access control",
         scopeLevel: "FARM",
+        rank: 15,
       },
       {
         name: "Senior Driver",
         description: "Senior logistics and transport driver",
         scopeLevel: "FARM",
+        rank: 18,
       },
       {
         name: "Driver",
         description: "Logistics and transport driver",
         scopeLevel: "FARM",
+        rank: 15,
       },
     ];
 
   for (const role of roles) {
-    await prisma.role.upsert({
-      where: { name: role.name },
-      update: {
-        description: role.description,
-        scopeLevel: role.scopeLevel,
-      },
-      create: role,
+    const existing = await prisma.role.findFirst({
+      where: { name: role.name, companyId: null, farmId: null },
     });
+
+    if (existing) {
+      await prisma.role.update({
+        where: { id: existing.id },
+        data: {
+          description: role.description,
+          scopeLevel: role.scopeLevel,
+          rank: role.rank,
+          isSystem: true,
+        },
+      });
+    } else {
+      await prisma.role.create({
+        data: {
+          ...role,
+          isSystem: true,
+        },
+      });
+    }
   }
 
   console.log(`✅ Created/verified ${roles.length} roles`);
@@ -283,7 +336,9 @@ async function main() {
     roleName: string,
     permissionNames: string[],
   ): Promise<void> {
-    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    const role = await prisma.role.findFirst({
+      where: { name: roleName, isSystem: true },
+    });
 
     if (!role) {
       throw new Error(`${roleName} role not found`);
@@ -341,6 +396,8 @@ async function main() {
   ];
 
   await assignPermissions("Company Admin", companyAdminPermissions);
+  await assignPermissions("CEO", companyAdminPermissions);
+  await assignPermissions("GM", companyAdminPermissions);
 
   // DGM is farm-scoped full authority: every permission except company management.
   const dgmPermissions = permissions

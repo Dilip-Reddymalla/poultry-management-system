@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ApiError } from "../../api/client.js";
 import {
   createEmployee,
+  fetchDesignations,
   fetchFarms,
   updateEmployee,
   type EmployeeInput,
@@ -76,9 +77,27 @@ export function EmployeeFormDialog({
 
   const farmOptions = farms.data ?? [];
   const soleFarmId = farmOptions.length === 1 ? farmOptions[0]!.id : "";
-  // A farm user gets exactly one farm, so it locks; anyone else picks. Derived,
-  // not stored, so no effect is needed to reconcile it once the list loads.
-  const effectiveFarmId = form.farmId || soleFarmId;
+  const effectiveFarmId = editing ? (employee?.farm?.id ?? "") : (form.farmId || soleFarmId);
+
+  // Dynamically load active designations for the selected farm so disabled roles cannot be assigned
+  const farmDesignations = useResource<Designation[]>(
+    `designations:farm:${effectiveFarmId || "none"}`,
+    () => (effectiveFarmId ? fetchDesignations(effectiveFarmId) : Promise.resolve([])),
+    { enabled: Boolean(effectiveFarmId) },
+  );
+
+  const availableDesignations = effectiveFarmId
+    ? (farmDesignations.data ?? [])
+    : designations;
+
+  function handleFarmChange(event: React.ChangeEvent<HTMLSelectElement>): void {
+    const nextFarmId = event.target.value;
+    setForm((current) => ({
+      ...current,
+      farmId: nextFarmId,
+      designationId: "", // Reset designation on farm switch
+    }));
+  }
 
   function field<K extends keyof FormState>(key: K) {
     return (
@@ -170,7 +189,7 @@ export function EmployeeFormDialog({
                 : "The farm this employee belongs to. It cannot be changed later."
             }
             errors={error?.fieldErrors.farmId}
-            onChange={field("farmId")}
+            onChange={handleFarmChange}
           >
             <option value="">Select a farm</option>
             {farmOptions.map((farm) => (
@@ -194,12 +213,26 @@ export function EmployeeFormDialog({
           id="designationId"
           label="Designation"
           required
+          disabled={!effectiveFarmId || farmDesignations.loading}
           value={form.designationId}
+          hint={
+            !effectiveFarmId
+              ? "Select a farm first to view active roles."
+              : farmDesignations.loading
+                ? "Loading available designations for this farm…"
+                : "Only roles enabled for this company and farm can be assigned."
+          }
           errors={error?.fieldErrors.designationId}
           onChange={field("designationId")}
         >
-          <option value="">Select a designation</option>
-          {designations.map((designation) => (
+          <option value="">
+            {!effectiveFarmId
+              ? "Select a farm first"
+              : farmDesignations.loading
+                ? "Loading designations…"
+                : "Select a designation"}
+          </option>
+          {availableDesignations.map((designation) => (
             <option key={designation.id} value={designation.id}>
               {designation.name}
             </option>

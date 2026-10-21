@@ -22,6 +22,8 @@ import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
 import { FarmFormDialog } from "./FarmFormDialog.js";
+import { FarmRolesTab } from "./FarmRolesTab.js";
+import { FarmShiftTimingsTab } from "./FarmShiftTimingsTab.js";
 
 export function FarmDetailPage(): React.ReactElement {
   const { t } = useTranslation();
@@ -40,6 +42,7 @@ export function FarmDetailPage(): React.ReactElement {
   const [editing, setEditing] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "roles" | "shifts">("overview");
 
   const record = farm.data;
   const active = record?.status === "ACTIVE";
@@ -137,101 +140,155 @@ export function FarmDetailPage(): React.ReactElement {
         }
       />
 
-      <div className="split">
-        <Panel title={t("farms.detail.recordPanel")}>
-          <DetailList
-            items={[
-              {
-                label: t("farms.detail.farmCode"),
-                value: <span className="numeric">{record.code}</span>,
-              },
-              { label: t("farms.company"), value: record.company.name },
-              {
-                label: t("farms.detail.companyCode"),
-                value: <span className="numeric">{record.company.code}</span>,
-              },
-              { label: t("common.status"), value: <StatusTag status={record.status} /> },
-            ]}
-          />
-        </Panel>
-
-        {can("shed:view") ? (
-          <Panel title={t("farms.detail.capacityPanel")}>
-            <DetailList
-              items={[
-                {
-                  label: t("farms.detail.sheds"),
-                  value: (
-                    <span className="numeric">
-                      {formatNumber(shedList.length)}
-                    </span>
-                  ),
-                },
-                {
-                  label: t("farms.detail.available"),
-                  value: (
-                    <span className="numeric">
-                      {formatNumber(
-                        shedList.filter((shed) => shed.status === "AVAILABLE")
-                          .length,
-                      )}
-                    </span>
-                  ),
-                },
-                {
-                  label: t("farms.detail.birdCapacity"),
-                  value: (
-                    <span className="numeric">{formatNumber(capacity)}</span>
-                  ),
-                },
-              ]}
-            />
-          </Panel>
-        ) : null}
+      <div className="page-tab-nav">
+        <button
+          type="button"
+          className={`button page-tab-nav__btn ${activeTab === "overview" ? "button--primary" : "button--ghost"}`}
+          onClick={() => setActiveTab("overview")}
+        >
+          Overview & Sheds
+        </button>
+        <button
+          type="button"
+          className={`button page-tab-nav__btn ${activeTab === "roles" ? "button--primary" : "button--ghost"}`}
+          onClick={() => setActiveTab("roles")}
+        >
+          Roles & Permissions
+        </button>
+        <button
+          type="button"
+          className={`button page-tab-nav__btn ${activeTab === "shifts" ? "button--primary" : "button--ghost"}`}
+          onClick={() => setActiveTab("shifts")}
+        >
+          Shift Schedules
+        </button>
       </div>
 
-      {can("shed:view") ? (
-        <Panel
-          eyebrow={t("farms.detail.shedBoardEyebrow")}
-          title={t("farms.detail.shedBoardTitle")}
-          actions={
-            <>
-              <ShedLegend />
-              <Link className="button button--secondary" to={`/sheds?farmId=${id}`}>
-                {t("farms.detail.manageSheds")}
-              </Link>
-            </>
-          }
-          bleed
-        >
-          {sheds.loading ? (
-            <div className="panel__pad">
-              <CardSkeleton />
-            </div>
-          ) : sheds.error ? (
-            <div className="panel__pad">
-              <ErrorState error={sheds.error} onRetry={sheds.reload} />
-            </div>
-          ) : shedList.length === 0 ? (
-            <div className="panel__pad">
-              <EmptyState
-                title={t("farms.detail.noSheds.title")}
-                description={t("farms.detail.noSheds.description")}
+      {activeTab === "overview" && (
+        <>
+          <div className="split">
+            <Panel title={t("farms.detail.recordPanel")}>
+              <DetailList
+                items={[
+                  {
+                    label: t("farms.detail.farmCode"),
+                    value: <span className="numeric">{record.code}</span>,
+                  },
+                  { label: t("farms.company"), value: record.company.name },
+                  {
+                    label: t("farms.detail.companyCode"),
+                    value: <span className="numeric">{record.company.code}</span>,
+                  },
+                  ...(record.company.website
+                    ? [
+                        {
+                          label: "Company Website",
+                          value: (
+                            <a
+                              href={
+                                record.company.website.startsWith("http")
+                                  ? record.company.website
+                                  : `https://${record.company.website}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="table__link"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                            >
+                              {record.company.website} ↗
+                            </a>
+                          ),
+                        },
+                      ]
+                    : []),
+                  { label: t("common.status"), value: <StatusTag status={record.status} /> },
+                ]}
               />
-            </div>
-          ) : (
-            <div className="board">
-              <div className="board__row">
-                <div className="board__farm">
-                  <span className="board__code numeric">{record.code}</span>
-                  <span className="board__name">{record.name}</span>
+            </Panel>
+
+            {can("shed:view") ? (
+              <Panel title={t("farms.detail.capacityPanel")}>
+                <DetailList
+                  items={[
+                    {
+                      label: t("farms.detail.sheds"),
+                      value: (
+                        <span className="numeric">
+                          {formatNumber(shedList.length)}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: t("farms.detail.available"),
+                      value: (
+                        <span className="numeric">
+                          {formatNumber(
+                            shedList.filter((shed) => shed.status === "AVAILABLE")
+                              .length,
+                          )}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: t("farms.detail.birdCapacity"),
+                      value: (
+                        <span className="numeric">{formatNumber(capacity)}</span>
+                      ),
+                    },
+                  ]}
+                />
+              </Panel>
+            ) : null}
+          </div>
+
+          {can("shed:view") ? (
+            <Panel
+              eyebrow={t("farms.detail.shedBoardEyebrow")}
+              title={t("farms.detail.shedBoardTitle")}
+              actions={
+                <>
+                  <ShedLegend />
+                  <Link className="button button--secondary" to={`/sheds?farmId=${id}`}>
+                    {t("farms.detail.manageSheds")}
+                  </Link>
+                </>
+              }
+              bleed
+            >
+              {sheds.loading ? (
+                <div className="panel__pad">
+                  <CardSkeleton />
                 </div>
-                <ShedStrip sheds={shedList} />
-              </div>
-            </div>
-          )}
-        </Panel>
-      ) : null}
+              ) : sheds.error ? (
+                <div className="panel__pad">
+                  <ErrorState error={sheds.error} onRetry={sheds.reload} />
+                </div>
+              ) : shedList.length === 0 ? (
+                <div className="panel__pad">
+                  <EmptyState
+                    title={t("farms.detail.noSheds.title")}
+                    description={t("farms.detail.noSheds.description")}
+                  />
+                </div>
+              ) : (
+                <div className="board">
+                  <div className="board__row">
+                    <div className="board__farm">
+                      <span className="board__code numeric">{record.code}</span>
+                      <span className="board__name">{record.name}</span>
+                    </div>
+                    <ShedStrip sheds={shedList} />
+                  </div>
+                </div>
+              )}
+            </Panel>
+          ) : null}
+        </>
+      )}
+
+      {activeTab === "roles" && <FarmRolesTab farmId={id} />}
+
+      {activeTab === "shifts" && <FarmShiftTimingsTab farmId={id} />}
 
       {editing ? (
         <FarmFormDialog

@@ -21,6 +21,8 @@ interface NavItem {
   /** Permission that makes this section usable; undefined means always. */
   permission?: string;
   systemAdminOnly?: boolean;
+  executiveOnly?: boolean;
+  operationalOnly?: boolean;
   icon: (props: { className?: string }) => React.ReactElement;
 }
 
@@ -46,28 +48,41 @@ const NAV_ITEMS: NavItem[] = [
     permission: "worker:view",
     icon: WorkerIcon,
   },
+  // Executive Attendance Report: For Company Admins & System Admin
+  {
+    to: "/attendance/reports",
+    labelKey: "nav.attendanceReport",
+    permission: "report:view",
+    executiveOnly: true,
+    icon: DashboardIcon,
+  },
+  // Operational Attendance Views: For Farm-level managers/supervisors
   {
     to: "/attendance/dashboard",
     labelKey: "nav.attDashboard",
     permission: "attendance:view",
+    operationalOnly: true,
     icon: DashboardIcon,
   },
   {
     to: "/attendance",
     labelKey: "nav.attendanceList",
     permission: "attendance:view",
+    operationalOnly: true,
     icon: CalendarIcon,
   },
   {
     to: "/attendance/approvals",
     labelKey: "nav.attendanceApprovals",
     permission: "attendance:approve",
+    operationalOnly: true,
     icon: CalendarIcon,
   },
   {
     to: "/attendance/face",
     labelKey: "nav.faceAttendance",
     permission: "attendance:create",
+    operationalOnly: true,
     icon: PeopleIcon,
   },
   {
@@ -92,18 +107,41 @@ export function Sidebar({
   const { t } = useTranslation();
   const { user, can } = useAuth();
 
+  const isExecutive = Boolean(user?.isSystemAdmin || user?.scope.level === "COMPANY" || user?.role === "Company Admin");
+
   // A section the user cannot read is not shown. The API enforces the same rule.
   const items = NAV_ITEMS.filter((item) => {
     if (item.systemAdminOnly && !user?.isSystemAdmin) return false;
+    if (item.executiveOnly && !isExecutive) return false;
+    if (item.operationalOnly && isExecutive) return false;
     return item.permission === undefined || can(item.permission);
   });
+
+  const companyLogo = user?.company?.logoUrl;
+  const companyName = user?.company?.name;
 
   return (
     <div className="sidebar">
       <div className="sidebar__brand">
-        <EggIcon className="sidebar__mark" />
-        <span>
-          Poultry<strong>Ops</strong>
+        {companyLogo ? (
+          <div className="sidebar__mark-badge">
+            <img
+              src={companyLogo}
+              alt={companyName ?? "Company logo"}
+              className="sidebar__mark-img"
+            />
+          </div>
+        ) : (
+          <EggIcon className="sidebar__mark" />
+        )}
+        <span className="sidebar__brand-name" title={companyName ?? "PoultryOps"}>
+          {companyName ? (
+            companyName
+          ) : (
+            <>
+              Poultry<strong>Ops</strong>
+            </>
+          )}
         </span>
       </div>
 

@@ -11,13 +11,17 @@ export const companyIdParamSchema = z.object({
 export const createCompanySchema = z.object({
   name: nameSchema,
   code: codeSchema,
+  logoUrl: z.string().url().nullable().optional(),
+  website: z.string().url().or(z.string().trim().length(0)).nullable().optional(),
 });
 
-// Both fields are optional so a company can be renamed or recoded independently.
+// Fields are optional so a company can be renamed, recoded, or logo updated independently.
 export const updateCompanySchema = z
   .object({
     name: nameSchema,
     code: codeSchema,
+    logoUrl: z.string().url().nullable().optional(),
+    website: z.string().url().or(z.string().trim().length(0)).nullable().optional(),
   })
   .partial();
 

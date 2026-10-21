@@ -73,7 +73,9 @@ describe("company module", () => {
       "code",
       "farmCount",
       "id",
+      "logoUrl",
       "name",
+      "website",
     ]);
     // companyA owns exactly the one farm created for the Company Admin.
     expect(response.body.company.farmCount).toBe(1);

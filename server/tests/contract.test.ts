@@ -25,7 +25,7 @@ describe("API contract", () => {
 
     dgm = await createActor("DGM");
 
-    const supervisorRole = await prisma.role.findUniqueOrThrow({
+    const supervisorRole = await prisma.role.findFirstOrThrow({
       where: {
         name: "Supervisor",
       },

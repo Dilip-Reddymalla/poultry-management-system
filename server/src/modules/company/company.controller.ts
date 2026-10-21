@@ -13,6 +13,16 @@ import {
   createCompanySchema,
   updateCompanySchema,
 } from "./company.schema.js";
+import {
+  getCompanyShiftSchedule,
+  updateCompanyShiftTiming,
+} from "../attendance/shift-timing.service.js";
+import {
+  bulkToggleCompanyRoles,
+  getCompanyRolesConfig,
+  toggleCompanyRole,
+  updateCompanyRole,
+} from "./company-role.service.js";
 
 export async function listCompaniesController(
   req: Request,
@@ -40,11 +50,18 @@ export async function getCompanyController(
   });
 }
 
+import { uploadImage } from "../../services/cloudinary.service.js";
+
 export async function createCompanyController(
   req: Request,
   res: Response,
 ): Promise<void> {
   const input = createCompanySchema.parse(req.body);
+
+  if (req.file) {
+    const uploadResult = await uploadImage(req.file.buffer, "companies/logos");
+    input.logoUrl = uploadResult.url;
+  }
 
   const company = await createCompany(getScope(req), input);
 
@@ -63,6 +80,11 @@ export async function updateCompanyController(
 
   const input = updateCompanySchema.parse(req.body);
 
+  if (req.file) {
+    const uploadResult = await uploadImage(req.file.buffer, "companies/logos");
+    input.logoUrl = uploadResult.url;
+  }
+
   const company = await updateCompany(getScope(req), params.id, input);
 
   res.status(200).json({
@@ -71,3 +93,88 @@ export async function updateCompanyController(
     company,
   });
 }
+
+export async function getCompanyShiftScheduleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const result = await getCompanyShiftSchedule(getScope(req), params.id);
+
+  res.status(200).json({
+    success: true,
+    ...result,
+  });
+}
+
+export async function updateCompanyShiftTimingController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const shift = req.params.shift as any;
+  const timing = await updateCompanyShiftTiming(getScope(req), params.id, shift, req.body);
+
+  res.status(200).json({
+    success: true,
+    message: "Company shift timing updated successfully",
+    timing,
+  });
+}
+
+export async function getCompanyRolesConfigController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const result = await getCompanyRolesConfig(getScope(req), params.id);
+
+  res.status(200).json({
+    success: true,
+    ...result,
+  });
+}
+
+export async function toggleCompanyRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const roleId = req.params.roleId as string;
+  const { isEnabled } = req.body;
+  const result = await toggleCompanyRole(getScope(req), params.id, roleId, Boolean(isEnabled));
+
+  res.status(200).json({
+    message: `Role ${isEnabled ? "enabled" : "disabled"} successfully`,
+    ...result,
+  });
+}
+
+export async function bulkToggleCompanyRolesController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const { enabled } = req.body;
+  const result = await bulkToggleCompanyRoles(getScope(req), params.id, Boolean(enabled));
+
+  res.status(200).json({
+    message: `All optional roles ${enabled ? "enabled" : "disabled"} successfully`,
+    ...result,
+  });
+}
+
+export async function updateCompanyRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const roleId = req.params.roleId as string;
+  const result = await updateCompanyRole(getScope(req), params.id, roleId, req.body);
+
+  res.status(200).json({
+    message: "Company role updated successfully",
+    ...result,
+  });
+}
+

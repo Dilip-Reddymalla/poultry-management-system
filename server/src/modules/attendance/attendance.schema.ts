@@ -163,6 +163,15 @@ export const exportAttendanceQuerySchema = z.object({
   scope: z.enum(["employees", "workers", "all"]).default("all"),
 });
 
+export const attendanceReportQuerySchema = z.object({
+  date: dateOnlySchema.optional(),
+  from: dateOnlySchema.optional(),
+  to: dateOnlySchema.optional(),
+  companyId: z.uuid("Invalid company ID").optional(),
+  farmId: z.uuid("Invalid farm ID").optional(),
+  shift: shiftSchema.optional(),
+});
+
 export type AttendanceIdParamInput = z.infer<typeof attendanceIdParamSchema>;
 
 export type ListAttendanceQueryInput = z.infer<
@@ -182,3 +191,5 @@ export type UnmarkedSummaryQueryInput = z.infer<typeof unmarkedSummaryQuerySchem
 export type MarkUnmarkedAbsentInput = z.infer<typeof markUnmarkedAbsentSchema>;
 
 export type ExportAttendanceQueryInput = z.infer<typeof exportAttendanceQuerySchema>;
+
+export type AttendanceReportQueryInput = z.infer<typeof attendanceReportQuerySchema>;

@@ -12,10 +12,15 @@ model Company {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
   code      String   @unique
+  logoUrl   String?
+  website   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  farms Farm[]
+  farms               Farm[]
+  roles               Role[]
+  shiftTimings        ShiftTiming[]
+  companyRoleSettings CompanyRoleSetting[]
 
   @@map("companies")
 }
@@ -36,11 +41,14 @@ model Farm {
   latitude  Float?
   longitude Float?
 
-  company     Company      @relation(fields: [companyId], references: [id])
-  sheds       Shed[]
-  employees   Employee[]
-  workers     Worker[]
-  attendances Attendance[]
+  company          Company           @relation(fields: [companyId], references: [id])
+  sheds            Shed[]
+  employees        Employee[]
+  workers          Worker[]
+  attendances      Attendance[]
+  roles            Role[]
+  shiftTimings     ShiftTiming[]
+  farmRoleSettings FarmRoleSetting[]
 
   @@unique([companyId, code])
   @@map("farms")
@@ -197,7 +205,7 @@ model User {
 model Role {
   id String @id @default(uuid()) @db.Uuid()
 
-  name        String  @unique
+  name        String
   description String?
 
   // Scope breadth this role grants, applied relative to the user's own farm and
@@ -206,13 +214,87 @@ model Role {
   // and global, so no seeded role needs GLOBAL.
   scopeLevel ScopeLevel @default(FARM)
 
+  companyId String? @db.Uuid
+  farmId    String? @db.Uuid
+  isSystem  Boolean @default(false)
+  isActive  Boolean @default(true)
+  rank      Int     @default(30)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       UserRole[]
-  permissions RolePermission[]
+  company         Company?             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  farm            Farm?                @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  users           UserRole[]
+  permissions     RolePermission[]
+  companySettings CompanyRoleSetting[]
+  farmSettings    FarmRoleSetting[]
 
+  @@unique([name, companyId, farmId])
+  @@index([companyId])
+  @@index([farmId])
   @@map("roles")
+}
+
+model CompanyRoleSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  roleId     String   @db.Uuid
+  isEnabled  Boolean  @default(true)
+  customRank Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, roleId])
+  @@index([companyId])
+  @@index([roleId])
+  @@map("company_role_settings")
+}
+
+model FarmRoleSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  farmId    String   @db.Uuid
+  roleId    String   @db.Uuid
+  isEnabled Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, roleId])
+  @@map("farm_role_settings")
+}
+
+model ShiftTiming {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String?  @db.Uuid
+  farmId          String?  @db.Uuid
+
+  shift           Shift
+  label           String
+  startHour       Int
+  startMinute     Int
+  endHour         Int
+  endMinute       Int
+  crossesMidnight Boolean  @default(false)
+  isEnabled       Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company         Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  farm            Farm?    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, shift])
+  @@index([companyId])
+  @@index([farmId])
+  @@map("shift_timings")
 }
 
 // permission

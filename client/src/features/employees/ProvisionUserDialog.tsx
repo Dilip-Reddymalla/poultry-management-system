@@ -25,7 +25,7 @@ export function ProvisionUserDialog({
   onClose,
   onProvisioned,
 }: ProvisionUserDialogProps): React.ReactElement {
-  const roles = useResource<Role[]>("roles", () => fetchRoles());
+  const roles = useResource<Role[]>(`roles:${employee.farm?.id ?? "all"}`, () => fetchRoles(employee.farm?.id));
 
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");

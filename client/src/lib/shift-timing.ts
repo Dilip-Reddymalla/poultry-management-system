@@ -10,6 +10,8 @@ export interface ShiftTimingRule {
   endHour: number;
   endMinute: number;
   crossesMidnight?: boolean;
+  isEnabled?: boolean;
+  source?: "FARM" | "COMPANY" | "DEFAULT";
 }
 
 export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
@@ -22,6 +24,8 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
     startMinute: 30,
     endHour: 13,
     endMinute: 0,
+    isEnabled: true,
+    source: "DEFAULT",
   },
   AFTERNOON_SHIFT: {
     shift: "AFTERNOON_SHIFT",
@@ -32,6 +36,8 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
     startMinute: 0,
     endHour: 18,
     endMinute: 0,
+    isEnabled: true,
+    source: "DEFAULT",
   },
   NIGHT_SHIFT: {
     shift: "NIGHT_SHIFT",
@@ -43,6 +49,8 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
     endHour: 4,
     endMinute: 0,
     crossesMidnight: true,
+    isEnabled: true,
+    source: "DEFAULT",
   },
   OVERTIME: {
     shift: "OVERTIME",
@@ -53,42 +61,85 @@ export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
     startMinute: 0,
     endHour: 24,
     endMinute: 0,
+    isEnabled: true,
+    source: "DEFAULT",
   },
 };
+
+export function formatTimeString(hour: number, minute: number): string {
+  if (hour === 24 && minute === 0) return "12:00 AM";
+  const period = hour >= 12 && hour < 24 ? "PM" : "AM";
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+  const paddedMinute = minute.toString().padStart(2, "0");
+  return `${normalizedHour.toString().padStart(2, "0")}:${paddedMinute} ${period}`;
+}
+
+export function buildTimeRange(startHour: number, startMinute: number, endHour: number, endMinute: number): string {
+  if (startHour === 0 && startMinute === 0 && endHour >= 24) {
+    return "Anytime (24/7)";
+  }
+  return `${formatTimeString(startHour, startMinute)} – ${formatTimeString(endHour, endMinute)}`;
+}
+
+export function isTimeInShiftWindow(rule: ShiftTimingRule, date: Date = new Date()): boolean {
+  if (rule.shift === "OVERTIME") return true;
+  if (rule.isEnabled === false) return false;
+
+  const currentTotalMinutes = date.getHours() * 60 + date.getMinutes();
+  const startTotalMinutes = rule.startHour * 60 + rule.startMinute;
+  const endTotalMinutes = rule.endHour * 60 + rule.endMinute;
+
+  if (rule.crossesMidnight) {
+    return currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
+  }
+  return currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
+}
+
+/**
+ * Resolves the active shift corresponding to the current clock time.
+ * Evaluates against the provided shift rules (or defaults).
+ * If within a shift window, selects that shift; otherwise defaults to closest/MORNING_SHIFT.
+ */
+export function getCurrentShift(
+  date: Date = new Date(),
+  shiftRules: Record<Shift, ShiftTimingRule> = SHIFT_TIMINGS,
+): Shift {
+  // Test shifts in order of daytime progression
+  const candidateShifts: Shift[] = ["MORNING_SHIFT", "AFTERNOON_SHIFT", "NIGHT_SHIFT"];
+  for (const s of candidateShifts) {
+    const rule = shiftRules[s];
+    if (rule && isTimeInShiftWindow(rule, date)) {
+      return s;
+    }
+  }
+
+  // If outside standard windows (e.g. before dawn 05:00 AM or late night),
+  // select Morning shift as the primary upcoming work shift
+  return "MORNING_SHIFT";
+}
 
 export function validateShiftTiming(
   shift: Shift,
   date: Date = new Date(),
+  shiftRules: Record<Shift, ShiftTimingRule> = SHIFT_TIMINGS,
 ): { allowed: boolean; message?: string } {
   if (shift === "OVERTIME") {
     return { allowed: true };
   }
 
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const currentTotalMinutes = hours * 60 + minutes;
-
-  const rule = SHIFT_TIMINGS[shift];
+  const rule = shiftRules[shift];
   if (!rule) {
     return { allowed: true };
   }
 
-  const startTotalMinutes = rule.startHour * 60 + rule.startMinute;
-  const endTotalMinutes = rule.endHour * 60 + rule.endMinute;
-
-  let isInWindow = false;
-
-  if (rule.crossesMidnight) {
-    isInWindow =
-      currentTotalMinutes >= startTotalMinutes ||
-      currentTotalMinutes <= endTotalMinutes;
-  } else {
-    isInWindow =
-      currentTotalMinutes >= startTotalMinutes &&
-      currentTotalMinutes <= endTotalMinutes;
+  if (rule.isEnabled === false) {
+    return {
+      allowed: false,
+      message: `${rule.shortLabel || rule.label} shift is currently disabled for this location.`,
+    };
   }
 
-  if (!isInWindow) {
+  if (!isTimeInShiftWindow(rule, date)) {
     const formattedNow = date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",

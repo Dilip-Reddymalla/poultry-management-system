@@ -76,6 +76,7 @@ export function CompaniesPage(): React.ReactElement {
                 <tr>
                   <th scope="col">{t("farms.code", "Code")}</th>
                   <th scope="col">{t("companies.pageTitle", "Company")}</th>
+                  <th scope="col">Website</th>
                   <th scope="col">{t("nav.farms", "Farms")}</th>
                 </tr>
               </thead>
@@ -93,6 +94,22 @@ export function CompaniesPage(): React.ReactElement {
                       >
                         {company.name}
                       </Link>
+                    </td>
+                    <td data-label="Website">
+                      {company.website ? (
+                        <a
+                          href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="table__link"
+                          style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {company.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} ↗
+                        </a>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </td>
                     <td className="numeric" data-label={t("nav.farms", "Farms")}>
                       {company.farmCount === undefined

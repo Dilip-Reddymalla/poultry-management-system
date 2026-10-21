@@ -77,6 +77,8 @@ Thumbs.db
 .claude/
 .windsurf/
 .gemini/
+.skills-lock.json
+skills-lock.json
 
 # Prisma / generated code
 prisma/*.db
@@ -102,3 +104,4 @@ SRS.md
 SYSTEM_DESIGN.md
 PROJECT_AUDIT.md
 NOTIFICATION_EDGE_CASE_OPTIONS.md
+EXTRA_FEATURES.md

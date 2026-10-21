@@ -72,6 +72,7 @@ export async function buildSystemAdminSafeUser(): Promise<SafeUser> {
       companyId: null,
       farmId: null,
     },
+    company: null,
     employee: {
       id: SYSTEM_ADMIN_USER_ID,
       name: "System Administrator",

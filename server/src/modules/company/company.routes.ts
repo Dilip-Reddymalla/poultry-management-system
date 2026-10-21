@@ -1,28 +1,70 @@
 import { Router } from "express";
 
 import {
+  bulkToggleCompanyRolesController,
   createCompanyController,
   getCompanyController,
+  getCompanyRolesConfigController,
+  getCompanyShiftScheduleController,
   listCompaniesController,
+  toggleCompanyRoleController,
   updateCompanyController,
+  updateCompanyRoleController,
+  updateCompanyShiftTimingController,
 } from "./company.controller.js";
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
+import { uploadPhoto } from "../../middlewares/upload.middleware.js";
 
 const router = Router();
 
-// company:view is held by company-level roles (and the System Admin, who bypasses
-// permission checks). The list/get are still scope-filtered, so a Company Admin
-// only ever sees its own company.
 router.get("/", requirePermission("company:view"), listCompaniesController);
 router.get("/:id", requirePermission("company:view"), getCompanyController);
-// Only the System Admin effectively holds company:create (creating a company is a
-// global action); the service also asserts GLOBAL scope as defense in depth.
-router.post("/", requirePermission("company:create"), createCompanyController);
+router.post(
+  "/",
+  requirePermission("company:create"),
+  uploadPhoto,
+  createCompanyController,
+);
 router.patch(
   "/:id",
   requirePermission("company:update"),
+  uploadPhoto,
   updateCompanyController,
+);
+
+// Company shift schedule defaults
+router.get(
+  "/:id/shift-timings",
+  requirePermission("company:view"),
+  getCompanyShiftScheduleController,
+);
+router.put(
+  "/:id/shift-timings/:shift",
+  requirePermission("company:update"),
+  updateCompanyShiftTimingController,
+);
+
+// Company roles configuration
+router.get(
+  "/:id/roles-config",
+  requirePermission("company:view"),
+  getCompanyRolesConfigController,
+);
+router.patch(
+  "/:id/roles/bulk",
+  requirePermission("company:update"),
+  bulkToggleCompanyRolesController,
+);
+router.patch(
+  "/:id/roles/:roleId/toggle",
+  requirePermission("company:update"),
+  toggleCompanyRoleController,
+);
+router.patch(
+  "/:id/roles/:roleId",
+  requirePermission("company:update"),
+  updateCompanyRoleController,
 );
 
 export default router;

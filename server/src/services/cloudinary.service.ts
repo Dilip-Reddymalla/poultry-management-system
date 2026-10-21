@@ -78,3 +78,49 @@ export async function deleteImage(publicId: string): Promise<void> {
 
   await cloudinary.uploader.destroy(publicId);
 }
+
+/**
+ * Extracts a Cloudinary public_id from a full Cloudinary secure URL.
+ * Example URL:
+ * https://res.cloudinary.com/cloud_name/image/upload/v123456789/companies/logos/abc123xyz.jpg
+ * Returns: "companies/logos/abc123xyz"
+ */
+export function extractPublicId(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+  if (!url.includes("cloudinary.com")) return null;
+
+  try {
+    const uploadIndex = url.indexOf("/upload/");
+    if (uploadIndex === -1) return null;
+
+    let pathAfterUpload = url.substring(uploadIndex + "/upload/".length);
+
+    // Strip version prefix if present, e.g. "v123456789/"
+    pathAfterUpload = pathAfterUpload.replace(/^v\d+\//, "");
+
+    // Strip file extension (.jpg, .png, etc.)
+    const lastDotIndex = pathAfterUpload.lastIndexOf(".");
+    if (lastDotIndex !== -1) {
+      pathAfterUpload = pathAfterUpload.substring(0, lastDotIndex);
+    }
+
+    return pathAfterUpload || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deletes an image from Cloudinary given its secure URL.
+ * Safe to call even if URL is not Cloudinary or null.
+ */
+export async function deleteImageByUrl(url: string | null | undefined): Promise<void> {
+  const publicId = extractPublicId(url);
+  if (publicId) {
+    try {
+      await deleteImage(publicId);
+    } catch {
+      // Best-effort cleanup, don't break request if delete fails
+    }
+  }
+}

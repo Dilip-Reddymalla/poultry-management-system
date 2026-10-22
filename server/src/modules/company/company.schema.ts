@@ -30,3 +30,15 @@ export type CompanyIdParamInput = z.infer<typeof companyIdParamSchema>;
 export type CreateCompanyInput = z.infer<typeof createCompanySchema>;
 
 export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;
+
+export const updateCompanyRolesHierarchySchema = z.object({
+  hierarchy: z.array(
+    z.object({
+      roleId: z.string().uuid("Invalid role ID"),
+      isEnabled: z.boolean(),
+      customRank: z.number().int().min(1).max(100).nullable().optional(),
+    }),
+  ).min(1, "At least one role configuration is required"),
+});
+
+export type UpdateCompanyRolesHierarchyInput = z.infer<typeof updateCompanyRolesHierarchySchema>;

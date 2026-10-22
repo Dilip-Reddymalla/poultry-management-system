@@ -337,6 +337,12 @@ export interface CompanyRolesConfigResponse {
   systemRoles: CompanyRoleConfigItem[];
 }
 
+export interface CompanyRoleHierarchyInputItem {
+  roleId: string;
+  isEnabled: boolean;
+  customRank?: number | null;
+}
+
 export interface FarmAttendanceReportSummary {
   farmId: string;
   farmCode: string;

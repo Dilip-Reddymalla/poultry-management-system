@@ -10,6 +10,7 @@ import {
   toggleCompanyRoleController,
   updateCompanyController,
   updateCompanyRoleController,
+  updateCompanyRolesHierarchyController,
   updateCompanyShiftTimingController,
 } from "./company.controller.js";
 
@@ -65,6 +66,11 @@ router.patch(
   "/:id/roles/:roleId",
   requirePermission("company:update"),
   updateCompanyRoleController,
+);
+router.put(
+  "/:id/roles/hierarchy",
+  requirePermission("company:update"),
+  updateCompanyRolesHierarchyController,
 );
 
 export default router;

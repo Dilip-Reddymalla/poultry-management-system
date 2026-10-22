@@ -14,6 +14,7 @@ import type {
   Worker,
   WorkerStatus,
   EnterpriseAttendanceReportResponse,
+  CompanyRoleHierarchyInputItem,
 } from "./types.js";
 
 // -- Companies --
@@ -955,6 +956,13 @@ export function updateCompanyRole(
 
 export function bulkToggleCompanyRoles(companyId: string, enabled: boolean): Promise<any> {
   return apiClient.patch(`/companies/${companyId}/roles/bulk`, { enabled });
+}
+
+export function updateCompanyRolesHierarchy(
+  companyId: string,
+  hierarchy: CompanyRoleHierarchyInputItem[],
+): Promise<{ success: boolean; updatedCount: number }> {
+  return apiClient.put(`/companies/${companyId}/roles/hierarchy`, { hierarchy });
 }
 
 // -- Enterprise & Cross-Farm Attendance Reports --

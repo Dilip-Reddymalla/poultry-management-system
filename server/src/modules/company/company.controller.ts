@@ -11,6 +11,7 @@ import {
 import {
   companyIdParamSchema,
   createCompanySchema,
+  updateCompanyRolesHierarchySchema,
   updateCompanySchema,
 } from "./company.schema.js";
 import {
@@ -22,6 +23,7 @@ import {
   getCompanyRolesConfig,
   toggleCompanyRole,
   updateCompanyRole,
+  updateCompanyRolesHierarchy,
 } from "./company-role.service.js";
 
 export async function listCompaniesController(
@@ -174,6 +176,20 @@ export async function updateCompanyRoleController(
 
   res.status(200).json({
     message: "Company role updated successfully",
+    ...result,
+  });
+}
+
+export async function updateCompanyRolesHierarchyController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const parsed = updateCompanyRolesHierarchySchema.parse(req.body);
+  const result = await updateCompanyRolesHierarchy(getScope(req), params.id, parsed.hierarchy);
+
+  res.status(200).json({
+    message: "Company roles hierarchy updated successfully",
     ...result,
   });
 }

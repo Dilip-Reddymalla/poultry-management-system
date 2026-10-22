@@ -189,5 +189,72 @@ describe("Farm-specific Shift Timings and Roles", () => {
       expect(delRes.status).toBe(200);
       expect(delRes.body.success).toBe(true);
     });
+
+    it("batch updates company roles hierarchy and verifies smoothed peer ranks", async () => {
+      // 1. Fetch current company roles config
+      const getRes = await request(app)
+        .get(`/api/companies/${companyId}/roles-config`)
+        .set("Cookie", companyAdmin.cookie);
+
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.systemRoles.length).toBeGreaterThan(3);
+
+      const adminRole = getRes.body.systemRoles.find((r: any) => r.name === "Company Admin");
+      const gmRole = getRes.body.systemRoles.find((r: any) => r.name === "GM");
+      const dgmRole = getRes.body.systemRoles.find((r: any) => r.name === "DGM");
+      const accRole = getRes.body.systemRoles.find((r: any) => r.name === "Accountant");
+
+      expect(adminRole).toBeDefined();
+      expect(gmRole).toBeDefined();
+      expect(dgmRole).toBeDefined();
+      expect(accRole).toBeDefined();
+
+      // 2. Reject if Company Admin is disabled
+      const badRes = await request(app)
+        .put(`/api/companies/${companyId}/roles/hierarchy`)
+        .set("Cookie", companyAdmin.cookie)
+        .send({
+          hierarchy: [
+            { roleId: adminRole.id, isEnabled: false, customRank: 90 },
+          ],
+        });
+      expect(badRes.status).toBe(400);
+
+      // 3. Batch update with peer roles having the same smoothed rank (DGM & Accountant both 70)
+      const batchRes = await request(app)
+        .put(`/api/companies/${companyId}/roles/hierarchy`)
+        .set("Cookie", companyAdmin.cookie)
+        .send({
+          hierarchy: [
+            { roleId: adminRole.id, isEnabled: true, customRank: 90 },
+            { roleId: gmRole.id, isEnabled: true, customRank: 80 },
+            { roleId: dgmRole.id, isEnabled: true, customRank: 70 },
+            { roleId: accRole.id, isEnabled: true, customRank: 70 }, // Peer / Same rank
+          ],
+        });
+
+      expect(batchRes.status).toBe(200);
+      expect(batchRes.body.success).toBe(true);
+      expect(batchRes.body.updatedCount).toBe(4);
+
+      // 4. Verify updated ranks in company roles config
+      const verifyRes = await request(app)
+        .get(`/api/companies/${companyId}/roles-config`)
+        .set("Cookie", companyAdmin.cookie);
+
+      expect(verifyRes.status).toBe(200);
+      const updatedRoles = verifyRes.body.systemRoles;
+
+      const updatedGm = updatedRoles.find((r: any) => r.id === gmRole.id);
+      const updatedDgm = updatedRoles.find((r: any) => r.id === dgmRole.id);
+      const updatedAcc = updatedRoles.find((r: any) => r.id === accRole.id);
+
+      expect(updatedGm.customRank).toBe(80);
+      expect(updatedGm.rank).toBe(80);
+      expect(updatedDgm.customRank).toBe(70);
+      expect(updatedDgm.rank).toBe(70);
+      expect(updatedAcc.customRank).toBe(70);
+      expect(updatedAcc.rank).toBe(70);
+    });
   });
 });

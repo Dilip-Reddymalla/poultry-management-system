@@ -197,3 +197,79 @@ export async function bulkToggleCompanyRoles(
 
   return { success: true };
 }
+
+export interface CompanyRoleHierarchyUpdateItem {
+  roleId: string;
+  isEnabled: boolean;
+  customRank?: number | null | undefined;
+}
+
+export async function updateCompanyRolesHierarchy(
+  scope: AuthScope,
+  companyId: string,
+  hierarchy: CompanyRoleHierarchyUpdateItem[],
+): Promise<{ success: boolean; updatedCount: number }> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, name: true },
+  });
+  if (!company) throw new AppError("Company not found", 404);
+
+  assertCompanyWritable(scope, companyId);
+
+  // Invariant: Company Admin is a compulsory role and cannot be disabled
+  const companyAdminRole = await prisma.role.findFirst({
+    where: { name: "Company Admin", isSystem: true },
+    select: { id: true, rank: true },
+  });
+
+  if (companyAdminRole) {
+    const adminSetting = hierarchy.find((h) => h.roleId === companyAdminRole.id);
+    if (adminSetting && adminSetting.isEnabled === false) {
+      throw new AppError("Company Admin is a compulsory role and cannot be disabled", 400);
+    }
+  }
+
+  // Validate customRank if provided
+  for (const item of hierarchy) {
+    if (item.customRank !== undefined && item.customRank !== null) {
+      if (typeof item.customRank !== "number" || item.customRank < 1 || item.customRank > 100) {
+        throw new AppError("Custom rank must be an integer between 1 and 100", 400);
+      }
+    }
+  }
+
+  // Transactionally upsert each role setting
+  await prisma.$transaction(
+    hierarchy.map((item) =>
+      prisma.companyRoleSetting.upsert({
+        where: {
+          companyId_roleId: { companyId, roleId: item.roleId },
+        },
+        update: {
+          isEnabled: item.isEnabled,
+          customRank: item.customRank ?? null,
+        },
+        create: {
+          companyId,
+          roleId: item.roleId,
+          isEnabled: item.isEnabled,
+          customRank: item.customRank ?? null,
+        },
+      }),
+    ),
+  );
+
+  invalidateScopeCache();
+
+  void recordAuditLog({
+    scope,
+    action: "UPDATE",
+    entity: "CompanyRoleSetting",
+    entityId: companyId,
+    summary: `Updated role hierarchy and rank positions for company ${company.name}`,
+    changes: { count: hierarchy.length },
+  });
+
+  return { success: true, updatedCount: hierarchy.length };
+}

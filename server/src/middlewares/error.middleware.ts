@@ -43,6 +43,16 @@ export const errorMiddleware: ErrorRequestHandler = (
     return;
   }
 
+  // Handle malformed JSON request body from body-parser
+  if (err instanceof SyntaxError && "status" in err && (err as { status?: number }).status === 400 && "body" in err) {
+    res.status(400).json({
+      success: false,
+      message: "Malformed JSON payload in request body",
+    });
+
+    return;
+  }
+
   if (err instanceof AppError) {
     const errorPayload = {
       path: req?.originalUrl || req?.url,

@@ -42,8 +42,8 @@ const pool = new Pool({
   min: 0,
   // Keep connections idle for up to 1 minute, avoiding Neon proxy / PgBouncer 5-minute disconnect errors.
   idleTimeoutMillis: 60000,
-  // 30-second timeout accommodates Neon serverless cold-start wake-up times (typically 3-12s)
-  connectionTimeoutMillis: 30000,
+  // 60-second timeout accommodates Neon serverless cold-start wake-up times and connection spikes
+  connectionTimeoutMillis: 60000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   ssl: sslConfig,

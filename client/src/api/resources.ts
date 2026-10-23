@@ -15,7 +15,10 @@ import type {
   WorkerStatus,
   EnterpriseAttendanceReportResponse,
   CompanyRoleHierarchyInputItem,
+  CreateCompanyCustomRoleInput,
+  UpdateCompanyCustomRoleInput,
 } from "./types.js";
+
 
 // -- Companies --
 export interface CompanyListQuery {
@@ -964,6 +967,29 @@ export function updateCompanyRolesHierarchy(
 ): Promise<{ success: boolean; updatedCount: number }> {
   return apiClient.put(`/companies/${companyId}/roles/hierarchy`, { hierarchy });
 }
+
+export function createCompanyCustomRole(
+  companyId: string,
+  input: CreateCompanyCustomRoleInput,
+): Promise<{ message: string; role: any }> {
+  return apiClient.post(`/companies/${companyId}/roles/custom`, input);
+}
+
+export function updateCompanyCustomRole(
+  companyId: string,
+  roleId: string,
+  input: UpdateCompanyCustomRoleInput,
+): Promise<{ message: string; role: any }> {
+  return apiClient.patch(`/companies/${companyId}/roles/custom/${roleId}`, input);
+}
+
+export function deleteCompanyCustomRole(
+  companyId: string,
+  roleId: string,
+): Promise<{ success: boolean; id: string }> {
+  return apiClient.delete(`/companies/${companyId}/roles/custom/${roleId}`);
+}
+
 
 // -- Enterprise & Cross-Farm Attendance Reports --
 export function fetchAttendanceReport(query: {

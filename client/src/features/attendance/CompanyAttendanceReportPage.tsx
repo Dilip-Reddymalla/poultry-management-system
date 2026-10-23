@@ -16,6 +16,7 @@ import type {
 } from "../../api/types.js";
 import { SHIFTS } from "../../api/types.js";
 import { todayInputValue } from "../../lib/display.js";
+import { setLastSelectedFarmId } from "../../lib/farm-selection.js";
 import { EmptyState, ErrorState, Panel } from "../../components/ui.js";
 import { SHIFT_CONFIG } from "./attendance-dashboard-types.js";
 import "./AttendanceReport.css";
@@ -80,7 +81,13 @@ function getFarmPalette(idx: number) {
 export function AttendanceReportPage(): React.ReactElement {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const isSystemAdmin = Boolean(user?.isSystemAdmin);
+  const isSystemAdmin = Boolean(
+    user?.isSystemAdmin ||
+    user?.scope?.level === "GLOBAL" ||
+    user?.role === "System Administrator" ||
+    user?.role === "SYSTEM_ADMIN" ||
+    (user?.roles && user.roles.includes("System Administrator")),
+  );
 
   const [params, setParams] = useSearchParams();
 
@@ -111,10 +118,21 @@ export function AttendanceReportPage(): React.ReactElement {
   const selectedCompanyId = params.get("companyId") || "";
   const setSelectedCompanyId = useCallback(
     (v: string) => {
-      setParam("companyId", v);
-      setParam("farmId", "");
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (v) {
+            next.set("companyId", v);
+          } else {
+            next.delete("companyId");
+          }
+          next.delete("farmId");
+          return next;
+        },
+        { replace: true },
+      );
     },
-    [setParam],
+    [setParams],
   );
 
   const selectedFarmId = params.get("farmId") || "";
@@ -256,7 +274,13 @@ export function AttendanceReportPage(): React.ReactElement {
             <select
               className="input att-report__select"
               value={selectedFarmId}
-              onChange={(e) => setSelectedFarmId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedFarmId(val);
+                if (val) {
+                  setLastSelectedFarmId(val);
+                }
+              }}
             >
               <option value="">All Farms</option>
               {farmsRes.data?.map((f) => (
@@ -910,6 +934,7 @@ export function AttendanceReportPage(): React.ReactElement {
                             <Link
                               to={farmDashboardUrl}
                               className="att-report__farm-link"
+                              onClick={() => setLastSelectedFarmId(farm.farmId)}
                               title={`Open detailed attendance dashboard for ${farm.farmName}`}
                             >
                               {farm.farmName} ↗

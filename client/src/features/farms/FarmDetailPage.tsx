@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +21,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
+import { setLastSelectedFarmId } from "../../lib/farm-selection.js";
 import { FarmFormDialog } from "./FarmFormDialog.js";
 import { FarmRolesTab } from "./FarmRolesTab.js";
 import { FarmShiftTimingsTab } from "./FarmShiftTimingsTab.js";
@@ -38,6 +39,12 @@ export function FarmDetailPage(): React.ReactElement {
     (signal) => fetchSheds({ farmId: id }, signal),
     { enabled: can("shed:view") },
   );
+
+  useEffect(() => {
+    if (id) {
+      setLastSelectedFarmId(id);
+    }
+  }, [id]);
 
   const [editing, setEditing] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState(false);

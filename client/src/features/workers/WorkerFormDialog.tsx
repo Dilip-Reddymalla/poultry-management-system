@@ -19,6 +19,10 @@ import {
   TextField,
 } from "../../components/ui.js";
 import { useResource } from "../../hooks/useResource.js";
+import {
+  getLastSelectedFarmId,
+  setLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
 
 interface FormState {
   workerId: string;
@@ -27,11 +31,11 @@ interface FormState {
   phone: string;
 }
 
-function initialState(worker: Worker | null): FormState {
+function initialState(worker: Worker | null, defaultFarmId?: string): FormState {
   return {
     workerId: worker?.workerId ?? "",
     name: worker?.name ?? "",
-    farmId: worker?.farmId ?? "",
+    farmId: worker?.farmId ?? defaultFarmId ?? getLastSelectedFarmId() ?? "",
     phone: worker?.phone ?? "",
   };
 }
@@ -39,6 +43,7 @@ function initialState(worker: Worker | null): FormState {
 interface WorkerFormDialogProps {
   /** Null means create. */
   worker: Worker | null;
+  defaultFarmId?: string | undefined;
   onClose: () => void;
   onSaved: (worker: Worker, mode: "created" | "updated") => void;
 }
@@ -46,12 +51,15 @@ interface WorkerFormDialogProps {
 /** Mounted only while open, so the form starts clean every time. */
 export function WorkerFormDialog({
   worker,
+  defaultFarmId,
   onClose,
   onSaved,
 }: WorkerFormDialogProps): React.ReactElement {
   const editing = worker !== null;
 
-  const [form, setForm] = useState<FormState>(() => initialState(worker));
+  const [form, setForm] = useState<FormState>(() =>
+    initialState(worker, defaultFarmId),
+  );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,7 +81,11 @@ export function WorkerFormDialog({
     return (
       event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     ): void => {
-      setForm((current) => ({ ...current, [key]: event.target.value }));
+      const val = event.target.value;
+      if (key === "farmId" && val) {
+        setLastSelectedFarmId(val);
+      }
+      setForm((current) => ({ ...current, [key]: val }));
     };
   }
 
@@ -99,6 +111,10 @@ export function WorkerFormDialog({
             },
             photoFile,
           );
+
+      if (!editing && effectiveFarmId) {
+        setLastSelectedFarmId(effectiveFarmId);
+      }
 
       onSaved(saved, editing ? "updated" : "created");
     } catch (caught) {

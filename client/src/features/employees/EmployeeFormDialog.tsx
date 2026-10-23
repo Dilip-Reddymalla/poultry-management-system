@@ -21,6 +21,10 @@ import {
 } from "../../components/ui.js";
 import { useResource } from "../../hooks/useResource.js";
 import { toDateInputValue } from "../../lib/display.js";
+import {
+  getLastSelectedFarmId,
+  setLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
 
 interface FormState {
   employeeId?: string;
@@ -32,11 +36,11 @@ interface FormState {
   joiningDate: string;
 }
 
-function initialState(employee: Employee | null): FormState {
+function initialState(employee: Employee | null, defaultFarmId?: string): FormState {
   return {
     employeeId: employee?.employeeId ?? "",
     name: employee?.name ?? "",
-    farmId: employee?.farm.id ?? "",
+    farmId: employee?.farm.id ?? defaultFarmId ?? getLastSelectedFarmId() ?? "",
     designationId: employee?.designation.id ?? "",
     phone: employee?.phone ?? "",
     photoUrl: employee?.photoUrl ?? "",
@@ -49,6 +53,7 @@ interface EmployeeFormDialogProps {
   employee: Employee | null;
   designations: Designation[];
   designationsError: ApiError | null;
+  defaultFarmId?: string | undefined;
   onClose: () => void;
   onSaved: (employee: Employee, mode: "created" | "updated") => void;
 }
@@ -58,12 +63,15 @@ export function EmployeeFormDialog({
   employee,
   designations,
   designationsError,
+  defaultFarmId,
   onClose,
   onSaved,
 }: EmployeeFormDialogProps): React.ReactElement {
   const editing = employee !== null;
 
-  const [form, setForm] = useState<FormState>(() => initialState(employee));
+  const [form, setForm] = useState<FormState>(() =>
+    initialState(employee, defaultFarmId),
+  );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -92,6 +100,9 @@ export function EmployeeFormDialog({
 
   function handleFarmChange(event: React.ChangeEvent<HTMLSelectElement>): void {
     const nextFarmId = event.target.value;
+    if (nextFarmId) {
+      setLastSelectedFarmId(nextFarmId);
+    }
     setForm((current) => ({
       ...current,
       farmId: nextFarmId,
@@ -133,6 +144,10 @@ export function EmployeeFormDialog({
             },
             photoFile,
           );
+
+      if (!editing && effectiveFarmId) {
+        setLastSelectedFarmId(effectiveFarmId);
+      }
 
       onSaved(saved, editing ? "updated" : "created");
     } catch (caught) {

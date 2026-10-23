@@ -22,6 +22,10 @@ import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button } from "../../components/ui.js";
 import { getCurrentShift } from "../../lib/shift-timing.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
+import {
+  useAutoSelectFarm,
+  getLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
 import "./Attendance.css";
 
 // Extracted Subcomponents & Types
@@ -60,11 +64,14 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const [params, setParams] = useSearchParams();
 
   // If user is Company Admin or System Admin and has NOT selected a specific farm to inspect,
-  // redirect to the consolidated Attendance Report. If they clicked a farm name from the report,
-  // let them view that farm's detailed operational dashboard.
+  // redirect to recently selected farm or the consolidated Attendance Report.
   const isExecutive = Boolean(user?.isSystemAdmin || user?.scope.level === "COMPANY" || user?.role === "Company Admin");
   const targetedFarmId = params.get("farmId");
   if (isExecutive && !targetedFarmId) {
+    const lastFarmId = getLastSelectedFarmId();
+    if (lastFarmId) {
+      return <Navigate to={`/attendance/dashboard?farmId=${encodeURIComponent(lastFarmId)}`} replace />;
+    }
     return <Navigate to="/attendance/reports" replace />;
   }
 
@@ -109,7 +116,11 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const [showUnmarkedAbsentDialog, setShowUnmarkedAbsentDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
 
-  const showFarmFilter = user?.scope?.level === "GLOBAL";
+  const showFarmFilter =
+    user?.scope?.level === "GLOBAL" ||
+    user?.scope?.level === "COMPANY" ||
+    Boolean(user?.isSystemAdmin) ||
+    can("farm:view");
   const isSupervisor = user?.role === "SUPERVISOR" || (user?.roles && user.roles.includes("SUPERVISOR"));
 
   // Fetch Farms
@@ -119,6 +130,25 @@ export function AttendanceDashboardPage(): React.ReactElement {
     { enabled: showFarmFilter }
   );
   const farmList = farms.data ?? [];
+
+  const onSelectFarm = useCallback((id: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (id) {
+        next.set("farmId", id);
+      } else {
+        next.delete("farmId");
+      }
+      next.delete("shedId");
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  const { handleFarmChange } = useAutoSelectFarm(
+    selectedFarmId,
+    onSelectFarm,
+    farmList,
+  );
 
   // Fetch Sheds
   const sheds = useResource<Shed[]>(
@@ -174,38 +204,63 @@ export function AttendanceDashboardPage(): React.ReactElement {
     return records.filter((r) => r.shift === dashboardShift);
   }, [records, dashboardShift]);
 
-  // Overall KPI Metrics
+  // Overall KPI Metrics: when viewing All Shifts, take the max of Morning and Afternoon
+  // so metrics represent peak shift deployment rather than double-counting staff across both shifts.
   const metrics = useMemo<AttendanceMetrics>(() => {
-    let presentEmployees = 0;
-    let presentWorkers = 0;
-    let halfDayCount = 0;
-    let absentCount = 0;
-    let leaveCount = 0;
-    let faceAiCount = 0;
-    let faceAiConfidenceSum = 0;
+    const calculateStats = (recs: Attendance[], denominator: number) => {
+      let presentEmployees = 0;
+      let presentWorkers = 0;
+      let halfDayCount = 0;
+      let absentCount = 0;
+      let leaveCount = 0;
+      let faceAiCount = 0;
+      let faceAiConfidenceSum = 0;
+
+      for (const r of recs) {
+        if (r.status === "PRESENT") {
+          if (r.person.type === "EMPLOYEE") presentEmployees++;
+          else presentWorkers++;
+        } else if (r.status === "HALF_DAY") {
+          halfDayCount++;
+        } else if (r.status === "ABSENT") {
+          absentCount++;
+        } else if (r.status === "LEAVE") {
+          leaveCount++;
+        }
+
+        if (r.verificationMode === "FACE_AI") {
+          faceAiCount++;
+          if (r.confidenceScore != null) {
+            faceAiConfidenceSum += r.confidenceScore;
+          }
+        }
+      }
+
+      const totalPresent = presentEmployees + presentWorkers;
+      const totalPresentAndHalf = totalPresent + halfDayCount;
+      const attendanceRate = Math.min(100, Math.round((totalPresentAndHalf / denominator) * 100));
+      const avgConfidence = faceAiCount > 0 ? Math.round(faceAiConfidenceSum / faceAiCount) : null;
+
+      return {
+        presentEmployees,
+        presentWorkers,
+        totalPresent,
+        halfDayCount,
+        absentCount,
+        leaveCount,
+        faceAiCount,
+        avgConfidence,
+        attendanceRate,
+        totalMarked: recs.length,
+      };
+    };
+
+    // Actionable review & audit counts across all records (always global)
     let pendingApprovalCount = 0;
     let ipFallbackCount = 0;
     let pendingIpFallbackCount = 0;
 
-    for (const r of scopedRecords) {
-      if (r.status === "PRESENT") {
-        if (r.person.type === "EMPLOYEE") presentEmployees++;
-        else presentWorkers++;
-      } else if (r.status === "HALF_DAY") {
-        halfDayCount++;
-      } else if (r.status === "ABSENT") {
-        absentCount++;
-      } else if (r.status === "LEAVE") {
-        leaveCount++;
-      }
-
-      if (r.verificationMode === "FACE_AI") {
-        faceAiCount++;
-        if (r.confidenceScore != null) {
-          faceAiConfidenceSum += r.confidenceScore;
-        }
-      }
-
+    for (const r of records) {
       if (r.locationSource === "IP_FALLBACK") {
         ipFallbackCount++;
         if (!r.approvedAt) {
@@ -218,29 +273,45 @@ export function AttendanceDashboardPage(): React.ReactElement {
       }
     }
 
-    const totalPresentAndHalf = presentEmployees + presentWorkers + halfDayCount;
-    const denominator = dashboardShift
-      ? (scopedRecords.length || 1)
-      : (totalActiveWorkforce > 0 ? totalActiveWorkforce : records.length || 1);
-    const attendanceRate = Math.min(100, Math.round((totalPresentAndHalf / denominator) * 100));
-    const avgConfidence = faceAiCount > 0 ? Math.round(faceAiConfidenceSum / faceAiCount) : null;
+    if (dashboardShift) {
+      const stats = calculateStats(scopedRecords, scopedRecords.length || 1);
+      return {
+        ...stats,
+        pendingApprovalCount,
+        ipFallbackCount,
+        pendingIpFallbackCount,
+      };
+    }
+
+    // Default "All Shifts" view: take the max of Morning and Afternoon shifts
+    const morningRecords = records.filter((r) => r.shift === "MORNING_SHIFT");
+    const afternoonRecords = records.filter((r) => r.shift === "AFTERNOON_SHIFT");
+
+    const denominator = totalActiveWorkforce > 0 ? totalActiveWorkforce : (records.length || 1);
+    const morningStats = calculateStats(morningRecords, denominator);
+    const afternoonStats = calculateStats(afternoonRecords, denominator);
+
+    const morningDuty = morningStats.totalPresent + morningStats.halfDayCount;
+    const afternoonDuty = afternoonStats.totalPresent + afternoonStats.halfDayCount;
+
+    let peakStats: ReturnType<typeof calculateStats>;
+    if (morningRecords.length > 0 && afternoonRecords.length > 0) {
+      peakStats = morningDuty >= afternoonDuty ? morningStats : afternoonStats;
+    } else if (morningRecords.length > 0) {
+      peakStats = morningStats;
+    } else if (afternoonRecords.length > 0) {
+      peakStats = afternoonStats;
+    } else {
+      peakStats = calculateStats(records, denominator);
+    }
 
     return {
-      presentEmployees,
-      presentWorkers,
-      totalPresent: presentEmployees + presentWorkers,
-      halfDayCount,
-      absentCount,
-      leaveCount,
-      faceAiCount,
-      avgConfidence,
+      ...peakStats,
       pendingApprovalCount,
       ipFallbackCount,
       pendingIpFallbackCount,
-      attendanceRate,
-      totalMarked: scopedRecords.length,
     };
-  }, [scopedRecords, dashboardShift, totalActiveWorkforce, records.length]);
+  }, [scopedRecords, dashboardShift, totalActiveWorkforce, records]);
 
   // Shift Breakdown Data (All shifts)
   const shiftSummaries = useMemo<ShiftSummaryData[]>(() => {
@@ -674,14 +745,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
         showFarmFilter={showFarmFilter}
         farmList={farmList}
         selectedFarmId={selectedFarmId}
-        onFarmChange={(id) => {
-          setParams((prev) => {
-            const next = new URLSearchParams(prev);
-            if (id) { next.set("farmId", id); } else { next.delete("farmId"); }
-            next.delete("shedId");
-            return next;
-          }, { replace: true });
-        }}
+        onFarmChange={(id) => handleFarmChange(id)}
         onRefresh={() => attendanceResource.reload()}
         isMobile={isMobile}
       />

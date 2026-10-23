@@ -26,6 +26,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
 import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
+import { useAutoSelectFarm } from "../../lib/farm-selection.js";
 
 const PAGE_SIZE = 20;
 
@@ -123,6 +124,12 @@ export function WorkersPage(): React.ReactElement {
     enabled: showFarm,
   });
 
+  const onSelectFarm = useCallback(
+    (newFarmId: string) => updateFilters({ farmId: newFarmId }),
+    [updateFilters],
+  );
+  const { handleFarmChange } = useAutoSelectFarm(farmId, onSelectFarm, farms.data);
+
   const key = JSON.stringify({ page, search, status, farmId, sortBy, sortOrder });
 
   const workers = useResource<WorkerListResult>(`workers:${key}`, (signal) =>
@@ -200,7 +207,7 @@ export function WorkersPage(): React.ReactElement {
                 className="input select"
                 value={farmId}
                 onChange={(event) => {
-                  updateFilters({ farmId: event.target.value });
+                  handleFarmChange(event.target.value);
                 }}
               >
                 <option value="">{t("common.allFarms")}</option>
@@ -363,6 +370,7 @@ export function WorkersPage(): React.ReactElement {
       {creating ? (
         <WorkerFormDialog
           worker={null}
+          defaultFarmId={farmId || undefined}
           onClose={() => {
             setCreating(false);
           }}

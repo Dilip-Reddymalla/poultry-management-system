@@ -35,7 +35,7 @@ export function ShiftShedMatrixTable({
   isMobile?: boolean;
 }): React.ReactElement {
   const isMobile = isMobileProp ?? useIsMobile();
-  const [mobileExpanded, setMobileExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <Panel
@@ -43,16 +43,14 @@ export function ShiftShedMatrixTable({
       eyebrow="Station vs Shift Deployment"
       actions={
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-          {isMobile && (
-            <button
-              type="button"
-              className="button button--secondary"
-              style={{ fontSize: "0.75rem", padding: "0.2rem 0.55rem", minHeight: "26px" }}
-              onClick={() => setMobileExpanded(!mobileExpanded)}
-            >
-              {mobileExpanded ? "Collapse ▴" : "Expand Matrix ▾"}
-            </button>
-          )}
+          <button
+            type="button"
+            className="button button--secondary"
+            style={{ fontSize: "0.75rem", padding: "0.2rem 0.55rem", minHeight: "26px" }}
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? "Collapse ▴" : "Expand Matrix ▾"}
+          </button>
           {(selectedShedId || dashboardShift) && (
             <button
               type="button"
@@ -66,9 +64,9 @@ export function ShiftShedMatrixTable({
         </div>
       }
     >
-      {isMobile && !mobileExpanded ? (
+      {!isExpanded ? (
         <div
-          onClick={() => setMobileExpanded(true)}
+          onClick={() => setIsExpanded(true)}
           style={{
             cursor: "pointer",
             padding: "0.85rem 1rem",
@@ -79,15 +77,22 @@ export function ShiftShedMatrixTable({
             justifyContent: "space-between",
             fontSize: "0.82rem",
             color: "var(--ink)",
+            transition: "background 150ms ease",
           }}
+          title="Click to expand 2D cross-tab matrix"
         >
           <div>
-            <strong>Tap to expand 2D cross-tab matrix</strong>
+            <strong>{isMobile ? "Tap to expand 2D cross-tab matrix" : "Click to expand 2D cross-tab matrix"}</strong>
             <div className="muted" style={{ fontSize: "0.74rem", marginTop: "2px" }}>
-              {shiftShedMatrix.length} sheds across 4 shifts ({metrics.totalPresent + metrics.halfDayCount}/{metrics.totalMarked} on duty)
+              {shiftShedMatrix.length} sheds/stations across 4 shifts ({metrics.totalPresent + metrics.halfDayCount}/{metrics.totalMarked} on duty)
             </div>
           </div>
-          <span style={{ fontSize: "1rem", color: "var(--moss)", fontWeight: 700 }}>+</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="tag" style={{ fontSize: "0.75rem", padding: "2px 8px", background: "var(--surface)", border: "1px solid var(--line)" }}>
+              Show 2D Matrix ▾
+            </span>
+            <span style={{ fontSize: "1.1rem", color: "var(--moss)", fontWeight: 700 }}>+</span>
+          </div>
         </div>
       ) : (
       <div className="table-scroll">

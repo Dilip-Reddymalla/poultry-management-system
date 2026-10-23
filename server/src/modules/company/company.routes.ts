@@ -3,16 +3,20 @@ import { Router } from "express";
 import {
   bulkToggleCompanyRolesController,
   createCompanyController,
+  createCompanyCustomRoleController,
+  deleteCompanyCustomRoleController,
   getCompanyController,
   getCompanyRolesConfigController,
   getCompanyShiftScheduleController,
   listCompaniesController,
   toggleCompanyRoleController,
   updateCompanyController,
+  updateCompanyCustomRoleController,
   updateCompanyRoleController,
   updateCompanyRolesHierarchyController,
   updateCompanyShiftTimingController,
 } from "./company.controller.js";
+
 
 import { requirePermission } from "../../middlewares/authorize.middleware.js";
 import { uploadPhoto } from "../../middlewares/upload.middleware.js";
@@ -72,5 +76,21 @@ router.put(
   requirePermission("company:update"),
   updateCompanyRolesHierarchyController,
 );
+router.post(
+  "/:id/roles/custom",
+  requirePermission("company:update"),
+  createCompanyCustomRoleController,
+);
+router.patch(
+  "/:id/roles/custom/:roleId",
+  requirePermission("company:update"),
+  updateCompanyCustomRoleController,
+);
+router.delete(
+  "/:id/roles/custom/:roleId",
+  requirePermission("company:update"),
+  deleteCompanyCustomRoleController,
+);
 
 export default router;
+

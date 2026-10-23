@@ -12,12 +12,16 @@ import {
   TextField,
 } from "../../components/ui.js";
 import { useResource } from "../../hooks/useResource.js";
+import {
+  getLastSelectedFarmId,
+  setLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
 
 interface ShedFormDialogProps {
   /** Null means create. */
   shed: Shed | null;
   /** Preselected farm when creating from a farm-filtered list. */
-  defaultFarmId?: string;
+  defaultFarmId?: string | undefined;
   onClose: () => void;
   onSaved: (shed: Shed, mode: "created" | "updated") => void;
 }
@@ -38,7 +42,9 @@ export function ShedFormDialog({
     { enabled: !editing },
   );
 
-  const [farmId, setFarmId] = useState(shed?.farm.id ?? defaultFarmId ?? "");
+  const [farmId, setFarmId] = useState(
+    shed?.farm.id ?? defaultFarmId ?? getLastSelectedFarmId() ?? "",
+  );
   const [number, setNumber] = useState(shed?.number ?? "");
   const [capacity, setCapacity] = useState(shed ? String(shed.capacity) : "");
   const [error, setError] = useState<ApiError | null>(null);
@@ -53,6 +59,10 @@ export function ShedFormDialog({
       const saved = editing
         ? await updateShed(shed.id, { number, capacity: Number(capacity) })
         : await createShed({ farmId, number, capacity: Number(capacity) });
+
+      if (!editing && farmId) {
+        setLastSelectedFarmId(farmId);
+      }
 
       onSaved(saved, editing ? "updated" : "created");
     } catch (caught) {

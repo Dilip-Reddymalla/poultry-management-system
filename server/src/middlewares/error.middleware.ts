@@ -17,7 +17,11 @@ const PRISMA_ERROR_MAP: Record<string, { status: number; message: string }> = {
   P2000: { status: 400, message: "A provided value is too long" },
   P2002: { status: 409, message: "A record with these values already exists" },
   P2003: { status: 409, message: "Related record constraint failed" },
+  P2024: { status: 503, message: "Database connection pool timed out while connecting. Please retry." },
   P2025: { status: 404, message: "Record not found" },
+  P1001: { status: 503, message: "Database server is unreachable or waking up. Please retry." },
+  P1002: { status: 503, message: "Database server timed out while connecting. Please retry." },
+  P1008: { status: 503, message: "Database operation timed out. Please retry." },
 };
 
 export const errorMiddleware: ErrorRequestHandler = (
@@ -113,8 +117,15 @@ export const errorMiddleware: ErrorRequestHandler = (
 
   // Handle database connection timeouts (e.g. Neon serverless wake-up)
   const isDbConnectionTimeout =
-    typeof (err as Error)?.message === "string" &&
-    (err as Error).message.includes("timeout exceeded when trying to connect");
+    (typeof (err as Error)?.message === "string" &&
+      ((err as Error).message.includes("timeout exceeded when trying to connect") ||
+        (err as Error).message.toLowerCase().includes("connection timeout") ||
+        (err as Error).message.includes("listOnTimeout") ||
+        (err as { code?: string })?.code === "P2024" ||
+        (err as { code?: string })?.code === "P1001" ||
+        (err as { code?: string })?.code === "P1002" ||
+        (err as { code?: string })?.code === "P1008")) ||
+    err instanceof Prisma.PrismaClientInitializationError;
 
   if (isDbConnectionTimeout) {
     reqLogger.error(

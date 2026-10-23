@@ -6,6 +6,10 @@ import { Button, TextField } from "../../components/ui.js";
 import { useResource } from "../../hooks/useResource.js";
 import { fetchFarms, exportAttendanceUrl, type ExportAttendanceQuery } from "../../api/resources.js";
 import { todayInputValue } from "../../lib/display.js";
+import {
+  getLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
+
 
 export function ExportAttendanceDialog({
   onClose,
@@ -17,7 +21,7 @@ export function ExportAttendanceDialog({
   const [date, setDate] = useState(todayInputValue());
   const [from, setFrom] = useState(todayInputValue());
   const [to, setTo] = useState(todayInputValue());
-  const [farmId, setFarmId] = useState("");
+  const [farmId, setFarmId] = useState(() => getLastSelectedFarmId() || "");
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms());
 

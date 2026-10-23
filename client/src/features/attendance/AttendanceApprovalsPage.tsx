@@ -17,6 +17,7 @@ import { statusLabel, todayInputValue } from "../../lib/display.js";
 import { Button, Panel, StatusTag, EmptyState, TableSkeleton, ErrorState } from "../../components/ui.js";
 import { AttendanceAvatar } from "./AttendanceAvatar.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
+import { useAutoSelectFarm } from "../../lib/farm-selection.js";
 import "./Attendance.css";
 
 type SourceFilter = "ALL" | "IP_FALLBACK" | "MANUAL" | "GPS";
@@ -78,6 +79,19 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     enabled: showFarm,
   });
   const farmOptions = farms.data ?? [];
+
+  const onSelectFarm = useCallback(
+    (id: string) => {
+      setParam("farmId", id);
+    },
+    [setParam],
+  );
+
+  const { handleFarmChange } = useAutoSelectFarm(
+    farmId,
+    onSelectFarm,
+    farmOptions,
+  );
 
   const attendanceResource = useResource<AttendanceListResponse>(
     `approvals:${date}:${farmId}:${shift}:${sourceFilter}:${approvalTab}:${search}:${page}`,
@@ -445,7 +459,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               <select
                 className="input"
                 value={farmId}
-                onChange={(e) => setParam("farmId", e.target.value)}
+                onChange={(e) => handleFarmChange(e.target.value)}
                 style={{
                   padding: "0.3rem 0.5rem",
                   fontSize: "0.82rem",

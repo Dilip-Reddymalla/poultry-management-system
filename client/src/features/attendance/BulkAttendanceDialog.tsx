@@ -25,6 +25,10 @@ import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { statusLabel } from "../../lib/display.js";
 import { getCurrentShift } from "../../lib/shift-timing.js";
 import { useAuth } from "../../auth/use-auth.js";
+import {
+  getLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
+
 import { ShiftChoice } from "./ShiftChoice.js";
 import { LocationStatusAlert } from "./LocationStatusAlert.js";
 
@@ -47,7 +51,9 @@ export function BulkAttendanceDialog({
 
   const [date, setDate] = useState(defaultDate);
   const [shift, setShift] = useState<Shift>(() => getCurrentShift());
-  const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
+  const [chosenFarmId, setChosenFarmId] = useState(
+    defaultFarmId || getLastSelectedFarmId() || "",
+  );
   const [shedId, setShedId] = useState("");
   const [status, setStatus] = useState<AttendanceStatus>("PRESENT");
   const [search, setSearch] = useState("");

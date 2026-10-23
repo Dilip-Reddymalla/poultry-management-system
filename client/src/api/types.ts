@@ -330,11 +330,32 @@ export interface CompanyRoleConfigItem {
   isEnabled: boolean;
   isCompulsory: boolean;
   permissionCount: number;
+  isCustom?: boolean;
+  permissions?: Permission[];
+  userCount?: number;
 }
 
 export interface CompanyRolesConfigResponse {
   companyId: string;
   systemRoles: CompanyRoleConfigItem[];
+  customRoles?: CompanyRoleConfigItem[];
+}
+
+export interface CreateCompanyCustomRoleInput {
+  name: string;
+  description?: string;
+  scopeLevel?: "COMPANY" | "FARM";
+  permissionIds: string[];
+  rank?: number;
+}
+
+export interface UpdateCompanyCustomRoleInput {
+  name?: string;
+  description?: string;
+  scopeLevel?: "COMPANY" | "FARM";
+  permissionIds?: string[];
+  rank?: number;
+  isActive?: boolean;
 }
 
 export interface CompanyRoleHierarchyInputItem {
@@ -342,6 +363,7 @@ export interface CompanyRoleHierarchyInputItem {
   isEnabled: boolean;
   customRank?: number | null;
 }
+
 
 export interface FarmAttendanceReportSummary {
   farmId: string;

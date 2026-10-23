@@ -16,6 +16,10 @@ import { useGeolocation } from "../../hooks/useGeolocation.js";
 import { ShiftChoice } from "./ShiftChoice.js";
 import { LocationStatusAlert } from "./LocationStatusAlert.js";
 import { getCurrentShift } from "../../lib/shift-timing.js";
+import {
+  getLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
+
 import { ApiError } from "../../api/client.js";
 
 interface MarkUnmarkedAbsentDialogProps {
@@ -39,7 +43,9 @@ export function MarkUnmarkedAbsentDialog({
 
   const [date, setDate] = useState(defaultDate);
   const [shift, setShift] = useState<Shift>(defaultShift);
-  const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
+  const [chosenFarmId, setChosenFarmId] = useState(
+    defaultFarmId || getLastSelectedFarmId() || "",
+  );
   const [shedId, setShedId] = useState("");
   const [target, setTarget] = useState<"ALL" | "EMPLOYEES" | "WORKERS">("ALL");
   const [notes, setNotes] = useState("Marked absent (Roster cutoff)");

@@ -4,6 +4,12 @@ import { recordAuditLog } from "../audit/audit.service.js";
 import type { AuthScope } from "../auth/scope.js";
 import { assertCompanyWritable, invalidateScopeCache, isCompanyInScope } from "../auth/scope.js";
 
+export interface RolePermissionDetail {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 export interface CompanyRoleConfigItem {
   id: string;
   name: string;
@@ -15,11 +21,15 @@ export interface CompanyRoleConfigItem {
   isEnabled: boolean;
   isCompulsory: boolean;
   permissionCount: number;
+  isCustom: boolean;
+  permissions: RolePermissionDetail[];
+  userCount?: number;
 }
 
 export interface CompanyRolesConfigResponse {
   companyId: string;
   systemRoles: CompanyRoleConfigItem[];
+  customRoles: CompanyRoleConfigItem[];
 }
 
 export async function getCompanyRolesConfig(
@@ -34,7 +44,7 @@ export async function getCompanyRolesConfig(
     throw new AppError("Company not found", 404);
   }
 
-  // Fetch all generic system roles
+  // 1. Fetch all generic system roles with permissions and company-specific settings
   const systemRolesRaw = await prisma.role.findMany({
     where: { isSystem: true },
     select: {
@@ -43,7 +53,13 @@ export async function getCompanyRolesConfig(
       description: true,
       scopeLevel: true,
       rank: true,
-      permissions: { select: { permissionId: true } },
+      permissions: {
+        select: {
+          permission: {
+            select: { id: true, name: true, description: true },
+          },
+        },
+      },
       companySettings: {
         where: { companyId },
         select: { isEnabled: true, customRank: true },
@@ -70,10 +86,51 @@ export async function getCompanyRolesConfig(
       isEnabled,
       isCompulsory: isCompanyAdmin,
       permissionCount: r.permissions.length,
+      isCustom: false,
+      permissions: r.permissions.map((p) => p.permission),
+      userCount: 0,
     };
   });
 
-  return { companyId, systemRoles };
+  // 2. Fetch custom roles created specifically for this company
+  const customRolesRaw = await prisma.role.findMany({
+    where: { companyId, farmId: null, isSystem: false },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      scopeLevel: true,
+      rank: true,
+      isActive: true,
+      permissions: {
+        select: {
+          permission: {
+            select: { id: true, name: true, description: true },
+          },
+        },
+      },
+      users: { select: { userId: true } },
+    },
+    orderBy: { rank: "desc" },
+  });
+
+  const customRoles: CompanyRoleConfigItem[] = customRolesRaw.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    scopeLevel: r.scopeLevel,
+    rank: r.rank,
+    defaultRank: r.rank,
+    customRank: r.rank,
+    isEnabled: r.isActive,
+    isCompulsory: false,
+    permissionCount: r.permissions.length,
+    isCustom: true,
+    permissions: r.permissions.map((p) => p.permission),
+    userCount: r.users.length,
+  }));
+
+  return { companyId, systemRoles, customRoles };
 }
 
 export interface UpdateCompanyRoleInput {
@@ -239,28 +296,53 @@ export async function updateCompanyRolesHierarchy(
     }
   }
 
-  // Transactionally upsert each role setting
+  // Fetch the roles to differentiate between system roles and company custom roles
+  const roleIds = hierarchy.map((h) => h.roleId);
+  const existingRoles = await prisma.role.findMany({
+    where: { id: { in: roleIds } },
+    select: { id: true, name: true, isSystem: true, companyId: true },
+  });
+  const roleMap = new Map(existingRoles.map((r) => [r.id, r]));
+
+  // Transactionally update system roles settings and custom role records in parallel
   await prisma.$transaction(
-    hierarchy.map((item) =>
-      prisma.companyRoleSetting.upsert({
-        where: {
-          companyId_roleId: { companyId, roleId: item.roleId },
-        },
-        update: {
-          isEnabled: item.isEnabled,
-          customRank: item.customRank ?? null,
-        },
-        create: {
-          companyId,
-          roleId: item.roleId,
-          isEnabled: item.isEnabled,
-          customRank: item.customRank ?? null,
-        },
-      }),
-    ),
+    async (tx) => {
+      await Promise.all(
+        hierarchy.map((item) => {
+          const role = roleMap.get(item.roleId);
+          if (role && !role.isSystem && role.companyId === companyId) {
+            return tx.role.update({
+              where: { id: item.roleId },
+              data: {
+                isActive: item.isEnabled,
+                ...(item.customRank !== undefined && item.customRank !== null ? { rank: item.customRank } : {}),
+              },
+            });
+          }
+
+          return tx.companyRoleSetting.upsert({
+            where: {
+              companyId_roleId: { companyId, roleId: item.roleId },
+            },
+            update: {
+              isEnabled: item.isEnabled,
+              customRank: item.customRank ?? null,
+            },
+            create: {
+              companyId,
+              roleId: item.roleId,
+              isEnabled: item.isEnabled,
+              customRank: item.customRank ?? null,
+            },
+          });
+        }),
+      );
+    },
+    { timeout: 45000, maxWait: 15000 },
   );
 
   invalidateScopeCache();
+
 
   void recordAuditLog({
     scope,
@@ -273,3 +355,273 @@ export async function updateCompanyRolesHierarchy(
 
   return { success: true, updatedCount: hierarchy.length };
 }
+
+export interface CreateCompanyCustomRoleInput {
+  name: string;
+  description?: string | undefined;
+  scopeLevel?: "COMPANY" | "FARM" | undefined;
+  permissionIds: string[];
+  rank?: number | undefined;
+}
+
+export async function createCompanyCustomRole(
+  scope: AuthScope,
+  companyId: string,
+  input: CreateCompanyCustomRoleInput,
+): Promise<CompanyRoleConfigItem> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, name: true },
+  });
+  if (!company) throw new AppError("Company not found", 404);
+
+  assertCompanyWritable(scope, companyId);
+
+  const name = input.name.trim();
+  if (!name || name.length < 2) {
+    throw new AppError("Role name must be at least 2 characters long", 400);
+  }
+
+  // Check for duplicate role in this company or system
+  const existing = await prisma.role.findFirst({
+    where: {
+      name,
+      OR: [
+        { isSystem: true },
+        { companyId, farmId: null },
+      ],
+    },
+  });
+  if (existing) {
+    throw new AppError(`A role named "${name}" already exists in this company or standard roles`, 409);
+  }
+
+  // Ensure a Designation exists for this custom role
+  await prisma.designation.upsert({
+    where: { name },
+    update: {},
+    create: { name },
+  });
+
+  const roleRank = input.rank ?? 30;
+
+  const newRole = await prisma.role.create({
+    data: {
+      name,
+      description: input.description?.trim() || null,
+      scopeLevel: input.scopeLevel || "COMPANY",
+      companyId,
+      farmId: null,
+      isSystem: false,
+      isActive: true,
+      rank: roleRank,
+      permissions: {
+        create: (input.permissionIds || []).map((permissionId) => ({
+          permissionId,
+        })),
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      scopeLevel: true,
+      rank: true,
+      isActive: true,
+      permissions: {
+        select: {
+          permission: {
+            select: { id: true, name: true, description: true },
+          },
+        },
+      },
+    },
+  });
+
+  invalidateScopeCache();
+
+  void recordAuditLog({
+    scope,
+    action: "CREATE",
+    entity: "Role",
+    entityId: newRole.id,
+    summary: `Created custom role ${newRole.name} for company ${company.name}`,
+    changes: { roleId: newRole.id, name: newRole.name, permissions: input.permissionIds },
+  });
+
+  return {
+    id: newRole.id,
+    name: newRole.name,
+    description: newRole.description,
+    scopeLevel: newRole.scopeLevel,
+    rank: newRole.rank,
+    defaultRank: newRole.rank,
+    customRank: newRole.rank,
+    isEnabled: newRole.isActive,
+    isCompulsory: false,
+    permissionCount: newRole.permissions.length,
+    isCustom: true,
+    permissions: newRole.permissions.map((p) => p.permission),
+    userCount: 0,
+  };
+}
+
+export interface UpdateCompanyCustomRoleInput {
+  name?: string | undefined;
+  description?: string | undefined;
+  scopeLevel?: "COMPANY" | "FARM" | undefined;
+  permissionIds?: string[] | undefined;
+  rank?: number | undefined;
+  isActive?: boolean | undefined;
+}
+
+
+export async function updateCompanyCustomRole(
+  scope: AuthScope,
+  companyId: string,
+  roleId: string,
+  input: UpdateCompanyCustomRoleInput,
+): Promise<CompanyRoleConfigItem> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, name: true },
+  });
+  if (!company) throw new AppError("Company not found", 404);
+
+  assertCompanyWritable(scope, companyId);
+
+  const role = await prisma.role.findFirst({
+    where: { id: roleId, companyId, farmId: null, isSystem: false },
+  });
+  if (!role) throw new AppError("Custom role not found in this company", 404);
+
+  if (input.name && input.name.trim() !== role.name) {
+    const trimmedName = input.name.trim();
+    const duplicate = await prisma.role.findFirst({
+      where: {
+        name: trimmedName,
+        id: { not: roleId },
+        OR: [{ isSystem: true }, { companyId, farmId: null }],
+      },
+    });
+    if (duplicate) {
+      throw new AppError(`A role named "${trimmedName}" already exists in this company`, 409);
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (
+      input.name ||
+      input.description !== undefined ||
+      input.rank !== undefined ||
+      input.isActive !== undefined ||
+      input.scopeLevel !== undefined
+    ) {
+      await tx.role.update({
+        where: { id: roleId },
+        data: {
+          ...(input.name && { name: input.name.trim() }),
+          ...(input.description !== undefined && { description: input.description.trim() || null }),
+          ...(input.rank !== undefined && { rank: input.rank }),
+          ...(input.scopeLevel && { scopeLevel: input.scopeLevel }),
+          ...(input.isActive !== undefined && { isActive: input.isActive }),
+        },
+      });
+
+      if (input.name) {
+        const trimmedName = input.name.trim();
+        await tx.designation.upsert({
+          where: { name: trimmedName },
+          update: {},
+          create: { name: trimmedName },
+        });
+      }
+    }
+
+    if (input.permissionIds) {
+      await tx.rolePermission.deleteMany({ where: { roleId } });
+      await tx.rolePermission.createMany({
+        data: input.permissionIds.map((permissionId) => ({ roleId, permissionId })),
+      });
+    }
+  });
+
+  invalidateScopeCache();
+
+  const updated = await prisma.role.findUniqueOrThrow({
+    where: { id: roleId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      scopeLevel: true,
+      rank: true,
+      isActive: true,
+      permissions: {
+        select: {
+          permission: {
+            select: { id: true, name: true, description: true },
+          },
+        },
+      },
+      users: { select: { userId: true } },
+    },
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    description: updated.description,
+    scopeLevel: updated.scopeLevel,
+    rank: updated.rank,
+    defaultRank: updated.rank,
+    customRank: updated.rank,
+    isEnabled: updated.isActive,
+    isCompulsory: false,
+    permissionCount: updated.permissions.length,
+    isCustom: true,
+    permissions: updated.permissions.map((p) => p.permission),
+    userCount: updated.users.length,
+  };
+}
+
+export async function deleteCompanyCustomRole(
+  scope: AuthScope,
+  companyId: string,
+  roleId: string,
+): Promise<{ success: boolean; id: string }> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, name: true },
+  });
+  if (!company) throw new AppError("Company not found", 404);
+
+  assertCompanyWritable(scope, companyId);
+
+  const role = await prisma.role.findFirst({
+    where: { id: roleId, companyId, farmId: null, isSystem: false },
+    include: { users: true },
+  });
+  if (!role) throw new AppError("Custom role not found", 404);
+
+  if (role.users.length > 0) {
+    throw new AppError(
+      `Cannot delete role "${role.name}" because it is currently assigned to ${role.users.length} active employee(s). Please reassign them first.`,
+      409,
+    );
+  }
+
+  await prisma.role.delete({ where: { id: roleId } });
+  invalidateScopeCache();
+
+  void recordAuditLog({
+    scope,
+    action: "DELETE",
+    entity: "Role",
+    entityId: roleId,
+    summary: `Deleted custom role ${role.name} for company ${company.name}`,
+  });
+
+  return { success: true, id: roleId };
+}
+

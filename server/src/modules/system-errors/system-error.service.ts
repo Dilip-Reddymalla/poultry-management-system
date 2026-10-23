@@ -1,6 +1,8 @@
 import type { Request } from "express";
 import { prisma } from "../../config/database.js";
 import { logger } from "../../config/logger.js";
+import { isSystemAdminId } from "../auth/system-admin.js";
+
 
 export interface RecordErrorOptions {
   err: unknown;
@@ -41,7 +43,9 @@ export async function recordSystemError({
   try {
     const errorObj = err instanceof Error ? err : new Error(String(err));
     const errorName = errorObj.name || "Error";
-    const errorMessage = errorObj.message || "Unknown internal error";
+    const errCode = (err as { code?: string })?.code;
+    const baseMessage = errorObj.message || "Unknown internal error";
+    const errorMessage = errCode ? `[${errCode}] ${baseMessage}` : baseMessage;
     const stackTrace = errorObj.stack || null;
 
     const path = req?.originalUrl || req?.url || "unknown";
@@ -65,10 +69,12 @@ export async function recordSystemError({
       : null;
 
     // Resolve Actor info (User, Role, Company, Farm)
-    const userId = (req as { userId?: string })?.userId || null;
-    let userName: string | null = null;
+    const rawUserId = (req as { userId?: string })?.userId || null;
+    const isSysAdmin = rawUserId ? isSystemAdminId(rawUserId) : ((req as { isSystemAdmin?: boolean })?.isSystemAdmin === true);
+    const userId = isSysAdmin ? null : rawUserId;
+    let userName: string | null = isSysAdmin ? "System Administrator" : null;
     let userEmail: string | null = null;
-    let userRole: string | null = null;
+    let userRole: string | null = isSysAdmin ? "SYSTEM_ADMIN" : null;
     let companyName: string | null = null;
     let farmName: string | null = null;
 
@@ -104,14 +110,8 @@ export async function recordSystemError({
       } catch (userErr) {
         logger.warn({ userErr }, "Could not resolve user context for error log");
       }
-    } else {
-      // Check if System Admin via token or headers
-      const isSystemAdmin = (req as { isSystemAdmin?: boolean })?.isSystemAdmin;
-      if (isSystemAdmin) {
-        userName = "System Administrator";
-        userRole = "SYSTEM_ADMIN";
-      }
     }
+
 
     const errorLog = await prisma.systemErrorLog.create({
       data: {

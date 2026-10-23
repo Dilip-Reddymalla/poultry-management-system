@@ -10,7 +10,9 @@ import {
 } from "./company.service.js";
 import {
   companyIdParamSchema,
+  createCompanyCustomRoleSchema,
   createCompanySchema,
+  updateCompanyCustomRoleSchema,
   updateCompanyRolesHierarchySchema,
   updateCompanySchema,
 } from "./company.schema.js";
@@ -20,11 +22,15 @@ import {
 } from "../attendance/shift-timing.service.js";
 import {
   bulkToggleCompanyRoles,
+  createCompanyCustomRole,
+  deleteCompanyCustomRole,
   getCompanyRolesConfig,
   toggleCompanyRole,
+  updateCompanyCustomRole,
   updateCompanyRole,
   updateCompanyRolesHierarchy,
 } from "./company-role.service.js";
+
 
 export async function listCompaniesController(
   req: Request,
@@ -193,4 +199,48 @@ export async function updateCompanyRolesHierarchyController(
     ...result,
   });
 }
+
+export async function createCompanyCustomRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const input = createCompanyCustomRoleSchema.parse(req.body);
+  const role = await createCompanyCustomRole(getScope(req), params.id, input);
+
+  res.status(201).json({
+    message: "Company custom role created successfully",
+    role,
+  });
+}
+
+export async function updateCompanyCustomRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const roleId = req.params.roleId as string;
+  const input = updateCompanyCustomRoleSchema.parse(req.body);
+  const role = await updateCompanyCustomRole(getScope(req), params.id, roleId, input);
+
+  res.status(200).json({
+    message: "Company custom role updated successfully",
+    role,
+  });
+}
+
+export async function deleteCompanyCustomRoleController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = companyIdParamSchema.parse(req.params);
+  const roleId = req.params.roleId as string;
+  const result = await deleteCompanyCustomRole(getScope(req), params.id, roleId);
+
+  res.status(200).json({
+    message: "Company custom role deleted successfully",
+    ...result,
+  });
+}
+
 

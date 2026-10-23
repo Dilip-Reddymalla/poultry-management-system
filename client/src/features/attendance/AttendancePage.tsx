@@ -28,6 +28,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatDate, statusLabel, todayInputValue } from "../../lib/display.js";
+import { useAutoSelectFarm } from "../../lib/farm-selection.js";
 import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
@@ -133,6 +134,19 @@ export function AttendancePage({
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms(), {
     enabled: showFarm && !personMode,
   });
+
+  const onSelectFarm = useCallback(
+    (id: string) => {
+      updateFilters({ farmId: id });
+    },
+    [updateFilters],
+  );
+
+  const { handleFarmChange } = useAutoSelectFarm(
+    farmId,
+    onSelectFarm,
+    farms.data,
+  );
 
   const isSupervisor = user?.role === "SUPERVISOR";
 
@@ -269,7 +283,7 @@ export function AttendancePage({
                   className="input select"
                   value={farmId}
                   onChange={(event) => {
-                    updateFilters({ farmId: event.target.value });
+                    handleFarmChange(event.target.value);
                   }}
                 >
                   <option value="">{t("common.allFarms")}</option>

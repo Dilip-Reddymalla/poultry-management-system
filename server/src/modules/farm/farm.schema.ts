@@ -12,6 +12,7 @@ export const farmIdParamSchema = z.object({
 
 export const listFarmsQuerySchema = z.object({
   status: statusSchema.optional(),
+  companyId: z.uuid("Invalid company ID").optional(),
 });
 
 export const createFarmSchema = z.object({

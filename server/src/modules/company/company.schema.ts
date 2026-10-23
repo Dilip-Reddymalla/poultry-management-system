@@ -42,3 +42,25 @@ export const updateCompanyRolesHierarchySchema = z.object({
 });
 
 export type UpdateCompanyRolesHierarchyInput = z.infer<typeof updateCompanyRolesHierarchySchema>;
+
+export const createCompanyCustomRoleSchema = z.object({
+  name: z.string().trim().min(2, "Role name must be at least 2 characters long"),
+  description: z.string().trim().optional(),
+  scopeLevel: z.enum(["COMPANY", "FARM"]).default("COMPANY"),
+  permissionIds: z.array(z.string().uuid("Invalid permission ID")).default([]),
+  rank: z.number().int().min(1).max(100).default(30),
+});
+
+export type CreateCompanyCustomRoleInput = z.infer<typeof createCompanyCustomRoleSchema>;
+
+export const updateCompanyCustomRoleSchema = z.object({
+  name: z.string().trim().min(2).optional(),
+  description: z.string().trim().optional(),
+  scopeLevel: z.enum(["COMPANY", "FARM"]).optional(),
+  permissionIds: z.array(z.string().uuid("Invalid permission ID")).optional(),
+  rank: z.number().int().min(1).max(100).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateCompanyCustomRoleInput = z.infer<typeof updateCompanyCustomRoleSchema>;
+

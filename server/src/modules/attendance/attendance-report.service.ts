@@ -88,14 +88,20 @@ export async function getEnterpriseAttendanceReport(
   }
 
   // Determine target company filter
+  const isGlobalUser = scope.isSystemAdmin || scope.level === "GLOBAL";
   let targetCompanyId: string | undefined = undefined;
-  if (!scope.isSystemAdmin) {
+
+  if (isGlobalUser) {
+    // Global admin can view all companies or filter to a specific company
+    if (query.companyId) {
+      targetCompanyId = query.companyId;
+    }
+  } else {
+    // Company user is strictly limited to their own company
     if (!scope.companyId) {
       throw new AppError("User is not associated with any company", 403);
     }
     targetCompanyId = scope.companyId;
-  } else if (query.companyId) {
-    targetCompanyId = query.companyId;
   }
 
   // Date range determination (defaults to today UTC)

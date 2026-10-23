@@ -18,6 +18,7 @@ import { useToast } from "../../components/use-toast.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
+import { useAutoSelectFarm } from "../../lib/farm-selection.js";
 import { ShedFormDialog } from "./ShedFormDialog.js";
 
 export function ShedsPage(): React.ReactElement {
@@ -60,6 +61,16 @@ export function ShedsPage(): React.ReactElement {
     }, { replace: true });
   }, [setParams]);
 
+  const onSelectFarm = useCallback((id: string) => {
+    setParam("farmId", id);
+  }, [setParam]);
+
+  const { handleFarmChange } = useAutoSelectFarm(
+    farmId,
+    onSelectFarm,
+    farms.data,
+  );
+
   return (
     <div className="stack">
       <PageHeader
@@ -90,7 +101,7 @@ export function ShedsPage(): React.ReactElement {
                 className="input select"
                 value={farmId}
                 onChange={(event) => {
-                  setParam("farmId", event.target.value);
+                  handleFarmChange(event.target.value);
                 }}
               >
                 <option value="">{t("common.allFarms")}</option>

@@ -282,10 +282,27 @@ export function AttendanceRosterTable({
                   <StatusTag status={record.status} />
                 </div>
 
-                {/* Meta row: Station & Shift & Time */}
+                {/* Meta row: Date & Shift & Station & Time */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap", fontSize: "0.72rem" }}>
+                  <span className="tag" style={{ background: "var(--surface-sunk)", fontWeight: 600, fontSize: "0.7rem", padding: "1px 6px" }}>
+                    📅 {formatDate(record.date)}
+                  </span>
+
+                  <span
+                    className="tag"
+                    style={{
+                      background: "var(--surface-sunk)",
+                      border: `1px solid ${SHIFT_CONFIG[record.shift]?.color || "var(--line)"}`,
+                      fontSize: "0.7rem",
+                      padding: "1px 6px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {SHIFT_CONFIG[record.shift]?.icon} {statusLabel(record.shift)}
+                  </span>
+
                   {record.shed?.number ? (
-                    <span className="tag" style={{ background: "var(--surface-sunk)", fontWeight: 600, fontSize: "0.7rem", padding: "1px 5px" }}>
+                    <span className="tag" style={{ background: "var(--surface-sunk)", fontWeight: 500, fontSize: "0.7rem", padding: "1px 5px" }}>
                       {record.shed.number.toLowerCase().includes("ac room")
                         ? "❄️ AC Room"
                         : record.shed.number.toLowerCase().startsWith("shed")
@@ -298,12 +315,8 @@ export function AttendanceRosterTable({
                     </span>
                   )}
 
-                  <span className="tag" style={{ background: "var(--surface-sunk)", borderColor: SHIFT_CONFIG[record.shift]?.color, fontSize: "0.7rem", padding: "1px 5px" }}>
-                    {SHIFT_CONFIG[record.shift]?.icon} {statusLabel(record.shift)}
-                  </span>
-
                   {record.createdAt && (
-                    <span className="muted" style={{ fontSize: "0.7rem", marginLeft: "auto" }}>
+                    <span className="muted" style={{ fontSize: "0.7rem", marginLeft: "auto", fontWeight: 500, whiteSpace: "nowrap" }}>
                       🕒 {new Date(record.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   )}

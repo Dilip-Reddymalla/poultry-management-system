@@ -22,6 +22,10 @@ import type {
 } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { getCurrentShift } from "../../lib/shift-timing.js";
+import {
+  getLastSelectedFarmId,
+  setLastSelectedFarmId,
+} from "../../lib/farm-selection.js";
 import { Dialog } from "../../components/Dialog.js";
 import {
   Button,
@@ -61,7 +65,9 @@ export function AttendanceEntryDialog({
   const [date, setDate] = useState(defaultDate);
   const [shift, setShift] = useState<Shift>(() => getCurrentShift());
   const [personType, setPersonType] = useState<PersonType>("EMPLOYEE");
-  const [chosenFarmId, setChosenFarmId] = useState(defaultFarmId ?? "");
+  const [chosenFarmId, setChosenFarmId] = useState(
+    defaultFarmId || getLastSelectedFarmId() || "",
+  );
   const [personId, setPersonId] = useState("");
   const [shedId, setShedId] = useState("");
   const [status, setStatus] = useState<AttendanceStatus>("PRESENT");
@@ -188,6 +194,9 @@ export function AttendanceEntryDialog({
 
     try {
       const saved = await createAttendance(payload);
+      if (farmId) {
+        setLastSelectedFarmId(farmId);
+      }
       onSaved(saved);
     } catch (caught) {
       setError(
@@ -256,7 +265,9 @@ export function AttendanceEntryDialog({
               value={farmId}
               hint="Pick the farm, then the person on it."
               onChange={(event) => {
-                setChosenFarmId(event.target.value);
+                const val = event.target.value;
+                setChosenFarmId(val);
+                if (val) setLastSelectedFarmId(val);
                 setPersonId("");
               }}
             >

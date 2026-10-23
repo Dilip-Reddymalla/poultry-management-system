@@ -78,6 +78,7 @@ export async function listFarms(
     // farms, a farm user only its own farm.
     ...farmModelScopedWhere(scope),
     ...(query.status !== undefined && { status: query.status }),
+    ...(query.companyId !== undefined && { companyId: query.companyId }),
   };
 
   const farms = await prisma.farm.findMany({

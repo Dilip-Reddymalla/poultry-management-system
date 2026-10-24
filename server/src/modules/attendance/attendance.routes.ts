@@ -14,6 +14,7 @@ import {
   getMarkedPersonIdsController,
   getUnmarkedSummaryController,
   markUnmarkedAbsentController,
+  autoAbsentCheckController,
   listAttendanceController,
   updateAttendanceController,
 } from "./attendance.controller.js";
@@ -64,6 +65,13 @@ router.post(
   "/mark-unmarked-absent",
   requirePermission("attendance:create"),
   markUnmarkedAbsentController,
+);
+
+// Manual or on-demand check for shift cutoffs (auto-absent)
+router.post(
+  "/auto-absent-check",
+  requirePermission("attendance:create"),
+  autoAbsentCheckController,
 );
 
 // Current location from IP (fallback)

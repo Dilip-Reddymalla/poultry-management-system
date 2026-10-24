@@ -90,6 +90,9 @@ export interface Farm {
   code: string;
   status: FarmStatus;
   location?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadius?: number | null;
   company: Company;
   createdAt: string;
   updatedAt: string;

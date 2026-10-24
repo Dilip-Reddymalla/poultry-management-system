@@ -2,13 +2,19 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/database.js";
 import { logger } from "./config/logger.js";
+import {
+  startAutoAbsentScheduler,
+  stopAutoAbsentScheduler,
+} from "./modules/attendance/auto-absent.service.js";
 
 const server = app.listen(env.PORT, () => {
   logger.info(`🚀 Server running on http://localhost:${env.PORT}`);
+  startAutoAbsentScheduler();
 });
 
 const gracefulShutdown = async () => {
   logger.info("Shutting down gracefully...");
+  stopAutoAbsentScheduler();
   server.close(async () => {
     logger.info("Closed out remaining connections.");
     await prisma.$disconnect();

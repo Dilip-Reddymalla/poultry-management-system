@@ -62,6 +62,9 @@ export interface FarmInput {
   companyId: string;
   status?: FarmStatus;
   location?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadius?: number | null;
 }
 
 // -- Sheds --
@@ -159,7 +162,13 @@ export interface AttendanceListQuery {
   status?: AttendanceStatus;
   shift?: Shift;
   recordedById?: string;
-  locationSource?: "GPS_EXACT" | "NETWORK_APPROX" | "CACHED_GPS" | "IP_FALLBACK" | "FARM_DEFAULT";
+  locationSource?:
+    | "GPS_EXACT"
+    | "NETWORK_APPROX"
+    | "CACHED_GPS"
+    | "IP_FALLBACK"
+    | "FARM_DEFAULT"
+    | "GEOFENCE_EXCEEDED";
   pendingApproval?: boolean;
   approvalStatus?: "ALL" | "PENDING" | "APPROVED";
   pendingLocationApproval?: boolean;

@@ -57,7 +57,14 @@ export const listAttendanceQuerySchema = z.object({
   // Filter by who recorded the attendance (for the dashboard).
   recordedById: z.uuid("Invalid user ID").optional(),
   locationSource: z
-    .enum(["GPS_EXACT", "NETWORK_APPROX", "CACHED_GPS", "IP_FALLBACK", "FARM_DEFAULT"])
+    .enum([
+      "GPS_EXACT",
+      "NETWORK_APPROX",
+      "CACHED_GPS",
+      "IP_FALLBACK",
+      "FARM_DEFAULT",
+      "GEOFENCE_EXCEEDED",
+    ])
     .optional(),
   pendingLocationApproval: z.coerce.boolean().optional(),
   pendingApproval: z.coerce.boolean().optional(),
@@ -78,7 +85,14 @@ export const createAttendanceSchema = z
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     locationSource: z
-      .enum(["GPS_EXACT", "NETWORK_APPROX", "CACHED_GPS", "IP_FALLBACK", "FARM_DEFAULT"])
+      .enum([
+        "GPS_EXACT",
+        "NETWORK_APPROX",
+        "CACHED_GPS",
+        "IP_FALLBACK",
+        "FARM_DEFAULT",
+        "GEOFENCE_EXCEEDED",
+      ])
       .default("GPS_EXACT"),
     accuracy: z.number().min(0).optional(),
     ipAddress: z.string().trim().optional(),

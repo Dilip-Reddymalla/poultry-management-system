@@ -208,6 +208,27 @@ export function FarmDetailPage(): React.ReactElement {
                         },
                       ]
                     : []),
+                  {
+                    label: "GPS Coordinates",
+                    value:
+                      record.latitude && record.longitude ? (
+                        <span className="numeric">
+                          {record.latitude.toFixed(5)}, {record.longitude.toFixed(5)}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-muted, #64748b)" }}>Not configured</span>
+                      ),
+                  },
+                  {
+                    label: "Geofence Radius",
+                    value: (
+                      <span className="numeric">
+                        {record.geofenceRadius
+                          ? `${record.geofenceRadius}m (${(record.geofenceRadius / 1000).toFixed(1)} KM)`
+                          : "1000m (1.0 KM default)"}
+                      </span>
+                    ),
+                  },
                   { label: t("common.status"), value: <StatusTag status={record.status} /> },
                 ]}
               />

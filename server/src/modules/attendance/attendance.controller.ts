@@ -15,6 +15,7 @@ import {
 } from "./attendance.service.js";
 import { exportAttendance } from "./attendance.export.js";
 import { getEnterpriseAttendanceReport } from "./attendance-report.service.js";
+import { processAutoAbsentCutoffs } from "./auto-absent.service.js";
 import {
   attendanceIdParamSchema,
   createAttendanceSchema,
@@ -210,6 +211,17 @@ export async function getAttendanceReportController(
   res.status(200).json({
     success: true,
     data: report,
+  });
+}
+
+export async function autoAbsentCheckController(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  const result = await processAutoAbsentCutoffs();
+  res.status(200).json({
+    success: true,
+    data: result,
   });
 }
 

@@ -11,6 +11,7 @@ import type { AuthScope } from "../auth/scope.js";
 import { assertFarmWritable, farmScopedWhere } from "../auth/scope.js";
 import type { BulkMarkFaceAttendanceInput } from "./face-attendance.schema.js";
 import { enqueueIpFallbackAudit } from "../notifications/ip-fallback-aggregator.js";
+import { evaluateGeofence } from "./attendance.service.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -152,7 +153,15 @@ export async function bulkMarkFaceAttendance(
           name: true,
           status: true,
           farmId: true,
-          farm: { select: { companyId: true, name: true } },
+          farm: {
+            select: {
+              companyId: true,
+              name: true,
+              latitude: true,
+              longitude: true,
+              geofenceRadius: true,
+            },
+          },
         },
       });
 
@@ -188,6 +197,18 @@ export async function bulkMarkFaceAttendance(
         record.locationSource === "IP_FALLBACK" ||
         record.locationSource === "FARM_DEFAULT";
 
+      const geo = evaluateGeofence(record.latitude, record.longitude, person.farm);
+      const requiresApproval = isFallback || geo.isExceeded;
+      const finalLocationSource = geo.isExceeded
+        ? "GEOFENCE_EXCEEDED"
+        : record.locationSource || "GPS_EXACT";
+
+      const finalNotes = record.notes
+        ? geo.flagNote
+          ? `${record.notes} [${geo.flagNote}]`
+          : record.notes
+        : geo.flagNote ?? null;
+
       const created = await prisma.attendance.create({
         data: {
           date: record.date,
@@ -203,13 +224,13 @@ export async function bulkMarkFaceAttendance(
           qualityScore: record.qualityScore ?? null,
           confidenceScore: record.confidenceScore ?? null,
           snapshotUrl: record.snapshotUrl ?? null,
-          notes: record.notes ?? null,
-          locationSource: record.locationSource || "GPS_EXACT",
+          notes: finalNotes,
+          locationSource: finalLocationSource,
           accuracy: record.accuracy ?? null,
           ipAddress: record.ipAddress ?? null,
           recordedById: scope.userId,
-          approvedById: isFallback ? null : scope.userId,
-          approvedAt: isFallback ? null : new Date(),
+          approvedById: requiresApproval ? null : scope.userId,
+          approvedAt: requiresApproval ? null : new Date(),
         },
       });
 

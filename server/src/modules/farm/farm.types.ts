@@ -5,6 +5,9 @@ export interface SafeFarm {
   code: string;
   name: string;
   status: FarmStatus;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadius?: number | null;
   company: {
     id: string;
     name: string;

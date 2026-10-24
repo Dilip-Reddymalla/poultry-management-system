@@ -15,10 +15,17 @@ export const listFarmsQuerySchema = z.object({
   companyId: z.uuid("Invalid company ID").optional(),
 });
 
+const latitudeSchema = z.number().min(-90).max(90);
+const longitudeSchema = z.number().min(-180).max(180);
+const geofenceRadiusSchema = z.number().min(50).max(50000).default(1000);
+
 export const createFarmSchema = z.object({
   companyId: z.uuid("Invalid company ID"),
   code: codeSchema,
   name: nameSchema,
+  latitude: latitudeSchema.nullable().optional(),
+  longitude: longitudeSchema.nullable().optional(),
+  geofenceRadius: geofenceRadiusSchema.optional(),
 });
 
 // The owning company is fixed at creation and status is owned by the
@@ -27,6 +34,9 @@ export const updateFarmSchema = z
   .object({
     code: codeSchema,
     name: nameSchema,
+    latitude: latitudeSchema.nullable().optional(),
+    longitude: longitudeSchema.nullable().optional(),
+    geofenceRadius: geofenceRadiusSchema.optional(),
   })
   .partial();
 

@@ -9,6 +9,7 @@ import {
   enqueueIpFallbackAudit,
   syncIpFallbackAuditResolution,
 } from "../notifications/ip-fallback-aggregator.js";
+import { haversineDistanceMeters, formatDistance } from "../../utils/geo.js";
 
 import type {
   CreateAttendanceInput,
@@ -168,6 +169,69 @@ function toSafeAttendance(record: AttendanceRecord): SafeAttendance {
   };
 }
 
+export interface ResolvedFarmLocation {
+  id: string;
+  companyId: string;
+  name?: string;
+  latitude: number | null;
+  longitude: number | null;
+  geofenceRadius?: number | null;
+}
+
+export interface GeofenceEvaluation {
+  isExceeded: boolean;
+  distanceMeters: number | null;
+  geofenceRadius: number | null;
+  flagNote: string | null;
+}
+
+export function evaluateGeofence(
+  attendanceLat: number,
+  attendanceLon: number,
+  farm: ResolvedFarmLocation | null | undefined,
+): GeofenceEvaluation {
+  if (
+    !farm ||
+    farm.latitude === null ||
+    farm.latitude === undefined ||
+    farm.longitude === null ||
+    farm.longitude === undefined ||
+    attendanceLat === 0 ||
+    attendanceLon === 0
+  ) {
+    return {
+      isExceeded: false,
+      distanceMeters: null,
+      geofenceRadius: null,
+      flagNote: null,
+    };
+  }
+
+  const distanceMeters = haversineDistanceMeters(
+    attendanceLat,
+    attendanceLon,
+    farm.latitude,
+    farm.longitude,
+  );
+  const maxRadius = farm.geofenceRadius ?? 1000;
+
+  if (distanceMeters > maxRadius) {
+    return {
+      isExceeded: true,
+      distanceMeters,
+      geofenceRadius: maxRadius,
+      flagNote: `Location offset: ${formatDistance(distanceMeters)} from farm (Geofence: ${formatDistance(maxRadius)})`,
+    };
+  }
+
+  return {
+    isExceeded: false,
+    distanceMeters,
+    geofenceRadius: maxRadius,
+    flagNote: null,
+  };
+}
+
 // Resolves the person named in a create request to its farm, asserting the
 // caller may write to that farm and that the person is active. The farm is taken
 // from the person, never from the request body, so a record can never be
@@ -175,7 +239,12 @@ function toSafeAttendance(record: AttendanceRecord): SafeAttendance {
 async function resolvePersonForWrite(
   scope: AuthScope,
   input: CreateAttendanceInput,
-): Promise<{ farmId: string; shedId?: string; link: { employeeId: string } | { workerId: string } }> {
+): Promise<{
+  farmId: string;
+  shedId?: string;
+  link: { employeeId: string } | { workerId: string };
+  farm: ResolvedFarmLocation;
+}> {
   if (input.employeeId !== undefined) {
     const employee = await prisma.employee.findUnique({
       where: { id: input.employeeId },
@@ -183,7 +252,16 @@ async function resolvePersonForWrite(
         id: true,
         status: true,
         farmId: true,
-        farm: { select: { companyId: true } },
+        farm: {
+          select: {
+            id: true,
+            companyId: true,
+            name: true,
+            latitude: true,
+            longitude: true,
+            geofenceRadius: true,
+          },
+        },
       },
     });
 
@@ -220,6 +298,7 @@ async function resolvePersonForWrite(
     return { 
       farmId: employee.farmId, 
       link: { employeeId: employee.id }, 
+      farm: employee.farm,
       ...(input.shedId ? { shedId: input.shedId } : {}) 
     };
   }
@@ -230,7 +309,16 @@ async function resolvePersonForWrite(
       id: true,
       status: true,
       farmId: true,
-      farm: { select: { companyId: true } },
+      farm: {
+        select: {
+          id: true,
+          companyId: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          geofenceRadius: true,
+        },
+      },
     },
   });
 
@@ -264,6 +352,7 @@ async function resolvePersonForWrite(
   return { 
     farmId: worker.farmId, 
     link: { workerId: worker.id }, 
+    farm: worker.farm,
     ...(input.shedId ? { shedId: input.shedId } : {}) 
   };
 }
@@ -419,10 +508,22 @@ export async function createAttendance(
   scope: AuthScope,
   input: CreateAttendanceInput,
 ): Promise<SafeAttendance> {
-  const { farmId, shedId, link } = await resolvePersonForWrite(scope, input);
+  const { farmId, shedId, link, farm } = await resolvePersonForWrite(scope, input);
+  const geo = evaluateGeofence(input.latitude, input.longitude, farm);
   const isFallback =
     input.locationSource === "IP_FALLBACK" ||
     input.locationSource === "FARM_DEFAULT";
+
+  const requiresApproval = isFallback || geo.isExceeded;
+  const finalLocationSource = geo.isExceeded
+    ? "GEOFENCE_EXCEEDED"
+    : input.locationSource || "GPS_EXACT";
+
+  const finalNotes = input.notes
+    ? geo.flagNote
+      ? `${input.notes} [${geo.flagNote}]`
+      : input.notes
+    : geo.flagNote;
 
   try {
     const record = await prisma.attendance.create({
@@ -435,14 +536,14 @@ export async function createAttendance(
         status: input.status,
         latitude: input.latitude,
         longitude: input.longitude,
-        locationSource: input.locationSource || "GPS_EXACT",
+        locationSource: finalLocationSource,
         ...(input.accuracy !== undefined && { accuracy: input.accuracy }),
         ...(input.ipAddress !== undefined && { ipAddress: input.ipAddress }),
-        ...(input.notes !== undefined && { notes: input.notes }),
+        ...(finalNotes !== null && { notes: finalNotes }),
         // Audit: who entered it. Null for the System Admin, which has no user row.
         recordedById: scope.userId,
-        approvedById: isFallback ? null : scope.userId,
-        approvedAt: isFallback ? null : new Date(),
+        approvedById: requiresApproval ? null : scope.userId,
+        approvedAt: requiresApproval ? null : new Date(),
       },
       select: attendanceSelect,
     });
@@ -653,10 +754,22 @@ export async function bulkCreateAttendance(
   // Need to process one by one to validate scope and catch individual failures
   for (const recordInput of input.records) {
     try {
-      const { farmId, shedId, link } = await resolvePersonForWrite(scope, recordInput);
+      const { farmId, shedId, link, farm } = await resolvePersonForWrite(scope, recordInput);
+      const geo = evaluateGeofence(recordInput.latitude, recordInput.longitude, farm);
       const isFallback =
         recordInput.locationSource === "IP_FALLBACK" ||
         recordInput.locationSource === "FARM_DEFAULT";
+
+      const requiresApproval = isFallback || geo.isExceeded;
+      const finalLocationSource = geo.isExceeded
+        ? "GEOFENCE_EXCEEDED"
+        : recordInput.locationSource || "GPS_EXACT";
+
+      const finalNotes = recordInput.notes
+        ? geo.flagNote
+          ? `${recordInput.notes} [${geo.flagNote}]`
+          : recordInput.notes
+        : geo.flagNote;
       
       const record = await prisma.attendance.create({
         data: {
@@ -668,13 +781,13 @@ export async function bulkCreateAttendance(
           status: recordInput.status,
           latitude: recordInput.latitude,
           longitude: recordInput.longitude,
-          locationSource: recordInput.locationSource || "GPS_EXACT",
+          locationSource: finalLocationSource,
           ...(recordInput.accuracy !== undefined && { accuracy: recordInput.accuracy }),
           ...(recordInput.ipAddress !== undefined && { ipAddress: recordInput.ipAddress }),
-          ...(recordInput.notes !== undefined && { notes: recordInput.notes }),
+          ...(finalNotes !== null && { notes: finalNotes }),
           recordedById: scope.userId,
-          approvedById: isFallback ? null : scope.userId,
-          approvedAt: isFallback ? null : new Date(),
+          approvedById: requiresApproval ? null : scope.userId,
+          approvedAt: requiresApproval ? null : new Date(),
         },
         select: attendanceSelect,
       });

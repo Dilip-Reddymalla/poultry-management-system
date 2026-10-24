@@ -98,7 +98,16 @@ export function AttendanceDashboardPage(): React.ReactElement {
   const dashboardShift = (params.get("shift") || "") as Shift | "";
   const setDashboardShift = useCallback((v: Shift | "") => setParam("shift", v), [setParam]);
 
-  type TabKey = "ALL" | "PRESENT" | "ABSENT" | "HALF_DAY" | "LEAVE" | "FACE_AI" | "PENDING" | "IP_FALLBACK";
+  type TabKey =
+    | "ALL"
+    | "PRESENT"
+    | "ABSENT"
+    | "HALF_DAY"
+    | "LEAVE"
+    | "FACE_AI"
+    | "PENDING"
+    | "IP_FALLBACK"
+    | "GEOFENCE_EXCEEDED";
   const activeTab = (params.get("tab") || "ALL") as TabKey;
   const setActiveTab = useCallback((v: TabKey) => setParam("tab", v === "ALL" ? "" : v), [setParam]);
 
@@ -508,6 +517,7 @@ export function AttendanceDashboardPage(): React.ReactElement {
       if (activeTab === "FACE_AI" && r.verificationMode !== "FACE_AI") return false;
       if (activeTab === "PENDING" && r.approvedAt != null) return false;
       if (activeTab === "IP_FALLBACK" && r.locationSource !== "IP_FALLBACK") return false;
+      if (activeTab === "GEOFENCE_EXCEEDED" && r.locationSource !== "GEOFENCE_EXCEEDED") return false;
 
       // Text Search
       if (searchQuery.trim() !== "") {

@@ -23,6 +23,9 @@ const farmSelect = {
   code: true,
   name: true,
   status: true,
+  latitude: true,
+  longitude: true,
+  geofenceRadius: true,
   companyId: true,
   company: {
     select: {
@@ -43,6 +46,9 @@ function toSafeFarm(farm: FarmRecord): SafeFarm {
     code: farm.code,
     name: farm.name,
     status: farm.status,
+    latitude: farm.latitude,
+    longitude: farm.longitude,
+    geofenceRadius: farm.geofenceRadius,
     company: {
       id: farm.company.id,
       name: farm.company.name,
@@ -140,6 +146,9 @@ export async function createFarm(
         companyId: input.companyId,
         code: input.code,
         name: input.name,
+        ...(input.latitude !== undefined && { latitude: input.latitude }),
+        ...(input.longitude !== undefined && { longitude: input.longitude }),
+        ...(input.geofenceRadius !== undefined && { geofenceRadius: input.geofenceRadius }),
       },
       select: farmSelect,
     });
@@ -159,7 +168,14 @@ export async function createFarm(
       entity: "Farm",
       entityId: farm.id,
       summary: `Created farm ${farm.name} (${farm.code})`,
-      changes: { code: farm.code, name: farm.name, companyId: farm.companyId },
+      changes: {
+        code: farm.code,
+        name: farm.name,
+        companyId: farm.companyId,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        geofenceRadius: input.geofenceRadius,
+      },
     });
     return safeFarm;
   } catch (error) {
@@ -199,6 +215,9 @@ export async function updateFarm(
       data: {
         ...(input.code !== undefined && { code: input.code }),
         ...(input.name !== undefined && { name: input.name }),
+        ...(input.latitude !== undefined && { latitude: input.latitude }),
+        ...(input.longitude !== undefined && { longitude: input.longitude }),
+        ...(input.geofenceRadius !== undefined && { geofenceRadius: input.geofenceRadius }),
       },
       select: farmSelect,
     });
@@ -214,6 +233,9 @@ export async function updateFarm(
       changes: {
         code: input.code,
         name: input.name,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        geofenceRadius: input.geofenceRadius,
       },
     });
 

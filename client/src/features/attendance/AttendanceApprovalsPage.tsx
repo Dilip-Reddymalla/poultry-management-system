@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/use-auth.js";
 import {
   fetchAttendance,
@@ -13,14 +13,28 @@ import { SHIFTS } from "../../api/types.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { useResource } from "../../hooks/useResource.js";
 import { useToast } from "../../components/use-toast.js";
-import { statusLabel, todayInputValue } from "../../lib/display.js";
-import { Button, Panel, StatusTag, EmptyState, TableSkeleton, ErrorState } from "../../components/ui.js";
+import { statusLabel, todayInputValue, formatDate } from "../../lib/display.js";
+import {
+  Button,
+  Panel,
+  StatusTag,
+  EmptyState,
+  TableSkeleton,
+  ErrorState,
+} from "../../components/ui.js";
 import { AttendanceAvatar } from "./AttendanceAvatar.js";
+import { SnapshotPreviewModal } from "./SnapshotPreviewModal.js";
+import type { SnapshotPreviewData } from "./attendance-dashboard-types.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { useAutoSelectFarm } from "../../lib/farm-selection.js";
 import "./Attendance.css";
 
-type SourceFilter = "ALL" | "IP_FALLBACK" | "MANUAL" | "GPS";
+type SourceFilter =
+  | "ALL"
+  | "GEOFENCE_EXCEEDED"
+  | "IP_FALLBACK"
+  | "FACE_AI"
+  | "GPS_EXACT";
 
 export function AttendanceApprovalsPage(): React.ReactElement {
   const { user } = useAuth();
@@ -45,32 +59,41 @@ export function AttendanceApprovalsPage(): React.ReactElement {
 
   // Filters
   const rawSource = params.get("source") || params.get("filter") || "ALL";
-  const sourceFilter = (["ALL", "IP_FALLBACK", "MANUAL", "GPS"].includes(rawSource)
-    ? rawSource
-    : "ALL") as SourceFilter;
+  const sourceFilter = (
+    ["ALL", "GEOFENCE_EXCEEDED", "IP_FALLBACK", "FACE_AI", "GPS_EXACT"].includes(
+      rawSource,
+    )
+      ? rawSource
+      : "ALL"
+  ) as SourceFilter;
 
-  // Smart Date Filter: If explicitly passed in URL, respect it.
-  // If navigated from an IP Fallback notification (source=IP_FALLBACK) and no date is specified in params,
-  // default to "" (All Dates / Sessions) so past sessions and yesterday's records are immediately visible!
-  // Otherwise default to todayInputValue().
+  // Date Filter: If navigated from notification without explicit date, default to All Dates
   const dateParam = params.get("date");
   const date =
     dateParam !== null
       ? dateParam
-      : sourceFilter === "IP_FALLBACK"
+      : sourceFilter === "IP_FALLBACK" || sourceFilter === "GEOFENCE_EXCEEDED"
         ? ""
         : todayInputValue();
 
   const farmId = params.get("farmId") || "";
   const shift = (params.get("shift") || "") as Shift | "";
-  const approvalTab = (params.get("tab") || "PENDING") as "PENDING" | "APPROVED" | "ALL";
+  const approvalTab = (params.get("tab") || "PENDING") as
+    | "PENDING"
+    | "APPROVED"
+    | "ALL";
   const search = params.get("q") || "";
   const page = Number(params.get("page")) || 1;
 
-  // Selected rows
+  // Selected rows & modals
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [inspectingRecord, setInspectingRecord] = useState<Attendance | null>(
+    null,
+  );
+  const [snapshotPreview, setSnapshotPreview] =
+    useState<SnapshotPreviewData | null>(null);
 
   const showFarm =
     user?.scope.level === "COMPANY" || user?.scope.level === "GLOBAL";
@@ -101,12 +124,8 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           ...(date ? { date } : {}),
           ...(farmId ? { farmId } : {}),
           ...(shift ? { shift } : {}),
-          ...(sourceFilter !== "ALL"
-            ? sourceFilter === "GPS"
-              ? { locationSource: "GPS_EXACT" }
-              : sourceFilter === "MANUAL"
-                ? {} // No filter for manual
-                : { locationSource: sourceFilter as any }
+          ...(sourceFilter !== "ALL" && sourceFilter !== "FACE_AI"
+            ? { locationSource: sourceFilter as any }
             : {}),
           ...(approvalTab === "PENDING"
             ? { pendingApproval: true }
@@ -121,7 +140,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       ),
   );
 
-  // Overview resource without approval status tab filter to calculate true KPI counts
+  // Overview resource to calculate persistent KPI counts across filters
   const overviewResource = useResource<AttendanceListResponse>(
     `approvals-overview:${date}:${farmId}:${shift}:${sourceFilter}`,
     (signal) =>
@@ -130,12 +149,8 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           ...(date ? { date } : {}),
           ...(farmId ? { farmId } : {}),
           ...(shift ? { shift } : {}),
-          ...(sourceFilter !== "ALL"
-            ? sourceFilter === "GPS"
-              ? { locationSource: "GPS_EXACT" }
-              : sourceFilter === "MANUAL"
-                ? {}
-                : { locationSource: sourceFilter as any }
+          ...(sourceFilter !== "ALL" && sourceFilter !== "FACE_AI"
+            ? { locationSource: sourceFilter as any }
             : {}),
           limit: 500,
         },
@@ -143,17 +158,31 @@ export function AttendanceApprovalsPage(): React.ReactElement {
       ),
   );
 
-  const records: Attendance[] = attendanceResource.data?.attendance ?? [];
-  const overviewRecords: Attendance[] = overviewResource.data?.attendance ?? records;
+  const rawRecords: Attendance[] = attendanceResource.data?.attendance ?? [];
+  const overviewRecords: Attendance[] =
+    overviewResource.data?.attendance ?? rawRecords;
 
-  // Accurate KPI Metrics across current filters (does not collapse when switching tabs)
+  // Client-side filter for FACE_AI if selected
+  const records = useMemo(() => {
+    if (sourceFilter === "FACE_AI") {
+      return rawRecords.filter((r) => r.verificationMode === "FACE_AI");
+    }
+    return rawRecords;
+  }, [rawRecords, sourceFilter]);
+
+  // KPI Metrics
   const kpis = useMemo(() => {
+    const pendingList = overviewRecords.filter((r) => !r.approvedAt);
     return {
       totalShown: records.length,
-      pending: overviewRecords.filter((r) => !r.approvedAt).length,
-      ipFallback: overviewRecords.filter(
-        (r) => r.locationSource === "IP_FALLBACK" && !r.approvedAt,
+      pending: pendingList.length,
+      geofenceExceeded: pendingList.filter(
+        (r) => r.locationSource === "GEOFENCE_EXCEEDED",
       ).length,
+      ipFallback: pendingList.filter(
+        (r) => r.locationSource === "IP_FALLBACK",
+      ).length,
+      faceAi: pendingList.filter((r) => r.verificationMode === "FACE_AI").length,
       approved: overviewRecords.filter((r) => r.approvedAt).length,
     };
   }, [overviewRecords, records]);
@@ -183,14 +212,21 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     }
   };
 
-  // Approve single
+  // Single Approve
   const handleApproveSingle = async (id: string) => {
     setApprovingId(id);
     try {
       await approveAttendance(id);
-      notify("success", "Attendance record approved.");
+      notify("success", "Attendance record approved successfully.");
       attendanceResource.reload();
       overviewResource.reload();
+      if (inspectingRecord?.id === id) {
+        setInspectingRecord((prev) =>
+          prev
+            ? { ...prev, approvedAt: new Date().toISOString(), approvedBy: { id: user?.id ?? "", name: user?.employee?.name || "You" } }
+            : null,
+        );
+      }
       setSelectedIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
@@ -203,7 +239,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     }
   };
 
-  // Bulk approve selected
+  // Bulk Approve Selected
   const handleBulkApproveSelected = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -228,7 +264,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     }
   };
 
-  // Bulk approve all pending
+  // Bulk Approve All Pending
   const handleBulkApproveAll = async () => {
     if (pendingRecords.length === 0) return;
     if (
@@ -254,8 +290,29 @@ export function AttendanceApprovalsPage(): React.ReactElement {
     }
   };
 
-  // Source badge helper
-  const sourceBadge = (record: Attendance) => {
+  // Render informative reason badge for review
+  const renderReasonBadge = (record: Attendance) => {
+    if (record.locationSource === "GEOFENCE_EXCEEDED") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "2px 8px",
+            borderRadius: 6,
+            background: "#fee2e2",
+            border: "1px solid #fca5a5",
+            color: "#991b1b",
+            fontSize: "0.74rem",
+            fontWeight: 700,
+          }}
+          title={record.notes || "Recorded outside farm 1KM geofence boundary"}
+        >
+          ⚠️ Geofence Offset
+        </span>
+      );
+    }
     if (record.locationSource === "IP_FALLBACK") {
       return (
         <span
@@ -264,13 +321,14 @@ export function AttendanceApprovalsPage(): React.ReactElement {
             alignItems: "center",
             gap: 4,
             padding: "2px 8px",
-            borderRadius: 12,
-            background: "#fffbeb",
+            borderRadius: 6,
+            background: "#fef3c7",
             border: "1px solid #fde68a",
             color: "#92400e",
-            fontSize: 11,
-            fontWeight: 600,
+            fontSize: "0.74rem",
+            fontWeight: 700,
           }}
+          title={`IP: ${record.ipAddress || "Unknown"}, Accuracy: ±${record.accuracy ? Math.round(record.accuracy) + "m" : "N/A"}`}
         >
           🌐 IP Fallback
         </span>
@@ -284,15 +342,15 @@ export function AttendanceApprovalsPage(): React.ReactElement {
             alignItems: "center",
             gap: 4,
             padding: "2px 8px",
-            borderRadius: 12,
+            borderRadius: 6,
             background: "#eff6ff",
             border: "1px solid #bfdbfe",
             color: "#1e40af",
-            fontSize: 11,
-            fontWeight: 600,
+            fontSize: "0.74rem",
+            fontWeight: 700,
           }}
         >
-          📸 Face AI
+          🤖 Face AI {record.confidenceScore ? `(${Math.round(record.confidenceScore)}%)` : ""}
         </span>
       );
     }
@@ -303,76 +361,99 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           alignItems: "center",
           gap: 4,
           padding: "2px 8px",
-          borderRadius: 12,
+          borderRadius: 6,
           background: "#f0fdf4",
           border: "1px solid #bbf7d0",
           color: "#166534",
-          fontSize: 11,
+          fontSize: "0.74rem",
           fontWeight: 600,
         }}
       >
-        📍 GPS
+        📍 GPS Exact
       </span>
     );
   };
 
   return (
-    <div className="stack" style={{ gap: isMobile ? "0.85rem" : "1.5rem" }}>
+    <div className="stack" style={{ gap: isMobile ? "0.85rem" : "1.25rem" }}>
       <PageHeader
-        title="Attendance Approvals"
-        description="Review and approve pending attendance records (IP Fallback, Face AI, manual)."
+        title="Attendance Approvals & Audit"
+        description="Review attendance requiring managerial verification: out-of-geofence locations, IP network fallbacks, and biometric exceptions."
       />
 
-      {/* KPI Cards */}
+      {/* KPI Insight Metric Cards */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: isMobile
             ? "repeat(2, 1fr)"
-            : "repeat(4, 1fr)",
-          gap: isMobile ? "0.5rem" : "1rem",
+            : "repeat(5, 1fr)",
+          gap: isMobile ? "0.5rem" : "0.75rem",
         }}
       >
         {[
           {
-            label: "Total Shown",
+            label: "Total Records",
             value: kpis.totalShown,
-            color: "#3b82f6",
+            color: "#2563eb",
             bg: "#eff6ff",
+            filterSource: "ALL",
           },
           {
-            label: "Pending Approval",
+            label: "Pending Review",
             value: kpis.pending,
             color: "#d97706",
             bg: "#fffbeb",
+            tabKey: "PENDING",
           },
           {
-            label: "IP Fallback (Pending)",
+            label: "⚠️ Geofence Offsets",
+            value: kpis.geofenceExceeded,
+            color: "#dc2626",
+            bg: "#fef2f2",
+            filterSource: "GEOFENCE_EXCEEDED",
+          },
+          {
+            label: "🌐 IP Fallbacks",
             value: kpis.ipFallback,
-            color: "#ea580c",
+            color: "#d97706",
             bg: "#fff7ed",
+            filterSource: "IP_FALLBACK",
           },
           {
-            label: "Approved",
+            label: "✅ Approved",
             value: kpis.approved,
             color: "#16a34a",
             bg: "#f0fdf4",
+            tabKey: "APPROVED",
           },
         ].map((kpi) => (
           <div
             key={kpi.label}
-            style={{
-              padding: isMobile ? "10px 12px" : "14px 18px",
-              borderRadius: 10,
-              background: kpi.bg,
-              border: `1px solid ${kpi.color}22`,
+            onClick={() => {
+              if (kpi.filterSource) {
+                setParam("source", kpi.filterSource === "ALL" ? "" : kpi.filterSource);
+              }
+              if (kpi.tabKey) {
+                setParam("tab", kpi.tabKey === "PENDING" ? "" : kpi.tabKey);
+              }
             }}
+            style={{
+              padding: isMobile ? "8px 10px" : "12px 14px",
+              borderRadius: "var(--radius)",
+              background: kpi.bg,
+              border: `1px solid ${kpi.color}33`,
+              cursor: "pointer",
+              transition: "transform 0.1s ease, box-shadow 0.1s ease",
+            }}
+            title="Click to filter by this category"
           >
             <div
               style={{
-                fontSize: isMobile ? 22 : 28,
+                fontSize: isMobile ? 20 : 26,
                 fontWeight: 700,
                 color: kpi.color,
+                lineHeight: 1.1,
               }}
             >
               {kpi.value}
@@ -381,8 +462,11 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               style={{
                 fontSize: isMobile ? 11 : 12,
                 color: kpi.color,
-                fontWeight: 500,
-                marginTop: 2,
+                fontWeight: 600,
+                marginTop: 3,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {kpi.label}
@@ -391,11 +475,11 @@ export function AttendanceApprovalsPage(): React.ReactElement {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filter Toolbar */}
       <Panel bleed>
         <div
           style={{
-            padding: isMobile ? "0.5rem 0.75rem" : "0.75rem 1.25rem",
+            padding: isMobile ? "0.6rem 0.75rem" : "0.75rem 1.25rem",
             borderBottom: "1px solid var(--line)",
             background: "var(--surface-sunk)",
           }}
@@ -408,6 +492,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               alignItems: "center",
             }}
           >
+            {/* Date Selector */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <input
                 type="date"
@@ -430,7 +515,6 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                     fontSize: "0.72rem",
                     padding: "0.2rem 0.45rem",
                     minHeight: "28px",
-                    height: "auto",
                     color: "var(--ink-soft)",
                     whiteSpace: "nowrap",
                   }}
@@ -447,7 +531,6 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                     fontSize: "0.72rem",
                     padding: "0.2rem 0.5rem",
                     minHeight: "28px",
-                    height: "auto",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -455,6 +538,8 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 </button>
               )}
             </div>
+
+            {/* Farm Picker */}
             {showFarm && (
               <select
                 className="input"
@@ -474,12 +559,12 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 ))}
               </select>
             )}
+
+            {/* Shift Picker */}
             <select
               className="input"
               value={shift}
-              onChange={(e) =>
-                setParam("shift", e.target.value)
-              }
+              onChange={(e) => setParam("shift", e.target.value)}
               style={{
                 padding: "0.3rem 0.5rem",
                 fontSize: "0.82rem",
@@ -493,6 +578,8 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 </option>
               ))}
             </select>
+
+            {/* Reason / Source Filter */}
             <select
               className="input"
               value={sourceFilter}
@@ -502,17 +589,22 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               style={{
                 padding: "0.3rem 0.5rem",
                 fontSize: "0.82rem",
-                minWidth: 120,
+                minWidth: 140,
+                fontWeight: 600,
               }}
             >
-              <option value="ALL">All Sources</option>
-              <option value="IP_FALLBACK">🌐 IP Fallback</option>
-              <option value="GPS">📍 GPS Only</option>
+              <option value="ALL">All Review Reasons</option>
+              <option value="GEOFENCE_EXCEEDED">⚠️ Geofence Offset</option>
+              <option value="IP_FALLBACK">🌐 IP Fallback (No GPS)</option>
+              <option value="FACE_AI">🤖 Face AI Biometric</option>
+              <option value="GPS_EXACT">📍 GPS Verified Exact</option>
             </select>
+
+            {/* Search Input */}
             <input
               type="text"
               className="input"
-              placeholder="Search name, code..."
+              placeholder="Search person, code, notes..."
               value={search}
               onChange={(e) => setParam("q", e.target.value)}
               style={{
@@ -523,21 +615,33 @@ export function AttendanceApprovalsPage(): React.ReactElement {
             />
           </div>
 
-          {/* Approval Status Tabs */}
+          {/* Status Tabs */}
           <div
             style={{
               display: "flex",
-              gap: "0.25rem",
-              marginTop: "0.5rem",
+              gap: "0.35rem",
+              marginTop: "0.6rem",
               overflowX: "auto",
               scrollbarWidth: "none",
             }}
           >
             {(
               [
-                { key: "PENDING" as const, label: `✍️ Pending (${kpis.pending})`, color: "#d97706" },
-                { key: "APPROVED" as const, label: `✅ Approved (${kpis.approved})`, color: "#16a34a" },
-                { key: "ALL" as const, label: `All (${kpis.totalShown})`, color: undefined },
+                {
+                  key: "PENDING" as const,
+                  label: `✍️ Pending Review (${kpis.pending})`,
+                  color: "#d97706",
+                },
+                {
+                  key: "APPROVED" as const,
+                  label: `✅ Approved Records (${kpis.approved})`,
+                  color: "#16a34a",
+                },
+                {
+                  key: "ALL" as const,
+                  label: `All Sessions (${kpis.totalShown})`,
+                  color: undefined,
+                },
               ] as const
             ).map((tab) => (
               <button
@@ -545,9 +649,9 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 type="button"
                 className={`button ${approvalTab === tab.key ? "button--primary" : "button--ghost"}`}
                 style={{
-                  padding: "0.25rem 0.6rem",
-                  fontSize: "0.75rem",
-                  minHeight: 26,
+                  padding: "0.25rem 0.65rem",
+                  fontSize: "0.76rem",
+                  minHeight: 28,
                   whiteSpace: "nowrap",
                   ...(approvalTab === tab.key && tab.color
                     ? { backgroundColor: tab.color, borderColor: tab.color }
@@ -563,14 +667,15 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* Bulk Actions Bar */}
+        {/* Bulk Action Controls */}
         {pendingRecords.length > 0 && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: isMobile ? "0.4rem" : "0.75rem",
-              padding: isMobile ? "0.4rem 0.75rem" : "0.5rem 1.25rem",
+              padding: isMobile ? "0.45rem 0.75rem" : "0.55rem 1.25rem",
               borderBottom: "1px solid var(--line)",
               background: "#fffbeb",
               flexWrap: "wrap",
@@ -591,37 +696,40 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 checked={allPendingSelected}
                 onChange={toggleSelectAll}
               />
-              Select All Pending
+              Select All Pending ({pendingRecords.length})
             </label>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={selectedIds.size === 0 || bulkApproving}
-              onClick={handleBulkApproveSelected}
-              style={{ padding: "4px 12px", fontSize: 12 }}
-            >
-              {bulkApproving
-                ? "Approving…"
-                : `✓ Approve Selected (${selectedIds.size})`}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pendingRecords.length === 0 || bulkApproving}
-              onClick={handleBulkApproveAll}
-              style={{
-                padding: "4px 12px",
-                fontSize: 12,
-                border: "1px solid #d97706",
-                color: "#92400e",
-              }}
-            >
-              ✓ Approve All Pending ({pendingRecords.length})
-            </Button>
+
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={selectedIds.size === 0 || bulkApproving}
+                onClick={handleBulkApproveSelected}
+                style={{ padding: "4px 12px", fontSize: 12 }}
+              >
+                {bulkApproving
+                  ? "Approving…"
+                  : `✓ Approve Selected (${selectedIds.size})`}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={pendingRecords.length === 0 || bulkApproving}
+                onClick={handleBulkApproveAll}
+                style={{
+                  padding: "4px 12px",
+                  fontSize: 12,
+                  borderColor: "#d97706",
+                  color: "#92400e",
+                }}
+              >
+                ✓ Approve All Pending
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Table */}
+        {/* Content Section: Table vs Mobile Cards */}
         {attendanceResource.loading ? (
           <div className="panel__pad">
             <TableSkeleton columns={7} />
@@ -650,13 +758,25 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: "1.5rem" }}>✅</span>
+                  <span style={{ fontSize: "1.75rem" }}>🎉</span>
                   <div>
-                    <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.95rem" }}>
-                      All {sourceFilter === "IP_FALLBACK" ? "IP Fallback " : ""}attendance records have been audited!
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        color: "#166534",
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      All attendance submissions have been reviewed and approved!
                     </div>
-                    <div style={{ color: "#15803d", fontSize: "0.82rem", marginTop: 3 }}>
-                      {kpis.approved} record(s) have already been verified and approved.
+                    <div
+                      style={{
+                        color: "#15803d",
+                        fontSize: "0.82rem",
+                        marginTop: 3,
+                      }}
+                    >
+                      {kpis.approved} record(s) are officially confirmed in the database.
                     </div>
                   </div>
                 </div>
@@ -677,20 +797,256 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               <EmptyState
                 title={
                   approvalTab === "PENDING"
-                    ? "No pending records"
+                    ? "No pending approval records"
                     : "No records found"
                 }
                 description={
                   approvalTab === "PENDING"
                     ? date
-                      ? `All attendance records for ${date} have been approved.`
-                      : "All attendance records across all sessions have been approved."
-                    : "No records match the current filters."
+                      ? `All attendance records for ${date} have been signed off.`
+                      : "No records across any farm are currently awaiting approval."
+                    : "No records match your selected filters."
                 }
               />
             )}
           </div>
+        ) : isMobile ? (
+          /* Mobile Card View with Rich Information */
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.65rem",
+              padding: "0.65rem",
+            }}
+          >
+            {records.map((record) => {
+              const isPending = !record.approvedAt;
+              const isGeofenceExceeded =
+                record.locationSource === "GEOFENCE_EXCEEDED";
+              const isIpFallback = record.locationSource === "IP_FALLBACK";
+
+              return (
+                <div
+                  key={record.id}
+                  style={{
+                    background: isPending ? "#fffef7" : "var(--surface)",
+                    borderRadius: "var(--radius)",
+                    border: `1px solid ${
+                      isGeofenceExceeded && isPending
+                        ? "#fca5a5"
+                        : isIpFallback && isPending
+                          ? "#fde68a"
+                          : isPending
+                            ? "var(--clay)"
+                            : "var(--line)"
+                    }`,
+                    padding: "0.75rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  {/* Card Header */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      {isPending && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(record.id)}
+                          onChange={() => toggleSelect(record.id)}
+                          style={{ width: 16, height: 16 }}
+                        />
+                      )}
+                      <AttendanceAvatar
+                        photoUrl={record.person.photoUrl}
+                        name={record.person.name}
+                        type={record.person.type}
+                        size={36}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                          {record.person.name}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>
+                          {record.person.type === "EMPLOYEE" ? "👔 Emp" : "🚜 Wkr"} ·{" "}
+                          <span className="numeric">{record.person.code}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                      <StatusTag status={record.status} />
+                      <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)" }}>
+                        {statusLabel(record.shift)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Primary Review Reason Banner */}
+                  <div>
+                    {isGeofenceExceeded ? (
+                      <div
+                        style={{
+                          background: "#fee2e2",
+                          border: "1px solid #fca5a5",
+                          borderRadius: 6,
+                          padding: "6px 8px",
+                          fontSize: "0.76rem",
+                          color: "#991b1b",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>
+                          ⚠️ Location Out-of-Geofence
+                        </div>
+                        <div style={{ fontSize: "0.72rem" }}>
+                          {record.notes || "Recorded outside farm 1KM geofence boundary."}
+                        </div>
+                      </div>
+                    ) : isIpFallback ? (
+                      <div
+                        style={{
+                          background: "#fef3c7",
+                          border: "1px solid #fde68a",
+                          borderRadius: 6,
+                          padding: "6px 8px",
+                          fontSize: "0.76rem",
+                          color: "#92400e",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>
+                          🌐 IP Fallback (GPS Unavailable)
+                        </div>
+                        <div style={{ fontSize: "0.72rem" }}>
+                          IP: {record.ipAddress || "Unknown"} · Accuracy: ±
+                          {record.accuracy ? Math.round(record.accuracy) + "m" : "Approx"}
+                        </div>
+                      </div>
+                    ) : record.verificationMode === "FACE_AI" ? (
+                      <div
+                        style={{
+                          background: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          borderRadius: 6,
+                          padding: "6px 8px",
+                          fontSize: "0.76rem",
+                          color: "#1e40af",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <strong>🤖 Face AI Verification</strong>
+                          <div style={{ fontSize: "0.72rem" }}>
+                            Confidence: {record.confidenceScore ? Math.round(record.confidenceScore) + "%" : "Verified"}
+                          </div>
+                        </div>
+                        {record.snapshotUrl && (
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            style={{ padding: "2px 6px", fontSize: "0.72rem" }}
+                            onClick={() =>
+                              setSnapshotPreview({
+                                url: record.snapshotUrl!,
+                                name: record.person.name,
+                                score: record.confidenceScore,
+                              })
+                            }
+                          >
+                            🔍 Photo
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {renderReasonBadge(record)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Station & Coordinates Context */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "0.75rem",
+                      color: "var(--ink-soft)",
+                    }}
+                  >
+                    <span>
+                      🏠 {record.farm.name} · {record.shed?.number ? `Shed ${record.shed.number}` : "General"}
+                    </span>
+                    {record.latitude != null && record.longitude != null && (
+                      <a
+                        href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}
+                      >
+                        📍 View Map ↗
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Submission Audit Meta */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "0.72rem",
+                      borderTop: "1px dashed var(--line)",
+                      paddingTop: "0.4rem",
+                    }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>
+                      {record.createdAt
+                        ? `Recorded at ${new Date(record.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                        : "—"}
+                      {record.recordedBy?.name ? ` by ${record.recordedBy.name}` : ""}
+                    </span>
+
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        style={{ padding: "2px 8px", fontSize: "0.72rem" }}
+                        onClick={() => setInspectingRecord(record)}
+                      >
+                        🔍 Details
+                      </button>
+                      {isPending ? (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          disabled={approvingId === record.id || bulkApproving}
+                          onClick={() => handleApproveSingle(record.id)}
+                          style={{ padding: "3px 10px", fontSize: "0.72rem" }}
+                        >
+                          {approvingId === record.id ? "…" : "✓ Approve"}
+                        </Button>
+                      ) : (
+                        <span style={{ color: "#16a34a", fontWeight: 600, fontSize: "0.72rem" }}>
+                          ✓ Approved
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* Desktop Modern Information Table */
           <div className="table-scroll">
             <table className="table">
               <thead>
@@ -705,24 +1061,35 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                       />
                     </th>
                   )}
-                  <th scope="col">Person</th>
-                  <th scope="col">Farm / Shed</th>
-                  <th scope="col">Shift</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Source / Location</th>
-                  <th scope="col">Approval</th>
+                  <th scope="col">Person & Role</th>
+                  <th scope="col">Review Trigger / Reason</th>
+                  <th scope="col">Location & Notes</th>
+                  <th scope="col">Farm & Station</th>
+                  <th scope="col">Shift & Status</th>
+                  <th scope="col">Recorded At & By</th>
+                  <th scope="col" style={{ textAlign: "right" }}>
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((record) => {
                   const isPending = !record.approvedAt;
+                  const isGeofenceExceeded =
+                    record.locationSource === "GEOFENCE_EXCEEDED";
+
                   return (
                     <tr
                       key={record.id}
                       style={{
-                        background: isPending ? "#fffef5" : undefined,
+                        background: isPending
+                          ? isGeofenceExceeded
+                            ? "#fff9f9"
+                            : "#fffef5"
+                          : undefined,
                       }}
                     >
+                      {/* Checkbox */}
                       {approvalTab !== "APPROVED" && (
                         <td>
                           {isPending ? (
@@ -732,26 +1099,40 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                               onChange={() => toggleSelect(record.id)}
                             />
                           ) : (
-                            <span style={{ color: "#16a34a" }}>✓</span>
+                            <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                              ✓
+                            </span>
                           )}
                         </td>
                       )}
+
+                      {/* Person */}
                       <td data-label="Person">
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.5rem",
+                            gap: "0.6rem",
                           }}
                         >
                           <AttendanceAvatar
                             photoUrl={record.person.photoUrl}
                             name={record.person.name}
                             type={record.person.type}
-                            size={32}
+                            size={34}
+                            onPreview={
+                              record.person.photoUrl
+                                ? () =>
+                                    setSnapshotPreview({
+                                      url: record.person.photoUrl!,
+                                      name: record.person.name,
+                                      title: `${record.person.type === "EMPLOYEE" ? "Employee" : "Worker"} Profile Photo`,
+                                    })
+                                : undefined
+                            }
                           />
                           <div>
-                            <div style={{ fontWeight: 500 }}>
+                            <div style={{ fontWeight: 600 }}>
                               {record.person.name}
                             </div>
                             <span
@@ -759,118 +1140,218 @@ export function AttendanceApprovalsPage(): React.ReactElement {
                               style={{ fontSize: 11 }}
                             >
                               {record.person.type === "EMPLOYEE"
-                                ? "Emp"
-                                : "Wkr"}{" "}
+                                ? "👔 Employee"
+                                : "🚜 Worker"}{" "}
                               · {record.person.code}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td data-label="Farm / Shed">
-                        <div style={{ fontSize: 12 }}>
-                          <span className="table__sub">
-                            {record.farm.code}
-                          </span>{" "}
-                          {record.farm.name}
-                        </div>
-                        {record.shed?.number && (
-                          <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                            Shed {record.shed.number}
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Shift">{statusLabel(record.shift)}</td>
-                      <td data-label="Status">
-                        <StatusTag status={record.status} />
-                      </td>
-                      <td data-label="Source / Location">
+
+                      {/* Review Reason Badge & Biometrics */}
+                      <td data-label="Review Trigger">
                         <div
                           style={{
                             display: "flex",
                             flexDirection: "column",
                             gap: 4,
+                            alignItems: "flex-start",
                           }}
                         >
-                          {sourceBadge(record)}
-                          {record.latitude != null &&
-                            record.longitude != null && (
+                          {renderReasonBadge(record)}
+                          {record.verificationMode === "FACE_AI" &&
+                            record.snapshotUrl && (
+                              <button
+                                type="button"
+                                className="button button--ghost"
+                                style={{
+                                  padding: "1px 5px",
+                                  fontSize: "0.7rem",
+                                  minHeight: "20px",
+                                }}
+                                onClick={() =>
+                                  setSnapshotPreview({
+                                    url: record.snapshotUrl!,
+                                    name: record.person.name,
+                                    score: record.confidenceScore,
+                                  })
+                                }
+                              >
+                                📸 View Face Photo
+                              </button>
+                            )}
+                        </div>
+                      </td>
+
+                      {/* Location & Operator Notes */}
+                      <td data-label="Location & Notes" style={{ maxWidth: 260 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          {record.notes ? (
+                            <div
+                              style={{
+                                fontSize: "0.78rem",
+                                color: isGeofenceExceeded
+                                  ? "#991b1b"
+                                  : "var(--ink)",
+                                fontWeight: isGeofenceExceeded ? 600 : 500,
+                                background: isGeofenceExceeded
+                                  ? "#fee2e2"
+                                  : "var(--surface-sunk)",
+                                padding: "3px 6px",
+                                borderRadius: 4,
+                                border: `1px solid ${
+                                  isGeofenceExceeded ? "#fca5a5" : "var(--line)"
+                                }`,
+                              }}
+                            >
+                              {record.notes}
+                            </div>
+                          ) : null}
+
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {record.latitude != null &&
+                            record.longitude != null ? (
                               <a
                                 href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
-                                  fontSize: 11,
                                   color: "#2563eb",
+                                  textDecoration: "none",
+                                  fontWeight: 600,
                                 }}
+                                title="Open exact coordinate location in Google Maps"
                               >
                                 📍 {record.latitude.toFixed(4)},{" "}
-                                {record.longitude.toFixed(4)}
-                                {record.accuracy
-                                  ? ` (±${Math.round(record.accuracy)}m)`
-                                  : ""}
+                                {record.longitude.toFixed(4)} ↗
                               </a>
+                            ) : (
+                              <span className="muted">No GPS coordinates</span>
                             )}
-                          {record.ipAddress && (
-                            <span
-                              style={{
-                                fontSize: 10,
-                                color: "var(--muted)",
-                              }}
-                            >
-                              IP: {record.ipAddress}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Approval">
-                        {record.approvedAt ? (
-                          <div>
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                background: "#f0fdf4",
-                                border: "1px solid #bbf7d0",
-                                color: "#166534",
-                                fontSize: 11,
-                                fontWeight: 600,
-                              }}
-                            >
-                              ✓ Approved
-                            </span>
-                            {record.approvedBy && (
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                  marginTop: 2,
-                                }}
-                              >
-                                by {record.approvedBy.name}
-                              </div>
+                            {record.accuracy && (
+                              <span style={{ color: "var(--muted)", fontSize: "0.7rem" }}>
+                                (±{Math.round(record.accuracy)}m)
+                              </span>
                             )}
                           </div>
-                        ) : (
-                          <Button
+                        </div>
+                      </td>
+
+                      {/* Farm & Station */}
+                      <td data-label="Farm & Station">
+                        <div style={{ fontSize: "0.82rem", fontWeight: 500 }}>
+                          {record.farm.name}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                          {record.shed?.number
+                            ? `Shed ${record.shed.number}`
+                            : "General / Staff"}
+                        </div>
+                      </td>
+
+                      {/* Shift & Status */}
+                      <td data-label="Shift & Status">
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          <StatusTag status={record.status} />
+                          <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>
+                            {statusLabel(record.shift)}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Submitter & Time */}
+                      <td data-label="Recorded Time">
+                        <div style={{ fontSize: "0.8rem", fontWeight: 500 }}>
+                          {record.createdAt
+                            ? new Date(record.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "—"}
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
+                          {record.recordedBy?.name
+                            ? `by ${record.recordedBy.name}`
+                            : "System"}
+                        </div>
+                      </td>
+
+                      {/* Action */}
+                      <td data-label="Action" style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: "0.4rem",
+                          }}
+                        >
+                          <button
                             type="button"
-                            variant="primary"
-                            disabled={
-                              approvingId === record.id || bulkApproving
-                            }
-                            onClick={() => handleApproveSingle(record.id)}
+                            className="button button--ghost"
                             style={{
-                              padding: "3px 10px",
-                              fontSize: 11,
+                              padding: "3px 8px",
+                              fontSize: "0.74rem",
+                              minHeight: 24,
                             }}
+                            onClick={() => setInspectingRecord(record)}
+                            title="Inspect full audit trail and geofence data"
                           >
-                            {approvingId === record.id
-                              ? "Approving…"
-                              : "✓ Approve"}
-                          </Button>
-                        )}
+                            🔍 Inspect
+                          </button>
+
+                          {isPending ? (
+                            <Button
+                              type="button"
+                              variant="primary"
+                              disabled={
+                                approvingId === record.id || bulkApproving
+                              }
+                              onClick={() => handleApproveSingle(record.id)}
+                              style={{
+                                padding: "3px 10px",
+                                fontSize: "0.74rem",
+                                minHeight: 24,
+                              }}
+                            >
+                              {approvingId === record.id
+                                ? "Approving…"
+                                : "✓ Approve"}
+                            </Button>
+                          ) : (
+                            <div style={{ textAlign: "right" }}>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  color: "#166534",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ✓ Approved
+                              </span>
+                              {record.approvedBy && (
+                                <div
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    color: "var(--muted)",
+                                  }}
+                                >
+                                  by {record.approvedBy.name}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -880,6 +1361,356 @@ export function AttendanceApprovalsPage(): React.ReactElement {
           </div>
         )}
       </Panel>
+
+      {/* Snapshot Preview Modal */}
+      <SnapshotPreviewModal
+        preview={snapshotPreview}
+        onClose={() => setSnapshotPreview(null)}
+      />
+
+      {/* Deep Inspection & Review Modal */}
+      {inspectingRecord && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+          onClick={() => setInspectingRecord(null)}
+        >
+          <div
+            style={{
+              background: "var(--surface)",
+              borderRadius: "var(--radius-lg)",
+              padding: isMobile ? "1.2rem" : "1.5rem",
+              maxWidth: "520px",
+              width: "100%",
+              boxShadow: "var(--shadow-lg)",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1rem",
+                borderBottom: "1px solid var(--line)",
+                paddingBottom: "0.75rem",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>
+                  Attendance Verification Audit
+                </h3>
+                <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+                  ID: {inspectingRecord.id} · {formatDate(inspectingRecord.date)}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={() => setInspectingRecord(null)}
+                style={{ padding: "0.2rem 0.5rem", minHeight: "28px" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Person & Roster Profile */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                background: "var(--surface-sunk)",
+                padding: "0.75rem",
+                borderRadius: "var(--radius)",
+                marginBottom: "1rem",
+              }}
+            >
+              <AttendanceAvatar
+                photoUrl={inspectingRecord.person.photoUrl}
+                name={inspectingRecord.person.name}
+                type={inspectingRecord.person.type}
+                size={44}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  {inspectingRecord.person.name}
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+                  {inspectingRecord.person.type === "EMPLOYEE" ? "👔 Employee" : "🚜 Worker"} ·{" "}
+                  <span className="numeric">{inspectingRecord.person.code}</span>
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: 2 }}>
+                  Farm: {inspectingRecord.farm.name} ({inspectingRecord.farm.code}) ·{" "}
+                  {inspectingRecord.shed?.number ? `Shed ${inspectingRecord.shed.number}` : "General / Staff"}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <StatusTag status={inspectingRecord.status} />
+                <div style={{ fontSize: "0.75rem", color: "var(--ink-soft)", marginTop: 4 }}>
+                  {statusLabel(inspectingRecord.shift)}
+                </div>
+              </div>
+            </div>
+
+            {/* Audit Trigger Explanation Banner */}
+            <div style={{ marginBottom: "1rem" }}>
+              {inspectingRecord.locationSource === "GEOFENCE_EXCEEDED" ? (
+                <div
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fca5a5",
+                    borderRadius: "var(--radius)",
+                    padding: "0.75rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: "#991b1b",
+                      fontSize: "0.85rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>⚠️</span> Farm Geofence Boundary Exceeded
+                  </div>
+                  <p style={{ fontSize: "0.8rem", color: "#7f1d1d", margin: "4px 0 0" }}>
+                    The attendance was recorded outside the permitted farm boundary.
+                    Managerial confirmation is required to verify legitimate off-site work.
+                  </p>
+                  {inspectingRecord.notes && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        background: "#fff",
+                        padding: "6px 8px",
+                        borderRadius: 4,
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        color: "#991b1b",
+                        border: "1px solid #fecaca",
+                      }}
+                    >
+                      {inspectingRecord.notes}
+                    </div>
+                  )}
+                </div>
+              ) : inspectingRecord.locationSource === "IP_FALLBACK" ? (
+                <div
+                  style={{
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: "var(--radius)",
+                    padding: "0.75rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: "#92400e",
+                      fontSize: "0.85rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>🌐</span> Network IP-Based Location Fallback
+                  </div>
+                  <p style={{ fontSize: "0.8rem", color: "#78350f", margin: "4px 0 0" }}>
+                    Device GPS was unavailable at submission time. The system used IP network
+                    triangulation. Please confirm the worker was on farm premises.
+                  </p>
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "#92400e" }}>
+                    <strong>IP Address:</strong> {inspectingRecord.ipAddress || "Unknown"} ·{" "}
+                    <strong>Accuracy:</strong> ±{inspectingRecord.accuracy ? Math.round(inspectingRecord.accuracy) + "m" : "Approx"}
+                  </div>
+                </div>
+              ) : inspectingRecord.verificationMode === "FACE_AI" ? (
+                <div
+                  style={{
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "var(--radius)",
+                    padding: "0.75rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color: "#1e40af",
+                      fontSize: "0.85rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>🤖</span> Face AI Biometric Capture
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#1e3a8a", marginTop: 4 }}>
+                    Confidence Match:{" "}
+                    <strong>
+                      {inspectingRecord.confidenceScore ? Math.round(inspectingRecord.confidenceScore) + "%" : "Verified"}
+                    </strong>
+                    {inspectingRecord.livenessScore != null && (
+                      <span> · Liveness: {(inspectingRecord.livenessScore * 100).toFixed(0)}%</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "var(--radius)",
+                    padding: "0.75rem",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: "#166534", fontSize: "0.85rem" }}>
+                    📍 Standard GPS Submission
+                  </div>
+                  <p style={{ fontSize: "0.8rem", color: "#14532d", margin: "4px 0 0" }}>
+                    Recorded within normal operating tolerances.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Face Snapshot Media Preview if Available */}
+            {inspectingRecord.snapshotUrl && (
+              <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: 4 }}>
+                  Verification Camera Snapshot
+                </span>
+                <img
+                  src={inspectingRecord.snapshotUrl}
+                  alt={`Snapshot of ${inspectingRecord.person.name}`}
+                  style={{
+                    maxHeight: 180,
+                    borderRadius: "var(--radius)",
+                    border: "2px solid var(--line)",
+                    objectFit: "cover",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Location & Coordinates Breakdown */}
+            <div
+              style={{
+                fontSize: "0.82rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.4rem",
+                background: "var(--surface-sunk)",
+                padding: "0.75rem",
+                borderRadius: "var(--radius)",
+                marginBottom: "1rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted">Recorded Coordinates:</span>
+                {inspectingRecord.latitude != null && inspectingRecord.longitude != null ? (
+                  <span className="numeric font-medium">
+                    {inspectingRecord.latitude.toFixed(6)}, {inspectingRecord.longitude.toFixed(6)}
+                  </span>
+                ) : (
+                  <span className="muted">Not recorded</span>
+                )}
+              </div>
+              {inspectingRecord.latitude != null && inspectingRecord.longitude != null && (
+                <div style={{ textAlign: "right" }}>
+                  <a
+                    href={`https://www.google.com/maps?q=${inspectingRecord.latitude},${inspectingRecord.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="table__link"
+                    style={{ fontSize: "0.78rem" }}
+                  >
+                    Open in Google Maps ↗
+                  </a>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed var(--line)", paddingTop: "0.4rem" }}>
+                <span className="muted">Recorded By:</span>
+                <span>{inspectingRecord.recordedBy?.name || "System"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted">Submission Time:</span>
+                <span>
+                  {inspectingRecord.createdAt
+                    ? new Date(inspectingRecord.createdAt).toLocaleString()
+                    : "—"}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted">Approval Status:</span>
+                <span>
+                  {inspectingRecord.approvedAt ? (
+                    <strong style={{ color: "#166534" }}>
+                      Approved on {new Date(inspectingRecord.approvedAt).toLocaleDateString()} by {inspectingRecord.approvedBy?.name || "Manager"}
+                    </strong>
+                  ) : (
+                    <strong style={{ color: "#d97706" }}>Awaiting Manager Approval</strong>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Link
+                to={`/attendance/${inspectingRecord.id}`}
+                className="button button--ghost"
+                style={{ fontSize: "0.82rem" }}
+              >
+                Full Record Page ↗
+              </Link>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setInspectingRecord(null)}
+                >
+                  Close
+                </Button>
+                {!inspectingRecord.approvedAt && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={approvingId === inspectingRecord.id}
+                    onClick={() => handleApproveSingle(inspectingRecord.id)}
+                  >
+                    {approvingId === inspectingRecord.id ? "Approving…" : "✓ Approve Record"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

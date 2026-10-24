@@ -1,5 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import ExcelJS from "exceljs";
 
 import {
   app,
@@ -501,5 +502,109 @@ describe("attendance module", () => {
 
     expect(afterSummary.status).toBe(200);
     expect(afterSummary.body.totalUnmarked).toBe(0);
+  });
+
+  it("exports attendance Excel with date sheets and extra summary pages for Employees and Workers", async () => {
+    const date = testDate();
+
+    // Record morning, afternoon, and overtime for employee
+    await record(supervisor.cookie, {
+      employeeId: employeeA1Id,
+      date,
+      shift: "MORNING_SHIFT",
+    });
+    await record(supervisor.cookie, {
+      employeeId: employeeA1Id,
+      date,
+      shift: "AFTERNOON_SHIFT",
+    });
+    await record(supervisor.cookie, {
+      employeeId: employeeA1Id,
+      date,
+      shift: "OVERTIME",
+    });
+
+    // Record morning only (half day) for worker
+    await record(supervisor.cookie, {
+      workerId: workerA1Id,
+      date,
+      shift: "MORNING_SHIFT",
+    });
+
+    const response = await request(app)
+      .get("/api/attendance/export")
+      .set("Cookie", accountant.cookie)
+      .query({
+        date,
+        farmId: farmA1Id,
+        scope: "all",
+      })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk) => chunks.push(chunk));
+        res.on("end", () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(response.body);
+
+    const sheetNames = workbook.worksheets.map((w) => w.name);
+    // Must include the date sheet, then Employees, then Workers at the end
+    expect(sheetNames).toContain(date);
+    expect(sheetNames).toContain("Employees");
+    expect(sheetNames).toContain("Workers");
+    expect(sheetNames[sheetNames.length - 2]).toBe("Employees");
+    expect(sheetNames[sheetNames.length - 1]).toBe("Workers");
+
+    // Inspect Employees sheet
+    const empSheet = workbook.getWorksheet("Employees")!;
+    expect(empSheet).toBeDefined();
+    // Headers in row 1
+    expect(empSheet.getRow(1).getCell(1).value).toBe("Emp ID");
+    expect(empSheet.getRow(1).getCell(2).value).toBe("Full Name");
+    expect(empSheet.getRow(1).getCell(3).value).toBe("Photo URL");
+    expect(empSheet.getRow(1).getCell(4).value).toBe("Total Full Days");
+    expect(empSheet.getRow(1).getCell(5).value).toBe("Total Half Days");
+    expect(empSheet.getRow(1).getCell(6).value).toBe("Total OT");
+    expect(empSheet.getRow(1).getCell(7).value).toBe("Total Working Days (Without Half Days)");
+    expect(empSheet.getRow(1).getCell(8).value).toBe("Total Working Days (With Half Days)");
+
+    // Must have a Role row (e.g. "Role: ...")
+    let foundRoleRow = false;
+    let foundEmpRow = false;
+    empSheet.eachRow((row) => {
+      const cell1Val = String(row.getCell(1).value ?? "");
+      if (cell1Val.startsWith("Role:")) {
+        foundRoleRow = true;
+      }
+      if (cell1Val.startsWith("EMP-") || row.getCell(2).value) {
+        foundEmpRow = true;
+      }
+    });
+    expect(foundRoleRow).toBe(true);
+    expect(foundEmpRow).toBe(true);
+
+    // Inspect Workers sheet
+    const wrkSheet = workbook.getWorksheet("Workers")!;
+    expect(wrkSheet).toBeDefined();
+    expect(wrkSheet.getRow(1).getCell(1).value).toBe("Worker ID");
+    expect(wrkSheet.getRow(1).getCell(2).value).toBe("Full Name");
+    expect(wrkSheet.getRow(1).getCell(3).value).toBe("Photo URL");
+
+    // In Workers sheet, there should be NO role header rows
+    let foundRoleInWorkers = false;
+    wrkSheet.eachRow((row) => {
+      const cell1Val = String(row.getCell(1).value ?? "");
+      if (cell1Val.startsWith("Role:")) {
+        foundRoleInWorkers = true;
+      }
+    });
+    expect(foundRoleInWorkers).toBe(false);
   });
 });

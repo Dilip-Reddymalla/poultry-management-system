@@ -205,7 +205,7 @@ export async function getEnterpriseAttendanceReport(
 
   const [groupedStats, pendingStats, fallbackStats, trendStats] = await Promise.all([
     prisma.attendance.groupBy({
-      by: ["farmId", "shift", "status"],
+      by: ["farmId", "date", "shift", "status"],
       where: attendanceWhere,
       _count: { id: true },
     }),
@@ -226,7 +226,7 @@ export async function getEnterpriseAttendanceReport(
       _count: { id: true },
     }),
     prisma.attendance.groupBy({
-      by: ["date", "status"],
+      by: ["date", "farmId", "shift", "status"],
       where: {
         farmId: { in: farmIds },
         date: { gte: trendStartDay, lte: targetEndDay },
@@ -246,19 +246,18 @@ export async function getEnterpriseAttendanceReport(
     fallbackMap.set(item.farmId, item._count.id);
   }
 
-  // Organize grouped data by farm
-  const farmGroupMap = new Map<
+  // Organize grouped data by farm and date
+  const allShifts: Shift[] = ["MORNING_SHIFT", "AFTERNOON_SHIFT", "NIGHT_SHIFT", "OVERTIME"];
+
+  const farmShiftsBreakdown = new Map<
     string,
-    {
-      present: number;
-      absent: number;
-      halfDay: number;
-      leave: number;
-      shifts: Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>;
-    }
+    Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>
   >();
 
-  const allShifts: Shift[] = ["MORNING_SHIFT", "AFTERNOON_SHIFT", "NIGHT_SHIFT", "OVERTIME"];
+  const farmDateShiftsMap = new Map<
+    string,
+    Map<string, Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>>
+  >();
 
   for (const fId of farmIds) {
     const shiftRecords = allShifts.reduce((acc, s) => {
@@ -266,32 +265,38 @@ export async function getEnterpriseAttendanceReport(
       return acc;
     }, {} as Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>);
 
-    farmGroupMap.set(fId, {
-      present: 0,
-      absent: 0,
-      halfDay: 0,
-      leave: 0,
-      shifts: shiftRecords,
-    });
+    farmShiftsBreakdown.set(fId, shiftRecords);
+    farmDateShiftsMap.set(fId, new Map());
   }
 
   for (const row of groupedStats) {
-    const farmData = farmGroupMap.get(row.farmId);
-    if (!farmData) continue;
+    const shiftsRecord = farmShiftsBreakdown.get(row.farmId);
+    if (!shiftsRecord) continue;
+
+    const farmDates = farmDateShiftsMap.get(row.farmId)!;
+    const dateStr = row.date.toISOString().slice(0, 10);
+    let dayShifts = farmDates.get(dateStr);
+    if (!dayShifts) {
+      dayShifts = allShifts.reduce((acc, s) => {
+        acc[s] = { present: 0, absent: 0, halfDay: 0, leave: 0 };
+        return acc;
+      }, {} as Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>);
+      farmDates.set(dateStr, dayShifts);
+    }
 
     const count = row._count.id;
     if (row.status === "PRESENT") {
-      farmData.present += count;
-      farmData.shifts[row.shift].present += count;
+      shiftsRecord[row.shift].present += count;
+      dayShifts[row.shift].present += count;
     } else if (row.status === "ABSENT") {
-      farmData.absent += count;
-      farmData.shifts[row.shift].absent += count;
+      shiftsRecord[row.shift].absent += count;
+      dayShifts[row.shift].absent += count;
     } else if (row.status === "HALF_DAY") {
-      farmData.halfDay += count;
-      farmData.shifts[row.shift].halfDay += count;
+      shiftsRecord[row.shift].halfDay += count;
+      dayShifts[row.shift].halfDay += count;
     } else if (row.status === "LEAVE") {
-      farmData.leave += count;
-      farmData.shifts[row.shift].leave += count;
+      shiftsRecord[row.shift].leave += count;
+      dayShifts[row.shift].leave += count;
     }
   }
 
@@ -309,17 +314,47 @@ export async function getEnterpriseAttendanceReport(
 
   for (const farm of farms) {
     uniqueCompanies.add(farm.companyId);
-    const data = farmGroupMap.get(farm.id)!;
+    const shiftsData = farmShiftsBreakdown.get(farm.id)!;
+    const farmDates = farmDateShiftsMap.get(farm.id)!;
     const totalEmployees = farm._count.employees;
     const totalWorkers = farm._count.workers;
     const totalWorkforce = totalEmployees + totalWorkers;
 
+    let farmPresent = 0;
+    let farmAbsent = 0;
+    let farmHalfDay = 0;
+    let farmLeave = 0;
+
+    for (const [, dayShifts] of farmDates.entries()) {
+      if (query.shift) {
+        const sData = dayShifts[query.shift];
+        if (sData) {
+          farmPresent += sData.present;
+          farmAbsent += sData.absent;
+          farmHalfDay += sData.halfDay;
+          farmLeave += sData.leave;
+        }
+      } else {
+        // "All Shifts": absent count and present count take the max across all shifts of the day
+        const shiftEntries = Object.values(dayShifts);
+        const maxDayPresent = Math.max(0, ...shiftEntries.map((s) => s.present));
+        const maxDayAbsent = Math.max(0, ...shiftEntries.map((s) => s.absent));
+        const maxDayHalfDay = Math.max(0, ...shiftEntries.map((s) => s.halfDay));
+        const maxDayLeave = Math.max(0, ...shiftEntries.map((s) => s.leave));
+
+        farmPresent += maxDayPresent;
+        farmAbsent += maxDayAbsent;
+        farmHalfDay += maxDayHalfDay;
+        farmLeave += maxDayLeave;
+      }
+    }
+
     // For single day, unmarked is workforce minus recorded (floor at 0)
-    const recordedCount = data.present + data.absent + data.halfDay + data.leave;
+    const recordedCount = farmPresent + farmAbsent + farmHalfDay + farmLeave;
     const unmarkedCount = isSingleDay ? Math.max(0, totalWorkforce - recordedCount) : 0;
 
     // Effective attendance: Present + 0.5 * HalfDay
-    const effectivePresent = data.present + data.halfDay * 0.5;
+    const effectivePresent = farmPresent + farmHalfDay * 0.5;
     const rateDenominator = isSingleDay ? totalWorkforce : (recordedCount || 1);
     const attendanceRate = rateDenominator > 0
       ? Math.min(100, Math.round((effectivePresent / rateDenominator) * 1000) / 10)
@@ -329,10 +364,10 @@ export async function getEnterpriseAttendanceReport(
     const fallbacks = fallbackMap.get(farm.id) ?? 0;
 
     grandTotalWorkforce += totalWorkforce;
-    grandTotalPresent += data.present;
-    grandTotalAbsent += data.absent;
-    grandTotalHalfDay += data.halfDay;
-    grandTotalLeave += data.leave;
+    grandTotalPresent += farmPresent;
+    grandTotalAbsent += farmAbsent;
+    grandTotalHalfDay += farmHalfDay;
+    grandTotalLeave += farmLeave;
     grandTotalUnmarked += unmarkedCount;
     grandTotalPending += pending;
     grandTotalFallbacks += fallbacks;
@@ -346,13 +381,13 @@ export async function getEnterpriseAttendanceReport(
       totalWorkforce,
       totalEmployees,
       totalWorkers,
-      presentCount: data.present,
-      absentCount: data.absent,
-      halfDayCount: data.halfDay,
-      leaveCount: data.leave,
+      presentCount: farmPresent,
+      absentCount: farmAbsent,
+      halfDayCount: farmHalfDay,
+      leaveCount: farmLeave,
       unmarkedCount,
       attendanceRate,
-      shiftsBreakdown: data.shifts,
+      shiftsBreakdown: shiftsData,
       flaggedIpFallbacks: fallbacks,
       pendingApprovals: pending,
     });
@@ -368,39 +403,78 @@ export async function getEnterpriseAttendanceReport(
     : 0;
 
   // Build 7-day chronological trends map
-  const trendDateMap = new Map<string, { present: number; absent: number; halfDay: number; leave: number }>();
+  const trendDateFarmMap = new Map<
+    string,
+    Map<string, Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>>
+  >();
+
   for (let i = 6; i >= 0; i--) {
     const d = new Date(targetEndDay);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    trendDateMap.set(dateStr, { present: 0, absent: 0, halfDay: 0, leave: 0 });
+    trendDateFarmMap.set(dateStr, new Map());
   }
 
   for (const row of trendStats) {
     const dStr = row.date.toISOString().slice(0, 10);
-    const entry = trendDateMap.get(dStr);
-    if (!entry) continue;
-    if (row.status === "PRESENT") entry.present += row._count.id;
-    else if (row.status === "ABSENT") entry.absent += row._count.id;
-    else if (row.status === "HALF_DAY") entry.halfDay += row._count.id;
-    else if (row.status === "LEAVE") entry.leave += row._count.id;
+    const farmMapForDate = trendDateFarmMap.get(dStr);
+    if (!farmMapForDate) continue;
+
+    let farmShiftRec = farmMapForDate.get(row.farmId);
+    if (!farmShiftRec) {
+      farmShiftRec = allShifts.reduce((acc, s) => {
+        acc[s] = { present: 0, absent: 0, halfDay: 0, leave: 0 };
+        return acc;
+      }, {} as Record<Shift, { present: number; absent: number; halfDay: number; leave: number }>);
+      farmMapForDate.set(row.farmId, farmShiftRec);
+    }
+
+    const count = row._count.id;
+    if (row.status === "PRESENT") farmShiftRec[row.shift].present += count;
+    else if (row.status === "ABSENT") farmShiftRec[row.shift].absent += count;
+    else if (row.status === "HALF_DAY") farmShiftRec[row.shift].halfDay += count;
+    else if (row.status === "LEAVE") farmShiftRec[row.shift].leave += count;
   }
 
-  const trends: DailyTrendItem[] = Array.from(trendDateMap.entries()).map(([dateStr, counts]) => {
+  const trends: DailyTrendItem[] = Array.from(trendDateFarmMap.entries()).map(([dateStr, farmMapForDate]) => {
     const d = new Date(`${dateStr}T00:00:00.000Z`);
     const dayLabel = d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
-    const effective = counts.present + counts.halfDay * 0.5;
-    const recorded = counts.present + counts.absent + counts.halfDay + counts.leave;
+
+    let dayPresent = 0;
+    let dayAbsent = 0;
+    let dayHalfDay = 0;
+    let dayLeave = 0;
+
+    for (const [, farmShifts] of farmMapForDate.entries()) {
+      if (query.shift) {
+        const sData = farmShifts[query.shift];
+        if (sData) {
+          dayPresent += sData.present;
+          dayAbsent += sData.absent;
+          dayHalfDay += sData.halfDay;
+          dayLeave += sData.leave;
+        }
+      } else {
+        const entries = Object.values(farmShifts);
+        dayPresent += Math.max(0, ...entries.map((s) => s.present));
+        dayAbsent += Math.max(0, ...entries.map((s) => s.absent));
+        dayHalfDay += Math.max(0, ...entries.map((s) => s.halfDay));
+        dayLeave += Math.max(0, ...entries.map((s) => s.leave));
+      }
+    }
+
+    const effective = dayPresent + dayHalfDay * 0.5;
+    const recorded = dayPresent + dayAbsent + dayHalfDay + dayLeave;
     const rateDenominator = grandTotalWorkforce > 0 ? grandTotalWorkforce : (recorded || 1);
     const attendanceRate = Math.min(100, Math.round((effective / rateDenominator) * 1000) / 10);
 
     return {
       date: dateStr,
       dayLabel,
-      present: counts.present,
-      absent: counts.absent,
-      halfDay: counts.halfDay,
-      leave: counts.leave,
+      present: dayPresent,
+      absent: dayAbsent,
+      halfDay: dayHalfDay,
+      leave: dayLeave,
       attendanceRate,
     };
   });

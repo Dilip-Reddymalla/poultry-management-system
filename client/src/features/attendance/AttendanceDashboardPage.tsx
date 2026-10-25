@@ -292,30 +292,65 @@ export function AttendanceDashboardPage(): React.ReactElement {
       };
     }
 
-    // Default "All Shifts" view: take the max of Morning and Afternoon shifts
-    const morningRecords = records.filter((r) => r.shift === "MORNING_SHIFT");
-    const afternoonRecords = records.filter((r) => r.shift === "AFTERNOON_SHIFT");
-
+    // Default "All Shifts" view: take the max across all operational shifts
+    // so metrics represent peak shift deployment rather than double-counting staff across shifts.
     const denominator = totalActiveWorkforce > 0 ? totalActiveWorkforce : (records.length || 1);
-    const morningStats = calculateStats(morningRecords, denominator);
-    const afternoonStats = calculateStats(afternoonRecords, denominator);
 
-    const morningDuty = morningStats.totalPresent + morningStats.halfDayCount;
-    const afternoonDuty = afternoonStats.totalPresent + afternoonStats.halfDayCount;
+    const activeShiftStats = SHIFTS.map((s) => {
+      const shiftRecs = records.filter((r) => r.shift === s);
+      return {
+        shift: s,
+        recs: shiftRecs,
+        stats: calculateStats(shiftRecs, denominator),
+      };
+    }).filter((item) => item.recs.length > 0);
 
-    let peakStats: ReturnType<typeof calculateStats>;
-    if (morningRecords.length > 0 && afternoonRecords.length > 0) {
-      peakStats = morningDuty >= afternoonDuty ? morningStats : afternoonStats;
-    } else if (morningRecords.length > 0) {
-      peakStats = morningStats;
-    } else if (afternoonRecords.length > 0) {
-      peakStats = afternoonStats;
-    } else {
-      peakStats = calculateStats(records, denominator);
+    if (activeShiftStats.length === 0) {
+      const emptyStats = calculateStats([], denominator);
+      return {
+        ...emptyStats,
+        pendingApprovalCount,
+        ipFallbackCount,
+        pendingIpFallbackCount,
+      };
     }
 
+    let peakPresentShift = activeShiftStats[0]!;
+    let maxFaceAiShift = activeShiftStats[0]!;
+
+    for (const item of activeShiftStats) {
+      const itemDuty = item.stats.totalPresent + item.stats.halfDayCount;
+      const peakDuty = peakPresentShift.stats.totalPresent + peakPresentShift.stats.halfDayCount;
+      if (itemDuty > peakDuty) {
+        peakPresentShift = item;
+      }
+      if (item.stats.faceAiCount > maxFaceAiShift.stats.faceAiCount) {
+        maxFaceAiShift = item;
+      }
+    }
+
+    // Maximum absent count across all shifts of the day
+    const peakAbsentCount = Math.max(...activeShiftStats.map((item) => item.stats.absentCount));
+
+    // Maximum half day and leave counts across shifts
+    const peakHalfDayCount = Math.max(...activeShiftStats.map((item) => item.stats.halfDayCount));
+    const peakLeaveCount = Math.max(...activeShiftStats.map((item) => item.stats.leaveCount));
+
+    const totalPresent = peakPresentShift.stats.totalPresent;
+    const totalPresentAndHalf = totalPresent + peakHalfDayCount;
+    const attendanceRate = Math.min(100, Math.round((totalPresentAndHalf / denominator) * 100));
+
     return {
-      ...peakStats,
+      presentEmployees: peakPresentShift.stats.presentEmployees,
+      presentWorkers: peakPresentShift.stats.presentWorkers,
+      totalPresent,
+      halfDayCount: peakHalfDayCount,
+      absentCount: peakAbsentCount,
+      leaveCount: peakLeaveCount,
+      faceAiCount: maxFaceAiShift.stats.faceAiCount,
+      avgConfidence: maxFaceAiShift.stats.avgConfidence,
+      attendanceRate,
+      totalMarked: peakPresentShift.recs.length,
       pendingApprovalCount,
       ipFallbackCount,
       pendingIpFallbackCount,

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import type { Attendance, Shed, Shift } from "../../api/types.js";
 import { statusLabel, formatDate } from "../../lib/display.js";
@@ -49,6 +50,44 @@ export function AttendanceRosterTable({
 }): React.ReactElement {
   const isMobile = isMobileProp ?? useIsMobile();
 
+  // Tab badge counts: when viewing All Shifts, take the max of the day's all shifts
+  // so counts represent peak workforce deployment rather than summing multiple shifts.
+  const tabCounts = useMemo(() => {
+    if (dashboardShift) {
+      const scoped = allRecords.filter((r) => r.shift === dashboardShift);
+      return {
+        all: scoped.filter((r) => r.status !== "ABSENT").length,
+        present: scoped.filter((r) => r.status === "PRESENT").length,
+        halfDay: scoped.filter((r) => r.status === "HALF_DAY").length,
+        absent: scoped.filter((r) => r.status === "ABSENT").length,
+        leave: scoped.filter((r) => r.status === "LEAVE").length,
+        faceAi: scoped.filter((r) => r.verificationMode === "FACE_AI").length,
+        pending: scoped.filter((r) => !r.approvedAt).length,
+        ipFallback: scoped.filter((r) => r.locationSource === "IP_FALLBACK").length,
+        geofenceExceeded: scoped.filter((r) => r.locationSource === "GEOFENCE_EXCEEDED").length,
+      };
+    }
+
+    const SHIFTS_LIST: Shift[] = ["MORNING_SHIFT", "AFTERNOON_SHIFT", "NIGHT_SHIFT", "OVERTIME"];
+    const maxPresent = Math.max(0, ...SHIFTS_LIST.map((s) => allRecords.filter((r) => r.shift === s && r.status === "PRESENT").length));
+    const maxHalfDay = Math.max(0, ...SHIFTS_LIST.map((s) => allRecords.filter((r) => r.shift === s && r.status === "HALF_DAY").length));
+    const maxAbsent = Math.max(0, ...SHIFTS_LIST.map((s) => allRecords.filter((r) => r.shift === s && r.status === "ABSENT").length));
+    const maxLeave = Math.max(0, ...SHIFTS_LIST.map((s) => allRecords.filter((r) => r.shift === s && r.status === "LEAVE").length));
+    const maxFaceAi = Math.max(0, ...SHIFTS_LIST.map((s) => allRecords.filter((r) => r.shift === s && r.verificationMode === "FACE_AI").length));
+
+    return {
+      all: maxPresent + maxHalfDay,
+      present: maxPresent,
+      halfDay: maxHalfDay,
+      absent: maxAbsent,
+      leave: maxLeave,
+      faceAi: maxFaceAi,
+      pending: allRecords.filter((r) => !r.approvedAt).length,
+      ipFallback: allRecords.filter((r) => r.locationSource === "IP_FALLBACK").length,
+      geofenceExceeded: allRecords.filter((r) => r.locationSource === "GEOFENCE_EXCEEDED").length,
+    };
+  }, [allRecords, dashboardShift]);
+
   return (
     <Panel bleed>
       {/* Table Filters & Tab Row */}
@@ -72,7 +111,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("ALL")}
             >
-              All ({allRecords.filter((r) => r.status !== "ABSENT").length})
+              All ({tabCounts.all})
             </button>
             <button
               type="button"
@@ -80,7 +119,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("PRESENT")}
             >
-              🟢 Present ({allRecords.filter((r) => r.status === "PRESENT").length})
+              🟢 Present ({tabCounts.present})
             </button>
             <button
               type="button"
@@ -88,7 +127,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("HALF_DAY")}
             >
-              🟠 Half-Day ({allRecords.filter((r) => r.status === "HALF_DAY").length})
+              🟠 Half-Day ({tabCounts.halfDay})
             </button>
             <button
               type="button"
@@ -96,7 +135,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("ABSENT")}
             >
-              🔴 Absent ({allRecords.filter((r) => r.status === "ABSENT").length})
+              🔴 Absent ({tabCounts.absent})
             </button>
             <button
               type="button"
@@ -104,7 +143,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("LEAVE")}
             >
-              ⚪ Leave ({allRecords.filter((r) => r.status === "LEAVE").length})
+              ⚪ Leave ({tabCounts.leave})
             </button>
             <button
               type="button"
@@ -112,7 +151,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("FACE_AI")}
             >
-              🤖 Face AI ({allRecords.filter((r) => r.verificationMode === "FACE_AI").length})
+              🤖 Face AI ({tabCounts.faceAi})
             </button>
             <button
               type="button"
@@ -120,7 +159,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("PENDING")}
             >
-              ✍️ Pending ({allRecords.filter((r) => !r.approvedAt).length})
+              ✍️ Pending ({tabCounts.pending})
             </button>
             <button
               type="button"
@@ -137,7 +176,7 @@ export function AttendanceRosterTable({
               }}
               onClick={() => onTabChange("IP_FALLBACK")}
             >
-              🌐 IP Fallback ({allRecords.filter((r) => r.locationSource === "IP_FALLBACK").length})
+              🌐 IP Fallback ({tabCounts.ipFallback})
             </button>
             <button
               type="button"
@@ -154,7 +193,7 @@ export function AttendanceRosterTable({
               }}
               onClick={() => onTabChange("GEOFENCE_EXCEEDED")}
             >
-              ⚠️ Offset ({allRecords.filter((r) => r.locationSource === "GEOFENCE_EXCEEDED").length})
+              ⚠️ Offset ({tabCounts.geofenceExceeded})
             </button>
           </div>
 

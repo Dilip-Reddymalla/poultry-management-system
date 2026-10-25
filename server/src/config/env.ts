@@ -58,6 +58,9 @@ const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
       .optional(),
 
+    // Application timezone for shift cutoffs and scheduling (defaults to Asia/Kolkata)
+    APP_TIMEZONE: z.string().trim().optional().default("Asia/Kolkata"),
+
     // Refresh token signing secret. If not set, falls back to JWT_SECRET.
     REFRESH_TOKEN_SECRET: z
       .string()

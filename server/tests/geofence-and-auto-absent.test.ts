@@ -33,7 +33,7 @@ describe("Farm Geofence & Auto-Mark Absent", () => {
     await cleanupTestData();
 
     systemAdminCookie = await loginSystemAdmin();
-    const company = await createTestCompany(systemAdminCookie);
+    const company = await createTestCompany();
 
     // Create a farm with GPS coordinates and 1,000m (1 KM) default geofence
     const farm = await createTestFarm("ACTIVE", company.id);
@@ -76,6 +76,8 @@ describe("Farm Geofence & Auto-Mark Absent", () => {
 
     it("evaluates within vs outside default 1000m geofence", () => {
       const farmLoc = {
+        id: "mock-farm-id",
+        companyId: "mock-company-id",
         latitude: FARM_LAT,
         longitude: FARM_LON,
         geofenceRadius: 1000,

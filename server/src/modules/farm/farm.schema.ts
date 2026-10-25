@@ -26,6 +26,8 @@ export const createFarmSchema = z.object({
   latitude: latitudeSchema.nullable().optional(),
   longitude: longitudeSchema.nullable().optional(),
   geofenceRadius: geofenceRadiusSchema.optional(),
+  autoAbsentEnabled: z.boolean().optional(),
+  autoAbsentGraceMinutes: z.number().int().min(0).max(360).optional(),
 });
 
 // The owning company is fixed at creation and status is owned by the
@@ -37,6 +39,8 @@ export const updateFarmSchema = z
     latitude: latitudeSchema.nullable().optional(),
     longitude: longitudeSchema.nullable().optional(),
     geofenceRadius: geofenceRadiusSchema.optional(),
+    autoAbsentEnabled: z.boolean().optional(),
+    autoAbsentGraceMinutes: z.number().int().min(0).max(360).optional(),
   })
   .partial();
 

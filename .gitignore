@@ -91,6 +91,7 @@ src/generated/
 backups/
 **/backups/
 *.sql
+!**/prisma/migrations/**/*.sql
 *.sql.gz
 *.dump
 server/src/scripts/neon-backup.ts

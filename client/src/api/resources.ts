@@ -65,6 +65,8 @@ export interface FarmInput {
   latitude?: number | null;
   longitude?: number | null;
   geofenceRadius?: number | null;
+  autoAbsentEnabled?: boolean;
+  autoAbsentGraceMinutes?: number;
 }
 
 // -- Sheds --

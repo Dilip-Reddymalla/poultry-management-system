@@ -72,7 +72,7 @@ export function AttendanceRosterTable({
               style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minHeight: "26px", flex: "0 0 auto", whiteSpace: "nowrap" }}
               onClick={() => onTabChange("ALL")}
             >
-              All ({records.length})
+              All ({allRecords.filter((r) => r.status !== "ABSENT").length})
             </button>
             <button
               type="button"

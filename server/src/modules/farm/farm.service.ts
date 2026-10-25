@@ -26,6 +26,8 @@ const farmSelect = {
   latitude: true,
   longitude: true,
   geofenceRadius: true,
+  autoAbsentEnabled: true,
+  autoAbsentGraceMinutes: true,
   companyId: true,
   company: {
     select: {
@@ -49,6 +51,8 @@ function toSafeFarm(farm: FarmRecord): SafeFarm {
     latitude: farm.latitude,
     longitude: farm.longitude,
     geofenceRadius: farm.geofenceRadius,
+    autoAbsentEnabled: farm.autoAbsentEnabled,
+    autoAbsentGraceMinutes: farm.autoAbsentGraceMinutes,
     company: {
       id: farm.company.id,
       name: farm.company.name,
@@ -149,6 +153,8 @@ export async function createFarm(
         ...(input.latitude !== undefined && { latitude: input.latitude }),
         ...(input.longitude !== undefined && { longitude: input.longitude }),
         ...(input.geofenceRadius !== undefined && { geofenceRadius: input.geofenceRadius }),
+        ...(input.autoAbsentEnabled !== undefined && { autoAbsentEnabled: input.autoAbsentEnabled }),
+        ...(input.autoAbsentGraceMinutes !== undefined && { autoAbsentGraceMinutes: input.autoAbsentGraceMinutes }),
       },
       select: farmSelect,
     });
@@ -175,6 +181,8 @@ export async function createFarm(
         latitude: input.latitude,
         longitude: input.longitude,
         geofenceRadius: input.geofenceRadius,
+        autoAbsentEnabled: input.autoAbsentEnabled,
+        autoAbsentGraceMinutes: input.autoAbsentGraceMinutes,
       },
     });
     return safeFarm;
@@ -218,6 +226,8 @@ export async function updateFarm(
         ...(input.latitude !== undefined && { latitude: input.latitude }),
         ...(input.longitude !== undefined && { longitude: input.longitude }),
         ...(input.geofenceRadius !== undefined && { geofenceRadius: input.geofenceRadius }),
+        ...(input.autoAbsentEnabled !== undefined && { autoAbsentEnabled: input.autoAbsentEnabled }),
+        ...(input.autoAbsentGraceMinutes !== undefined && { autoAbsentGraceMinutes: input.autoAbsentGraceMinutes }),
       },
       select: farmSelect,
     });

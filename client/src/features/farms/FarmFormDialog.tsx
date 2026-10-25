@@ -51,6 +51,12 @@ export function FarmFormDialog({
       ? String(farm.geofenceRadius)
       : "1000",
   );
+  const [autoAbsentEnabled, setAutoAbsentEnabled] = useState(
+    farm?.autoAbsentEnabled ?? true,
+  );
+  const [autoAbsentGraceMinutes, setAutoAbsentGraceMinutes] = useState<string>(
+    String(farm?.autoAbsentGraceMinutes ?? 5),
+  );
   const [locating, setLocating] = useState(false);
   const [locatingMsg, setLocatingMsg] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -87,12 +93,16 @@ export function FarmFormDialog({
     const lonVal = longitude.trim() ? parseFloat(longitude) : null;
     const geoVal = geofenceRadius.trim() ? parseFloat(geofenceRadius) : 1000;
 
+    const graceVal = autoAbsentGraceMinutes.trim() ? parseInt(autoAbsentGraceMinutes, 10) : 5;
+
     const payload = {
       code,
       name,
       latitude: latVal,
       longitude: lonVal,
       geofenceRadius: geoVal,
+      autoAbsentEnabled,
+      autoAbsentGraceMinutes: Number.isNaN(graceVal) ? 5 : Math.max(0, Math.min(360, graceVal)),
     };
 
     try {
@@ -228,6 +238,37 @@ export function FarmFormDialog({
               onChange={(e) => setGeofenceRadius(e.target.value)}
             />
           </div>
+        </div>
+
+        <div style={{ padding: "0.75rem 0.85rem", border: "1px solid var(--line)", borderRadius: "var(--radius)", background: "var(--surface-sunk)", marginTop: "0.25rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>
+            <input
+              type="checkbox"
+              id="farm-auto-absent"
+              checked={autoAbsentEnabled}
+              onChange={(e) => setAutoAbsentEnabled(e.target.checked)}
+              style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--moss, #2e7d32)" }}
+            />
+            <span>Enable Automatic Absent Marking</span>
+          </label>
+          <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.25rem", marginLeft: "1.6rem", marginBottom: autoAbsentEnabled ? "0.75rem" : 0 }}>
+            Automatically marks unrecorded personnel as ABSENT after shift end times. Uncheck to disable for this farm.
+          </p>
+
+          {autoAbsentEnabled && (
+            <div style={{ marginLeft: "1.6rem", marginTop: "0.5rem" }}>
+              <TextField
+                id="farm-auto-absent-grace"
+                label="Grace Buffer (Minutes after shift end)"
+                type="number"
+                min={0}
+                max={360}
+                value={autoAbsentGraceMinutes}
+                hint="Default: 5 minutes. Example: If morning shift ends at 13:00, auto-absent marks at 13:05 with a 5-minute buffer."
+                onChange={(e) => setAutoAbsentGraceMinutes(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         <div className="dialog__footer">

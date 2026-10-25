@@ -509,7 +509,9 @@ export function AttendanceDashboardPage(): React.ReactElement {
         return false;
       }
 
-      // Tab Status Filter
+      // Tab Status Filter:
+      // Absent records are hidden in 'All' or other sections, and ONLY displayed when explicitly filtering by 'ABSENT'.
+      if (activeTab !== "ABSENT" && r.status === "ABSENT") return false;
       if (activeTab === "PRESENT" && r.status !== "PRESENT") return false;
       if (activeTab === "ABSENT" && r.status !== "ABSENT") return false;
       if (activeTab === "HALF_DAY" && r.status !== "HALF_DAY") return false;

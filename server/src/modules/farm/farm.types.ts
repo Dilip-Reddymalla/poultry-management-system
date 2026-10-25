@@ -8,6 +8,8 @@ export interface SafeFarm {
   latitude?: number | null;
   longitude?: number | null;
   geofenceRadius?: number | null;
+  autoAbsentEnabled?: boolean;
+  autoAbsentGraceMinutes?: number;
   company: {
     id: string;
     name: string;

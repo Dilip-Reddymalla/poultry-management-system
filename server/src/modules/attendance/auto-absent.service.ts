@@ -1,6 +1,7 @@
 import type { Shift } from "@prisma/client";
 import { prisma } from "../../config/database.js";
 import { logger } from "../../config/logger.js";
+import { env } from "../../config/env.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { getEffectiveShiftTimings } from "./shift-timing.js";
 
@@ -26,6 +27,43 @@ export interface AutoAbsentExecutionSummary {
   }>;
 }
 
+function getZonedTimeParts(date: Date, timeZone: string) {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const parts = formatter.formatToParts(date);
+    const getPart = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+    const year = getPart("year");
+    const month = getPart("month");
+    const day = getPart("day");
+    const rawHour = parseInt(getPart("hour"), 10);
+    const hours = rawHour === 24 ? 0 : rawHour;
+    const minutes = parseInt(getPart("minute"), 10);
+    return {
+      dateStr: `${year}-${month}-${day}`,
+      hours,
+      minutes,
+      totalMinutes: hours * 60 + minutes,
+    };
+  } catch {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    return {
+      dateStr: date.toISOString().slice(0, 10),
+      hours,
+      minutes,
+      totalMinutes: hours * 60 + minutes,
+    };
+  }
+}
+
 /**
  * Checks all active farms and evaluates whether any regular shifts have concluded
  * (shift end time + 5 minutes grace buffer) on the current day.
@@ -46,7 +84,10 @@ export async function processAutoAbsentCutoffs(
   };
 
   const activeFarms = await prisma.farm.findMany({
-    where: { status: "ACTIVE" },
+    where: { 
+      status: "ACTIVE",
+      autoAbsentEnabled: true,
+    },
     select: {
       id: true,
       code: true,
@@ -54,22 +95,25 @@ export async function processAutoAbsentCutoffs(
       companyId: true,
       latitude: true,
       longitude: true,
+      autoAbsentEnabled: true,
+      autoAbsentGraceMinutes: true,
     },
   });
 
   summary.farmsEvaluated = activeFarms.length;
 
-  const currentHours = referenceDate.getHours();
-  const currentMinutes = referenceDate.getMinutes();
-  const currentTotalMinutes = currentHours * 60 + currentMinutes;
+  const targetTimezone = env.APP_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+  const zonedNow = getZonedTimeParts(referenceDate, targetTimezone);
+  const currentTotalMinutes = zonedNow.totalMinutes;
 
-  // Build calendar date strings (YYYY-MM-DD)
-  const todayStr = referenceDate.toISOString().slice(0, 10);
+  // Build calendar date strings (YYYY-MM-DD) pinned to UTC midnight
+  const todayStr = zonedNow.dateStr;
   const todayDate = new Date(`${todayStr}T00:00:00.000Z`);
 
-  const yesterday = new Date(referenceDate);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  // Compute yesterday in the target timezone
+  const yesterdayRef = new Date(referenceDate.getTime() - 24 * 60 * 60 * 1000);
+  const zonedYesterday = getZonedTimeParts(yesterdayRef, targetTimezone);
+  const yesterdayStr = zonedYesterday.dateStr;
   const yesterdayDate = new Date(`${yesterdayStr}T00:00:00.000Z`);
 
   for (const farm of activeFarms) {
@@ -85,9 +129,10 @@ export async function processAutoAbsentCutoffs(
         continue;
       }
 
-      // Calculate shift cutoff time in minutes
+      // Calculate shift cutoff time in minutes using farm-customized grace buffer
+      const graceMinutes = farm.autoAbsentGraceMinutes ?? AUTO_ABSENT_GRACE_MINUTES;
       const endTotalMinutes = rule.endHour * 60 + rule.endMinute;
-      const cutoffTotalMinutes = endTotalMinutes + AUTO_ABSENT_GRACE_MINUTES;
+      const cutoffTotalMinutes = endTotalMinutes + graceMinutes;
 
       let shouldProcess = false;
       let targetDate: Date = todayDate;
@@ -181,7 +226,7 @@ export async function processAutoAbsentCutoffs(
           latitude: defaultLat,
           longitude: defaultLon,
           locationSource,
-          notes: `Auto-marked absent (Shift cutoff + ${AUTO_ABSENT_GRACE_MINUTES}m grace)`,
+          notes: `Auto-marked absent (Shift cutoff + ${graceMinutes}m grace)`,
           recordedById: null,
           approvedById: null,
           approvedAt: now,
@@ -196,7 +241,7 @@ export async function processAutoAbsentCutoffs(
           latitude: defaultLat,
           longitude: defaultLon,
           locationSource,
-          notes: `Auto-marked absent (Shift cutoff + ${AUTO_ABSENT_GRACE_MINUTES}m grace)`,
+          notes: `Auto-marked absent (Shift cutoff + ${graceMinutes}m grace)`,
           recordedById: null,
           approvedById: null,
           approvedAt: now,

@@ -38,9 +38,11 @@ model Farm {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  latitude       Float?
-  longitude      Float?
-  geofenceRadius Float?  @default(1000)
+  latitude          Float?
+  longitude         Float?
+  geofenceRadius    Float?   @default(1000)
+  autoAbsentEnabled      Boolean  @default(true)
+  autoAbsentGraceMinutes Int      @default(5)
 
   company          Company           @relation(fields: [companyId], references: [id])
   sheds            Shed[]

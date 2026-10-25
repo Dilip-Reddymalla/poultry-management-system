@@ -113,8 +113,31 @@ export function getCurrentShift(
     }
   }
 
-  // If outside standard windows (e.g. before dawn 05:00 AM or late night),
-  // select Morning shift as the primary upcoming work shift
+  const currentTotalMinutes = date.getHours() * 60 + date.getMinutes();
+  const morningRule = shiftRules.MORNING_SHIFT ?? SHIFT_TIMINGS.MORNING_SHIFT;
+  const afternoonRule = shiftRules.AFTERNOON_SHIFT ?? SHIFT_TIMINGS.AFTERNOON_SHIFT;
+  const nightRule = shiftRules.NIGHT_SHIFT ?? SHIFT_TIMINGS.NIGHT_SHIFT;
+
+  const morningEnd = morningRule.endHour * 60 + morningRule.endMinute;
+  const afternoonStart = afternoonRule.startHour * 60 + afternoonRule.startMinute;
+  const afternoonEnd = afternoonRule.endHour * 60 + afternoonRule.endMinute;
+  const nightStart = nightRule.startHour * 60 + nightRule.startMinute;
+
+  // 1. Lunch gap between Morning and Afternoon shifts (e.g. 13:00 to 14:00):
+  // Associate with Morning shift for wrap-up/attendance review.
+  if (currentTotalMinutes >= morningEnd && currentTotalMinutes < afternoonStart) {
+    return "MORNING_SHIFT";
+  }
+
+  // 2. Evening period after Afternoon shift ends (e.g. 18:00 onwards until Night Shift starts, or all evening if Night Shift is disabled):
+  // This is the critical window where supervisors wrap up afternoon shift, inspect roster, and run auto-absent!
+  if (currentTotalMinutes >= afternoonEnd) {
+    if (nightRule.isEnabled === false || currentTotalMinutes < nightStart) {
+      return "AFTERNOON_SHIFT";
+    }
+  }
+
+  // 3. Early morning before morning shift begins: Upcoming shift is Morning
   return "MORNING_SHIFT";
 }
 

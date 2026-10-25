@@ -93,6 +93,8 @@ export interface Farm {
   latitude?: number | null;
   longitude?: number | null;
   geofenceRadius?: number | null;
+  autoAbsentEnabled?: boolean;
+  autoAbsentGraceMinutes?: number;
   company: Company;
   createdAt: string;
   updatedAt: string;

@@ -229,6 +229,16 @@ export function FarmDetailPage(): React.ReactElement {
                       </span>
                     ),
                   },
+                  {
+                    label: "Auto-Absent Feature",
+                    value: record.autoAbsentEnabled !== false ? (
+                      <span style={{ color: "var(--moss, #2e7d32)", fontWeight: 600 }}>
+                        ✅ Enabled (+{record.autoAbsentGraceMinutes ?? 5} min grace buffer)
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--rust, #dc2626)", fontWeight: 600 }}>⛔ Disabled</span>
+                    ),
+                  },
                   { label: t("common.status"), value: <StatusTag status={record.status} /> },
                 ]}
               />

@@ -79,6 +79,11 @@ async function inspectAndSync() {
     );
     console.log("shift_timings columns in production:", checkShiftTimings.rows.map((r) => `${r.column_name} (${r.data_type})`));
 
+    const checkFarms = await pool2.query(
+      "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name = 'farms' AND column_name IN ('autoAbsentEnabled', 'autoAbsentGraceMinutes');",
+    );
+    console.log("farms autoAbsent columns in production:", checkFarms.rows.map((r) => `${r.column_name} (${r.data_type}, default: ${r.column_default})`));
+
     // Verify system admin and permissions in production
     console.log("\nRunning seed / system-admin verification on production DB...");
     execSync("npx tsx prisma/seed.ts", {

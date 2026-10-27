@@ -188,6 +188,22 @@
   width: 100%;
 }
 
+.install-alert-banner {
+  background: var(--clay-soft);
+  border: 1px solid var(--clay);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  font-size: var(--step-0);
+  color: var(--ink);
+  line-height: 1.45;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .install-guide-notice {
   background: var(--surface-sunk);
   border-left: 3px solid var(--moss);

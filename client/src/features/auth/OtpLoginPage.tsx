@@ -301,6 +301,11 @@ export function OtpLoginPage(): React.ReactElement {
           <p className="signin__alt">
             <Link to="/login">{t("auth.otpLogin.signInWithEmail")}</Link>
           </p>
+
+          <p className="signin__alt signin__install-link">
+            <span>Using a mobile device? </span>
+            <Link to="/install">Install app for fast access</Link>
+          </p>
         </div>
       </main>
     </div>

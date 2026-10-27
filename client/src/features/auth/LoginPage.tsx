@@ -175,10 +175,15 @@ export function LoginPage(): React.ReactElement {
             {t("auth.login.noPassword")}{" "}
             <Link to="/otp-login">{t("auth.login.signInWithPhone")}</Link>
           </p>
+
+          <p className="signin__alt signin__install-link">
+            <span>Using a mobile device? </span>
+            <Link to="/install">Install app for fast access</Link>
+          </p>
         </form>
 
         <div className="signin__install">
-          <InstallButton variant="secondary" />
+          <InstallButton variant="secondary" alwaysShow />
         </div>
       </main>
     </div>

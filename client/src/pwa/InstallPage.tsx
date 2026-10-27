@@ -14,13 +14,20 @@ export function InstallPage(): React.ReactElement {
   const { canInstall, isInstalled, platform, install } = useInstallPrompt();
   const [installing, setInstalling] = useState(false);
   const [justInstalled, setJustInstalled] = useState(false);
+  const [promptUnavailableMessage, setPromptUnavailableMessage] = useState(false);
 
   async function handleDirectInstall(): Promise<void> {
     setInstalling(true);
+    setPromptUnavailableMessage(false);
     try {
-      const accepted = await install();
-      if (accepted) {
-        setJustInstalled(true);
+      if (canInstall) {
+        const accepted = await install();
+        if (accepted) {
+          setJustInstalled(true);
+        }
+      } else {
+        // Native trigger unavailable: alert user to use the 1-2-3 guide below
+        setPromptUnavailableMessage(true);
       }
     } finally {
       setInstalling(false);
@@ -70,7 +77,7 @@ export function InstallPage(): React.ReactElement {
           </div>
         ) : (
           <>
-            {/* Primary Action Hero */}
+            {/* Primary Action Hero - ALWAYS DISPLAYED */}
             <div className="install-hero">
               <div className="install-hero__meta">
                 <span className="install-badge">Progressive Web App</span>
@@ -78,30 +85,31 @@ export function InstallPage(): React.ReactElement {
                 <span className="install-badge install-badge--ghost">Fast &amp; Secure</span>
               </div>
 
-              {canInstall ? (
-                <div className="install-cta-box">
-                  <p className="install-cta-box__text">
-                    Install PoultryOps directly to your device for an instant full-screen, native application experience.
-                  </p>
-                  <Button
-                    variant="primary"
-                    className="install-button--hero"
-                    busy={installing}
-                    onClick={() => {
-                      void handleDirectInstall();
-                    }}
-                  >
-                    <InstallIcon className="button__icon" />
-                    <span>Install App on this Device</span>
-                  </Button>
-                </div>
-              ) : (
-                <div className="install-guide-notice">
-                  <p className="install-guide-notice__text">
-                    Follow the simple instructions below to add PoultryOps to your home screen or desktop.
-                  </p>
-                </div>
-              )}
+              <div className="install-cta-box">
+                <p className="install-cta-box__text">
+                  Install PoultryOps directly to your device for an instant full-screen, native application experience.
+                </p>
+
+                <Button
+                  variant="primary"
+                  className="install-button--hero"
+                  busy={installing}
+                  onClick={() => {
+                    void handleDirectInstall();
+                  }}
+                >
+                  <InstallIcon className="button__icon" />
+                  <span>
+                    {canInstall ? "Install App Now" : "Install App to Home Screen"}
+                  </span>
+                </Button>
+
+                {promptUnavailableMessage && (
+                  <div className="install-alert-banner">
+                    💡 Your browser requires manual confirmation: please tap your browser&apos;s menu (or Share icon on iOS) and choose <strong>&quot;Add to Home Screen&quot;</strong> or <strong>&quot;Install App&quot;</strong> as shown in the steps below.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Platform Guides */}
@@ -146,7 +154,7 @@ export function InstallPage(): React.ReactElement {
                 </div>
               )}
 
-              {platform === "android" && !canInstall && (
+              {platform === "android" && (
                 <div className="instruction-card instruction-card--featured">
                   <div className="instruction-card__header">
                     <span className="instruction-card__tag">Android Browser / Chrome</span>
@@ -175,7 +183,7 @@ export function InstallPage(): React.ReactElement {
                 </div>
               )}
 
-              {platform === "desktop" && !canInstall && (
+              {platform === "desktop" && (
                 <div className="instruction-card instruction-card--featured">
                   <div className="instruction-card__header">
                     <span className="instruction-card__tag">Desktop Browser</span>
@@ -204,7 +212,7 @@ export function InstallPage(): React.ReactElement {
                 </div>
               )}
 
-              {/* Show generic fallback accordion / expandable if non-targeted */}
+              {/* Show generic fallback if non-targeted */}
               {platform === "other" && (
                 <div className="instruction-card">
                   <div className="instruction-card__header">

@@ -1,0 +1,387 @@
+/* Install Page Styles */
+.install-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: var(--surface-sunk);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgb(63 107 74 / 5%) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgb(176 108 44 / 5%) 0%, transparent 40%);
+}
+
+.install-card {
+  width: 100%;
+  max-width: 620px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .install-page {
+    padding: var(--space-2);
+    align-items: flex-start;
+  }
+  .install-card {
+    padding: var(--space-4);
+    box-shadow: none;
+    border-radius: var(--radius);
+  }
+}
+
+.install-card__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-4);
+}
+
+.install-card__logo-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--moss);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgb(63 107 74 / 30%);
+}
+
+.install-card__logo-icon {
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+}
+
+.install-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-card__title {
+  margin: 0;
+  font-size: var(--step-2);
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.install-card__title strong {
+  color: var(--moss);
+  font-weight: 700;
+}
+
+.install-card__subtitle {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+}
+
+/* Status: Installed */
+.install-status--success {
+  text-align: center;
+  padding: var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.install-status__icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--moss-soft);
+  color: var(--moss);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-status__icon {
+  width: 32px;
+  height: 32px;
+}
+
+.install-status__heading {
+  margin: 0;
+  font-size: var(--step-1);
+  color: var(--ink);
+}
+
+.install-status__desc {
+  margin: 0;
+  font-size: var(--step-0);
+  color: var(--ink-soft);
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+.install-status__actions {
+  margin-top: var(--space-3);
+}
+
+/* Hero & CTA */
+.install-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.install-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.install-badge {
+  font-size: var(--step--1);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: var(--moss-soft);
+  color: var(--moss);
+}
+
+.install-badge--ghost {
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.install-cta-box {
+  background: var(--surface-sunk);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.install-cta-box__text {
+  margin: 0;
+  font-size: var(--step-0);
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.install-button--hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--step-0);
+  font-weight: 600;
+  width: 100%;
+}
+
+.install-guide-notice {
+  background: var(--surface-sunk);
+  border-left: 3px solid var(--moss);
+  padding: var(--space-3) var(--space-4);
+}
+
+.install-guide-notice__text {
+  margin: 0;
+  font-size: var(--step-0);
+  color: var(--ink-soft);
+}
+
+/* Instructions */
+.install-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.install-instructions__heading {
+  margin: 0;
+  font-size: var(--step-0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.instruction-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.instruction-card--featured {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 1px var(--moss);
+}
+
+.instruction-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.instruction-card__tag {
+  font-size: var(--step--1);
+  color: var(--moss);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.instruction-card__header h3 {
+  margin: 0;
+  font-size: var(--step-1);
+  color: var(--ink);
+}
+
+.instruction-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.instruction-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.instruction-step__num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--moss);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--step--1);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.instruction-step__content {
+  font-size: var(--step-0);
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.instruction-step__content strong {
+  color: var(--ink);
+}
+
+.instruction-step__inline-icon {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 1.1em;
+  vertical-align: middle;
+}
+
+.instruction-card__note {
+  margin: 0;
+  font-size: var(--step-0);
+  color: var(--ink-soft);
+}
+
+/* Benefits Section */
+.install-benefits {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.install-benefits__heading {
+  margin: 0;
+  font-size: var(--step-0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.install-benefits__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 540px) {
+  .install-benefits__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--surface-sunk);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+}
+
+.benefit-item__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.benefit-item h4 {
+  margin: 0 0 2px 0;
+  font-size: var(--step-0);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.benefit-item p {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+/* Footer Links */
+.install-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+
+.install-footer__link {
+  font-size: var(--step-0);
+  color: var(--moss);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.install-footer__link:hover {
+  text-decoration: underline;
+}
+
+.install-footer__sep {
+  color: var(--line-strong);
+}

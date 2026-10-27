@@ -39,6 +39,9 @@ const FaceAiDemoPage = lazy(() =>
 const AboutPage = lazy(() =>
   import("./features/about/AboutPage.js").then((m) => ({ default: m.AboutPage }))
 );
+const InstallPage = lazy(() =>
+  import("./pwa/InstallPage.js").then((m) => ({ default: m.InstallPage }))
+);
 const AuditLogsPage = lazy(() =>
   import("./features/audit/AuditLogsPage.js").then((m) => ({ default: m.AuditLogsPage }))
 );
@@ -138,10 +141,11 @@ export default function App(): React.ReactElement {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
-          {/* Publicly accessible analytics, Face AI interactive demo, and project about page */}
+          {/* Publicly accessible analytics, Face AI interactive demo, project about page, and PWA install guide */}
           <Route path="/about" element={<AboutPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/face-ai-demo" element={<FaceAiDemoPage />} />
+          <Route path="/install" element={<InstallPage />} />
 
           <Route element={<ProtectedRoute />}>
             {/* Set-password stands alone, full screen: a provisioned account owes a

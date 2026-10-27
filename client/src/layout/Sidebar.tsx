@@ -9,11 +9,13 @@ import {
   DashboardIcon,
   EggIcon,
   FarmIcon,
+  InstallIcon,
   PeopleIcon,
   ProfileIcon,
   ShedIcon,
   WorkerIcon,
 } from "../components/icons.js";
+import { isStandalone } from "../pwa/useInstallPrompt.js";
 
 interface NavItem {
   to: string;
@@ -159,6 +161,19 @@ export function Sidebar({
             {t(item.labelKey)}
           </NavLink>
         ))}
+
+        {!isStandalone() && (
+          <NavLink
+            to="/install"
+            className={({ isActive }) =>
+              isActive ? "navlink navlink--active" : "navlink"
+            }
+            onClick={onNavigate}
+          >
+            <InstallIcon className="navlink__icon" />
+            {t("pwa.installApp")}
+          </NavLink>
+        )}
       </nav>
 
       <div className="sidebar__foot">

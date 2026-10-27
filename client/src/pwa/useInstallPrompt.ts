@@ -1,74 +1,131 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-/**
- * The Chromium install event. It is not in the DOM lib types because it is not
- * a standard yet, and it is the only way to offer installation from our own UI
- * instead of the browser's address-bar affordance.
- */
-interface BeforeInstallPromptEvent extends Event {
+export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+
+function notifyListeners(): void {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+// Attach early at script load time so the event is captured even if React takes time to mount
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e: Event) => {
+    // Prevent standard mini-infobar on mobile Chrome
+    e.preventDefault();
+    deferredPrompt = e as BeforeInstallPromptEvent;
+    notifyListeners();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    notifyListeners();
+  });
+}
+
+function subscribe(callback: () => void): () => void {
+  listeners.add(callback);
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+function getSnapshot(): BeforeInstallPromptEvent | null {
+  return deferredPrompt;
+}
+
 /** True when the app is already running as an installed window. */
 export function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     window.matchMedia("(display-mode: window-controls-overlay)").matches ||
-    // iOS Safari, which has no display-mode support for installed web apps.
+    // iOS Safari standalone indicator
     ("standalone" in window.navigator &&
       (window.navigator as { standalone?: boolean }).standalone === true)
   );
 }
 
-interface InstallPrompt {
-  /** Only true when the browser has actually offered installation. */
-  canInstall: boolean;
-  install: () => Promise<void>;
+export type PlatformType = "ios" | "android" | "desktop" | "other";
+
+export function detectPlatform(): PlatformType {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent.toLowerCase();
+  
+  // iOS detection (iPad, iPhone, iPod or iPad OS Safari)
+  const isIos =
+    /iphone|ipad|ipod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isIos) return "ios";
+  if (/android/.test(ua)) return "android";
+  if (/windows|macintosh|linux/.test(ua) && !/mobile/.test(ua)) return "desktop";
+
+  return "other";
 }
 
-/**
- * Captures the browser's install offer so the app can present it once, from a
- * quiet control the user chose to press. Browsers that never fire the event
- * (Firefox, Safari) leave `canInstall` false and no install UI is rendered.
- */
+export interface InstallPrompt {
+  /** True when the browser has supplied a native one-click install prompt event */
+  canInstall: boolean;
+  /** True if already running inside an installed standalone window */
+  isInstalled: boolean;
+  /** The current user's OS / platform for targeted instructions */
+  platform: PlatformType;
+  /** Trigger the native browser install dialog */
+  install: () => Promise<boolean>;
+}
+
 export function useInstallPrompt(): InstallPrompt {
-  const [event, setEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const promptEvent = useSyncExternalStore(subscribe, getSnapshot, () => null);
+  const [installed, setInstalled] = useState<boolean>(false);
+  const [platform, setPlatform] = useState<PlatformType>("other");
 
   useEffect(() => {
-    function handleBeforeInstallPrompt(nativeEvent: Event): void {
-      // Suppress the browser's own mini-infobar; the app offers it instead.
-      nativeEvent.preventDefault();
-      setEvent(nativeEvent as BeforeInstallPromptEvent);
+    setInstalled(isStandalone());
+    setPlatform(detectPlatform());
+
+    function onDisplayModeChange(): void {
+      setInstalled(isStandalone());
     }
 
-    function handleInstalled(): void {
-      setEvent(null);
-    }
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleInstalled);
-
+    const mq = window.matchMedia("(display-mode: standalone)");
+    mq.addEventListener("change", onDisplayModeChange);
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt,
-      );
-      window.removeEventListener("appinstalled", handleInstalled);
+      mq.removeEventListener("change", onDisplayModeChange);
     };
   }, []);
 
-  const install = useCallback(async () => {
-    if (!event) {
-      return;
+  const install = useCallback(async (): Promise<boolean> => {
+    if (!deferredPrompt) {
+      return false;
     }
 
-    await event.prompt();
-    await event.userChoice;
+    const activePrompt = deferredPrompt;
+    await activePrompt.prompt();
+    const choice = await activePrompt.userChoice;
 
-    // The event is single-use, whatever the user chose.
-    setEvent(null);
-  }, [event]);
+    if (choice.outcome === "accepted") {
+      deferredPrompt = null;
+      notifyListeners();
+      return true;
+    }
 
-  return { canInstall: event !== null && !isStandalone(), install };
+    // Dismissed: event is single use in Chrome
+    deferredPrompt = null;
+    notifyListeners();
+    return false;
+  }, []);
+
+  return {
+    canInstall: promptEvent !== null && !installed,
+    isInstalled: installed,
+    platform,
+    install,
+  };
 }

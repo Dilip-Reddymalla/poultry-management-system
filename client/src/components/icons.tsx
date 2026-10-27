@@ -195,4 +195,10 @@ export function BellIcon({ className, style }: IconProps): React.ReactElement {
   );
 }
 
-
+export function CheckIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}

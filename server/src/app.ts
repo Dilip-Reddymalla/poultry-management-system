@@ -39,11 +39,24 @@ app.set("trust proxy", 1);
 // Correlation IDs on all incoming requests
 app.use(requestIdMiddleware);
 
-// CORS middleware: Echoes requesting origin to satisfy browser CORS & credential requirements
+// Parse allowed frontend origins from environment (CLIENT_ORIGIN / clientOrigin)
+const rawAllowedOrigins = env.CLIENT_ORIGIN || clientOrigin;
+const allowedOrigins = new Set(
+  rawAllowedOrigins
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter(Boolean),
+);
+if (env.NODE_ENV !== "production") {
+  allowedOrigins.add("http://localhost:5173");
+  allowedOrigins.add("http://127.0.0.1:5173");
+}
+
+// CORS middleware: Validates origin against configured website URL from env (CLIENT_ORIGIN)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (origin) {
+  if (origin && allowedOrigins.has(origin.replace(/\/+$/, ""))) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader(
@@ -54,6 +67,7 @@ app.use((req, res, next) => {
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, X-Requested-With, Accept, Cookie, X-Demo-Session, x-demo-session, X-Request-Id",
     );
+    res.setHeader("Vary", "Origin");
   }
 
   // Preflight OPTIONS requests must terminate immediately with 204 No Content

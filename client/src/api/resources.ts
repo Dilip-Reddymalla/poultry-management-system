@@ -740,6 +740,31 @@ export interface AnalyticsData {
     farmCode: string;
     totalAttendances: number;
   }>;
+  comparisons?: {
+    shifts: Array<{
+      shift: string;
+      label: string;
+      count: number;
+      percentage: number;
+    }>;
+    verificationChannels: {
+      faceAiRate: number;
+      manualRate: number;
+      faceAiAvgTimeMs: number;
+      manualAvgTimeMs: number;
+    };
+    capacityUtilization: {
+      activeCapacity: number;
+      totalCapacity: number;
+      readinessRate: number;
+    };
+    attendanceBenchmark: {
+      todayRate: number;
+      monthRate: number;
+      hasTodayData: boolean;
+      complianceRate: number;
+    };
+  };
 }
 
 export async function fetchAnalyticsSummary(): Promise<AnalyticsData> {

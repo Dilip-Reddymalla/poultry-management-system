@@ -215,10 +215,10 @@ export async function getAttendanceReportController(
 }
 
 export async function autoAbsentCheckController(
-  _req: Request,
+  req: Request,
   res: Response,
 ): Promise<void> {
-  const result = await processAutoAbsentCutoffs();
+  const result = await processAutoAbsentCutoffs(new Date(), getScope(req));
   res.status(200).json({
     success: true,
     data: result,

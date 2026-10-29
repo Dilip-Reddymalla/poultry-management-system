@@ -356,6 +356,10 @@ export async function changePassword(
     select: sessionUserSelect,
   });
 
+  // Invalidate any other existing refresh tokens on password change
+  await revokeAllUserRefreshTokens(user.id);
+  invalidateScopeCache(user.id);
+
   void recordAuditLog({
     action: "UPDATE",
     entity: "User",
@@ -487,6 +491,10 @@ export async function resetPasswordWithOtp(
       mustSetPassword: false,
     },
   });
+
+  // Revoke all existing refresh tokens and invalidate cached permissions upon password reset
+  await revokeAllUserRefreshTokens(targetUser.id);
+  invalidateScopeCache(targetUser.id);
 
   void recordAuditLog({
     action: "UPDATE",

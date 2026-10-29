@@ -4,6 +4,8 @@ import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { getEffectiveShiftTimings } from "./shift-timing.js";
+import type { AuthScope } from "../auth/scope.js";
+import { farmModelScopedWhere } from "../auth/scope.js";
 
 // Shifts subject to automatic absent cutoffs (OVERTIME and NIGHT_SHIFT are never auto-marked absent)
 const OPERATIONAL_SHIFTS: Shift[] = [
@@ -75,6 +77,7 @@ function getZonedTimeParts(date: Date, timeZone: string) {
  */
 export async function processAutoAbsentCutoffs(
   referenceDate: Date = new Date(),
+  scope?: AuthScope,
 ): Promise<AutoAbsentExecutionSummary> {
   const summary: AutoAbsentExecutionSummary = {
     farmsEvaluated: 0,
@@ -83,10 +86,12 @@ export async function processAutoAbsentCutoffs(
     details: [],
   };
 
+  const scopeWhere = scope ? farmModelScopedWhere(scope) : undefined;
   const activeFarms = await prisma.farm.findMany({
     where: { 
       status: "ACTIVE",
       autoAbsentEnabled: true,
+      ...(scopeWhere ?? {}),
     },
     select: {
       id: true,

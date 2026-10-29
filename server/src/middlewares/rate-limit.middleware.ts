@@ -9,6 +9,10 @@ import { env } from "../config/env.js";
  * Extracts client IP safely across proxies and direct connections.
  */
 export function getClientIp(req: Request): string {
+  // Rely on Express's req.ip configured with trusted reverse proxy hops first
+  if (req.ip) {
+    return req.ip;
+  }
   const forwarded = req.headers?.["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.length > 0) {
     const first = forwarded.split(",")[0];
@@ -16,7 +20,7 @@ export function getClientIp(req: Request): string {
       return first.trim();
     }
   }
-  return req.socket?.remoteAddress || req.ip || "unknown";
+  return req.socket?.remoteAddress || "unknown";
 }
 
 

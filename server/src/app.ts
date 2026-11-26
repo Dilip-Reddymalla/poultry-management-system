@@ -26,6 +26,7 @@ import { notificationRoutes } from "./modules/notifications/notification.routes.
 import { initializeWebPush } from "./modules/notifications/webpush.config.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { logger } from "./config/logger.js";
+import { recordRequest, renderMetrics } from "./config/metrics.js";
 
 import { systemErrorRouter } from "./modules/system-errors/system-error.routes.js";
 import syncRouter from "./modules/sync/sync.routes.js";
@@ -102,6 +103,8 @@ app.use((req, res, next) => {
     const url = req.originalUrl || req.url;
     const reqLogger = req.log || logger;
 
+    recordRequest(statusCode, duration);
+
     const logPayload = {
       method,
       url,
@@ -148,6 +151,12 @@ apiRouter.get('/version', (_req, res) => {
         environment: env.NODE_ENV,
         timestamp: new Date().toISOString(),
     });
+});
+
+// Prometheus-style operational metrics (no auth — reachable by monitoring probes)
+app.get("/metrics", (_req, res) => {
+  res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+  res.send(renderMetrics());
 });
 
 // Public / Demo routers mounted before general rate limiter

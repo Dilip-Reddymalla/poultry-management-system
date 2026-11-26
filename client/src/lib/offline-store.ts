@@ -20,6 +20,8 @@ export interface PendingAttendanceRecord {
 const DB_NAME = "poultry-offline";
 const DB_VERSION = 2;
 const STORE = "pending-attendance";
+/** Hard cap on queued offline records to avoid unbounded growth. */
+const MAX_QUEUE = 500;
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -56,6 +58,12 @@ export async function enqueueAttendance(
   payload: Record<string, unknown>,
   kind: PendingAttendanceRecord["kind"] = "single",
 ): Promise<string> {
+  const existing = await countPendingAttendance();
+  if (existing >= MAX_QUEUE) {
+    throw new Error(
+      `Offline queue is full (${MAX_QUEUE} records). Go online to sync before adding more.`,
+    );
+  }
   const localId = `offline-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 10)}`;

@@ -42,6 +42,28 @@ export function signOut(): Promise<{ message: string }> {
   return apiRequest<{ message: string }>("/auth/logout", { method: "POST" });
 }
 
+export interface SessionInfo {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export function listSessions(): Promise<{ success: boolean; sessions: SessionInfo[] }> {
+  return apiRequest<{ success: boolean; sessions: SessionInfo[] }>("/auth/sessions");
+}
+
+export function revokeSession(id: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/auth/sessions/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function logoutAll(): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>("/auth/logout-all", {
+    method: "POST",
+  });
+}
+
 // Mandatory first-login step for a provisioned account. Gated to the authenticated
 // first-login session; the backend rotates the cookie and clears mustSetPassword.
 export function setPassword(password: string): Promise<SessionResponse> {

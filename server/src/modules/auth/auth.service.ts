@@ -975,3 +975,40 @@ export async function purgeExpiredRefreshTokens(): Promise<{ deleted: number }> 
   return { deleted: result.count };
 }
 
+export async function listActiveSessions(userId: string) {
+  const tokens = await prisma.refreshToken.findMany({
+    where: {
+      userId,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      expiresAt: true,
+    },
+  });
+
+  return tokens.map((t) => ({
+    id: t.id,
+    createdAt: t.createdAt,
+    expiresAt: t.expiresAt,
+  }));
+}
+
+export async function revokeSession(userId: string, tokenId: string): Promise<void> {
+  const token = await prisma.refreshToken.findFirst({
+    where: { id: tokenId, userId },
+  });
+
+  if (!token) {
+    throw new AppError("Session not found", 404);
+  }
+
+  await prisma.refreshToken.update({
+    where: { id: tokenId },
+    data: { revokedAt: new Date() },
+  });
+}
+

@@ -13,6 +13,8 @@ import {
   resetPasswordController,
   refreshTokenController,
   logoutAllController,
+  listSessionsController,
+  revokeSessionController,
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
@@ -29,6 +31,8 @@ router.post("/refresh", tokenRefreshRateLimiter, refreshTokenController);
 router.get("/me", requireAuth, getCurrentUserController);
 router.post("/logout", logoutController);
 router.post("/logout-all", requireAuth, logoutAllController);
+router.get("/sessions", requireAuth, listSessionsController);
+router.delete("/sessions/:id", requireAuth, revokeSessionController);
 router.post("/phone/request-otp", authEndpointRateLimiter, requestOtpController);
 router.post("/phone/verify-otp", authEndpointRateLimiter, verifyOtpController);
 router.post("/phone/select-user", authEndpointRateLimiter, selectPhoneUserController);

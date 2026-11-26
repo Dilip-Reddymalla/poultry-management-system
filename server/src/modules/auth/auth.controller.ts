@@ -23,6 +23,8 @@ import {
   rotateRefreshToken,
   revokeRefreshToken,
   revokeAllUserRefreshTokens,
+  listActiveSessions,
+  revokeSession,
 } from "./auth.service.js";
 import {
   loginSchema,
@@ -283,5 +285,30 @@ export async function resetPasswordController(
   res.status(200).json({
     success: true,
     message: result.message,
+  });
+}
+
+export async function listSessionsController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const sessions = await listActiveSessions(authReq.userId);
+
+  res.status(200).json({ success: true, sessions });
+}
+
+export async function revokeSessionController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const id = String(req.params.id);
+
+  await revokeSession(authReq.userId, id);
+
+  res.status(200).json({
+    success: true,
+    message: "Session revoked",
   });
 }

@@ -7,6 +7,7 @@ import { ProfileHeroCard } from "./ProfileHeroCard.js";
 import { ProfileAttendanceStats } from "./ProfileAttendanceStats.js";
 import { ProfilePermissionsPanel } from "./ProfilePermissionsPanel.js";
 import { ProfileDocumentsPanel } from "./ProfileDocumentsPanel.js";
+import { ProfileSessionsPanel } from "./ProfileSessionsPanel.js";
 import { ChangePasswordDialog } from "./ChangePasswordDialog.js";
 import "./ProfilePage.css";
 
@@ -48,6 +49,9 @@ export function ProfilePage(): React.ReactElement {
           <ProfileAttendanceStats employeeId={user.employee.id} />
         </section>
       ) : null}
+
+      {/* ── Active sessions (security) ─────────────────────── */}
+      <ProfileSessionsPanel />
 
       {/* ── Bottom two-column grid ─────────────────────────── */}
       <div className="ph-bottom-grid">

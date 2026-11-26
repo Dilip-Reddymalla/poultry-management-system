@@ -729,9 +729,28 @@ async function main() {
     `✅ Assigned ${companyAdminPermissions.length} permissions to Company Admin, ${dgmPermissions.length} to DGM`,
   );
 
-  console.log(
-    "🌱 Database seed completed successfully (roles, designations & permissions only).",
-  );
+  // Baseline organization required by the test suite and dev tooling: a seeded
+  // company/farm that is NOT a TMP-TEST- fixture, so helper utilities such as
+  // getSeededCompanyId() have a stable target.
+  const seedCompanyCode = "SEED";
+  const seedCompany = await prisma.company.upsert({
+    where: { code: seedCompanyCode },
+    update: {},
+    create: { code: seedCompanyCode, name: "Seed Company" },
+  });
+  await prisma.farm.upsert({
+    where: { companyId_code: { companyId: seedCompany.id, code: "SEED-FARM" } },
+    update: {},
+    create: {
+      companyId: seedCompany.id,
+      code: "SEED-FARM",
+      name: "Seed Farm",
+      status: "ACTIVE",
+    },
+  });
+  console.log(`✅ Created/verified baseline company ${seedCompanyCode}`);
+
+  console.log("🌱 Database seed completed successfully.");
 }
 
 main()

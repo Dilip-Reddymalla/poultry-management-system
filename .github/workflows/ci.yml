@@ -105,9 +105,13 @@ jobs:
         working-directory: server
         run: |
           node -e "const {Pool}=require('pg');const p=new Pool({connectionString:process.env.DATABASE_URL});(async()=>{for(let i=0;i<30;i++){try{await p.query('SELECT 1');console.log('db ready');process.exit(0)}catch(e){await new Promise(r=>setTimeout(r,2000))}}console.error('db not ready');process.exit(1)})();"
-      - name: Apply migrations
+      - name: Enable pgvector extension
         working-directory: server
-        run: npx prisma migrate deploy
+        run: |
+          node -e "const {Pool}=require('pg');const p=new Pool({connectionString:process.env.DATABASE_URL});(async()=>{await p.query('CREATE EXTENSION IF NOT EXISTS vector');console.log('pgvector ready');process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})"
+      - name: Sync schema to database
+        working-directory: server
+        run: npx prisma db push --accept-data-loss
       - name: Seed
         working-directory: server
         run: npm run seed

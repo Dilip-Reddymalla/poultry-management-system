@@ -7,6 +7,7 @@ import "./i18n/index.js";
 import App from "./App.js";
 import { AuthProvider } from "./auth/AuthProvider.js";
 import { ToastProvider } from "./components/ToastProvider.js";
+import { OfflineQueueProvider } from "./hooks/useOfflineQueue.js";
 import { registerServiceWorker } from "./pwa/register.js";
 import "./index.css";
 import "./App.css";
@@ -48,13 +49,15 @@ createRoot(container).render(
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
-          {sentryDsn ? (
-            <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+          <OfflineQueueProvider>
+            {sentryDsn ? (
+              <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+                <App />
+              </Sentry.ErrorBoundary>
+            ) : (
               <App />
-            </Sentry.ErrorBoundary>
-          ) : (
-            <App />
-          )}
+            )}
+          </OfflineQueueProvider>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

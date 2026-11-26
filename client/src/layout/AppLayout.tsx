@@ -11,7 +11,6 @@ import { LanguageSwitcher } from "../i18n/LanguageSwitcher.js";
 import { initials } from "../lib/display.js";
 import { InstallButton } from "../pwa/InstallButton.js";
 import { OfflineNotice } from "../pwa/OfflineNotice.js";
-import { OfflineQueueProvider } from "../hooks/useOfflineQueue.js";
 import { NotificationBell } from "../components/NotificationBell.js";
 import { Sidebar } from "./Sidebar.js";
 
@@ -70,8 +69,7 @@ export function AppLayout(): React.ReactElement {
   }
 
   return (
-    <OfflineQueueProvider>
-      <div className={drawerOpen ? "shell shell--drawer-open" : "shell"}>
+    <div className={drawerOpen ? "shell shell--drawer-open" : "shell"}>
       <aside className="shell__sidebar">
         <Sidebar
           onNavigate={() => {
@@ -137,6 +135,5 @@ export function AppLayout(): React.ReactElement {
         </main>
       </div>
     </div>
-    </OfflineQueueProvider>
   );
 }

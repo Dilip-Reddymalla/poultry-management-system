@@ -84,6 +84,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://poultry_admin:changeme@localhost:5432/poultry_management?schema=public
       USE_PRODUCTION_DB: "false"
+      PORT: "5000"
       JWT_SECRET: ci-only-jwt-secret-this-is-long-enough-32-chars
       HTTPSMS_API_KEY: ci-only-key
       HTTPSMS_FROM_PHONE: "+10000000000"

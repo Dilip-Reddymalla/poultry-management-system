@@ -34,7 +34,8 @@ export function ShiftShedMatrixTable({
   metrics: AttendanceMetrics;
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (

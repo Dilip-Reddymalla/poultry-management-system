@@ -163,7 +163,7 @@ export function FaceAiDemoPage(): React.ReactElement {
     setErrorMessage(null);
     setBusyMessage(null);
 
-    let blobToAnalyze: Blob | File | null = null;
+    let blobToAnalyze: Blob | File | null;
     let filename = "capture.jpg";
 
     if (activeTab === "camera") {

@@ -17,7 +17,8 @@ export function ShedWorkforceCards({
   dashboardShift: Shift | "";
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
 
   return (
     <Panel

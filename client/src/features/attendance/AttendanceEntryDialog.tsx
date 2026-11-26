@@ -2,18 +2,18 @@ import { useState } from "react";
 
 import { ApiError } from "../../api/client.js";
 import {
-  createAttendance,
+  createAttendanceWithOffline,
   fetchEmployees,
   fetchFarms,
   fetchSheds,
   fetchWorkers,
   fetchMarkedPersonIds,
   type AttendanceInput,
+  type AttendanceSaveResult,
   type EmployeeListResult,
   type WorkerListResult,
 } from "../../api/resources.js";
 import type {
-  Attendance,
   AttendanceStatus,
   Farm,
   Shed,
@@ -44,7 +44,7 @@ interface AttendanceEntryDialogProps {
   defaultDate: string;
   defaultFarmId?: string | null;
   onClose: () => void;
-  onSaved: (record: Attendance) => void;
+  onSaved: (record: AttendanceSaveResult) => void;
 }
 
 const PERSON_TABS: { type: PersonType; label: string }[] = [
@@ -193,7 +193,7 @@ export function AttendanceEntryDialog({
     };
 
     try {
-      const saved = await createAttendance(payload);
+      const saved = await createAttendanceWithOffline(payload);
       if (farmId) {
         setLastSelectedFarmId(farmId);
       }

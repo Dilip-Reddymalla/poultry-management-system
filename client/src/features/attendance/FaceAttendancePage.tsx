@@ -7,7 +7,7 @@ import { fetchSheds } from "../../api/resources.js";
 import { useAuth } from "../../auth/use-auth.js";
 import {
   processFrame,
-  bulkMarkFaceAttendance,
+  bulkMarkFaceAttendanceWithOffline,
   type FrameProcessResult,
   type FaceAttendanceRecord,
 } from "../../api/face-attendance.api.js";
@@ -583,7 +583,19 @@ export function FaceAttendancePage(): React.ReactElement {
     setError(null);
 
     try {
-      const res = await bulkMarkFaceAttendance(records);
+      const saved = await bulkMarkFaceAttendanceWithOffline(records);
+
+      if (saved.queued) {
+        // Queued offline — the global OfflineNotice shows the pending count and
+        // the queue syncs when connectivity returns.
+        setSubmitResult({
+          markedCount: records.length,
+          duplicateCount: 0,
+        });
+        return;
+      }
+
+      const res = saved.response;
       setSubmitResult({
         markedCount: res.markedCount,
         duplicateCount: res.duplicateCount,

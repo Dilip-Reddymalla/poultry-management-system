@@ -45,6 +45,7 @@ export function AuditLogsPage(): React.ReactElement {
   const to = params.get("to") || "";
   const page = Number(params.get("page")) || 1;
   const errorIdParam = params.get("errorId") || "";
+  const [searchInput, setSearchInput] = useState(search);
 
   const setPage = useCallback((v: number) => setParam("page", v <= 1 ? "" : String(v)), [setParam]);
 
@@ -79,7 +80,6 @@ export function AuditLogsPage(): React.ReactElement {
   };
 
   // Local state
-  const [searchInput, setSearchInput] = useState(search);
   const [selectedChanges, setSelectedChanges] = useState<Record<string, unknown> | null>(null);
 
   // System errors state
@@ -172,7 +172,7 @@ export function AuditLogsPage(): React.ReactElement {
 
   const logs = auditResource.data?.logs ?? [];
 
-  const handleExport = () => {
+  const handleExport = (format: "xlsx" | "csv" = "xlsx") => {
     const exportQuery = {
       ...(entity !== "" ? { entity } : {}),
       ...(action !== "" ? { action } : {}),
@@ -180,7 +180,7 @@ export function AuditLogsPage(): React.ReactElement {
       ...(from !== "" ? { from } : {}),
       ...(to !== "" ? { to } : {}),
     };
-    window.location.href = exportAuditLogsUrl(exportQuery);
+    window.location.href = exportAuditLogsUrl(exportQuery, format);
   };
 
   return (
@@ -191,9 +191,14 @@ export function AuditLogsPage(): React.ReactElement {
         description="Comprehensive audit trail of database mutations, system errors, and security investigations."
         actions={
           activeTab === "activity" ? (
-            <Button variant="primary" onClick={handleExport}>
-              {t("common.exportExcel")} (.xlsx)
-            </Button>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <Button variant="primary" onClick={() => handleExport("xlsx")}>
+                {t("common.exportExcel")} (.xlsx)
+              </Button>
+              <Button variant="secondary" onClick={() => handleExport("csv")}>
+                CSV
+              </Button>
+            </div>
           ) : undefined
         }
       />

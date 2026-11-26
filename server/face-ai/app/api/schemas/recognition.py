@@ -5,59 +5,63 @@ from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
-    status: str = Field(..., example="ok")
-    service: str = Field(..., example="Face AI Service")
-    version: str = Field(..., example="1.0.0")
-    models_loaded: bool = Field(..., example=True)
+    status: str = Field(..., json_schema_extra={"example": "ok"})
+    service: str = Field(..., json_schema_extra={"example": "Face AI Service"})
+    version: str = Field(..., json_schema_extra={"example": "1.0.0"})
+    models_loaded: bool = Field(..., json_schema_extra={"example": True})
 
 
 class QualityMetrics(BaseModel):
-    face_width: int = Field(..., example=1331)
-    face_height: int = Field(..., example=1934)
-    face_area: float = Field(..., example=2575206.1)
-    relative_area: float = Field(..., example=0.0796)
-    detection_confidence: float | None = Field(default=None, example=0.7157)
-    sharpness: float | None = Field(default=None, example=63.33)
-    landmarks_valid: bool = Field(default=True, example=True)
+    face_width: int = Field(..., json_schema_extra={"example": 1331})
+    face_height: int = Field(..., json_schema_extra={"example": 1934})
+    face_area: float = Field(..., json_schema_extra={"example": 2575206.1})
+    relative_area: float = Field(..., json_schema_extra={"example": 0.0796})
+    detection_confidence: float | None = Field(default=None, json_schema_extra={"example": 0.7157})
+    sharpness: float | None = Field(default=None, json_schema_extra={"example": 63.33})
+    landmarks_valid: bool = Field(default=True, json_schema_extra={"example": True})
 
 
 class QualityResult(BaseModel):
-    usable: bool = Field(..., example=True)
-    decision: str = Field(..., example="ACCEPT")
-    quality_score: float = Field(..., example=0.5284)
-    reasons: list[str] = Field(default_factory=list, example=[])
+    usable: bool = Field(..., json_schema_extra={"example": True})
+    decision: str = Field(..., json_schema_extra={"example": "ACCEPT"})
+    quality_score: float = Field(..., json_schema_extra={"example": 0.5284})
+    reasons: list[str] = Field(default_factory=list, json_schema_extra={"example": []})
     metrics: QualityMetrics
 
 
 class LivenessResult(BaseModel):
-    decision: str = Field(..., example="LIVE")
-    score: float = Field(..., example=0.91)
+    decision: str = Field(..., json_schema_extra={"example": "LIVE"})
+    score: float = Field(..., json_schema_extra={"example": 0.91})
     scores: dict[str, float] = Field(
         default_factory=dict,
-        example={"class_0": 0.09, "class_1": 0.91, "live": 0.91, "spoof": 0.09},
+        json_schema_extra={
+            "example": {"class_0": 0.09, "class_1": 0.91, "live": 0.91, "spoof": 0.09}
+        },
     )
 
 
 class MatchCandidate(BaseModel):
-    identity: str = Field(..., example="person1")
-    similarity: float = Field(..., example=0.8523)
+    identity: str = Field(..., json_schema_extra={"example": "person1"})
+    similarity: float = Field(..., json_schema_extra={"example": 0.8523})
 
 
 class RecognitionResult(BaseModel):
     status: str = Field(
         ...,
-        example="MATCHED",
+        json_schema_extra={"example": "MATCHED"},
         description="Recognition status: MATCHED | UNKNOWN | SPOOF | REJECTED_LOW_QUALITY",
     )
-    identity: str | None = Field(default=None, example="person1")
-    similarity: float | None = Field(default=None, example=0.8523)
+    identity: str | None = Field(default=None, json_schema_extra={"example": "person1"})
+    similarity: float | None = Field(default=None, json_schema_extra={"example": 0.8523})
     candidates: list[MatchCandidate] = Field(default_factory=list)
 
 
 class FaceAnalysisResult(BaseModel):
-    face_index: int = Field(..., example=1)
-    bbox: list[float] = Field(..., example=[1295.88, 2035.85, 2627.17, 3970.23])
-    detection_confidence: float = Field(..., example=0.7157)
+    face_index: int = Field(..., json_schema_extra={"example": 1})
+    bbox: list[float] = Field(
+        ..., json_schema_extra={"example": [1295.88, 2035.85, 2627.17, 3970.23]}
+    )
+    detection_confidence: float = Field(..., json_schema_extra={"example": 0.7157})
     landmarks: list[list[float]] | None = Field(default=None)
     quality: QualityResult
     liveness: LivenessResult | None = Field(default=None)
@@ -69,13 +73,13 @@ class FaceAnalysisResult(BaseModel):
 
 
 class ImageAnalysisResponse(BaseModel):
-    success: bool = Field(default=True, example=True)
-    filename: str = Field(..., example="photo.jpg")
-    image_width: int = Field(..., example=1920)
-    image_height: int = Field(..., example=1080)
-    face_count: int = Field(..., example=1)
+    success: bool = Field(default=True, json_schema_extra={"example": True})
+    filename: str = Field(..., json_schema_extra={"example": "photo.jpg"})
+    image_width: int = Field(..., json_schema_extra={"example": 1920})
+    image_height: int = Field(..., json_schema_extra={"example": 1080})
+    face_count: int = Field(..., json_schema_extra={"example": 1})
     faces: list[FaceAnalysisResult] = Field(default_factory=list)
-    process_time_ms: float = Field(..., example=145.2)
+    process_time_ms: float = Field(..., json_schema_extra={"example": 145.2})
 
 
 class ProfileEnrollResponse(BaseModel):
@@ -86,12 +90,14 @@ class ProfileEnrollResponse(BaseModel):
     embedding.
     """
 
-    success: bool = Field(default=True, example=True)
-    filename: str = Field(..., example="photo.jpg")
-    image_width: int = Field(..., example=1920)
-    image_height: int = Field(..., example=1080)
+    success: bool = Field(default=True, json_schema_extra={"example": True})
+    filename: str = Field(..., json_schema_extra={"example": "photo.jpg"})
+    image_width: int = Field(..., json_schema_extra={"example": 1920})
+    image_height: int = Field(..., json_schema_extra={"example": 1080})
     total_faces_detected: int = Field(
-        ..., example=3, description="How many faces were found in the image before selection."
+        ...,
+        json_schema_extra={"example": 3},
+        description="How many faces were found in the image before selection.",
     )
     selected_face: FaceAnalysisResult | None = Field(
         default=None,
@@ -99,7 +105,9 @@ class ProfileEnrollResponse(BaseModel):
     )
     selection_reason: str = Field(
         ...,
-        example="Selected face #2: highest composite score (centrality 0.92, confidence 0.98).",
+        json_schema_extra={
+            "example": "Selected face #2: highest composite score (centrality 0.92, confidence 0.98)."
+        },
         description="Human-readable reason for the face selection.",
     )
-    process_time_ms: float = Field(..., example=145.2)
+    process_time_ms: float = Field(..., json_schema_extra={"example": 145.2})

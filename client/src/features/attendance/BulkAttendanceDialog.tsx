@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   fetchEmployees,
   fetchWorkers,
-  bulkCreateAttendance,
+  bulkCreateAttendanceWithOffline,
   fetchSheds,
   fetchFarms,
   fetchMarkedPersonIds,
@@ -208,7 +208,19 @@ export function BulkAttendanceDialog({
         };
       });
 
-      const response = await bulkCreateAttendance({ records });
+      const saved = await bulkCreateAttendanceWithOffline({ records });
+
+      if (saved.queued) {
+        notify(
+          "success",
+          `Saved ${records.length} record(s) offline — will sync when back online.`,
+        );
+        setSaving(false);
+        onSaved();
+        return;
+      }
+
+      const response = saved.response;
 
       const fulfilled = response.results.filter((r) => r.status === "fulfilled").length;
       const rejected = response.results.filter((r) => r.status === "rejected").length;

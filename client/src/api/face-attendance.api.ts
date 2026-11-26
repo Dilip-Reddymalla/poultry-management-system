@@ -1,4 +1,5 @@
 import { apiClient, API_BASE_URL, ApiError } from "./client";
+import { enqueueAttendance } from "../lib/offline-store.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,7 +98,7 @@ export async function processFrame(
   return payload as FrameProcessResult;
 }
 
-/**
+/** 
  * Submit confirmed face attendance records.
  */
 export async function bulkMarkFaceAttendance(
@@ -106,4 +107,26 @@ export async function bulkMarkFaceAttendance(
   return apiClient.post<BulkMarkResult>("/attendance/face/bulk-mark", {
     records,
   });
+}
+
+/**
+ * Offline-aware face attendance submit. When offline the confirmed records are
+ * queued as one unit and replayed as a single bulk-mark request on reconnect.
+ */
+export type FaceBulkSaveResult =
+  | { queued: true; localId: string }
+  | { queued: false; response: BulkMarkResult };
+
+export async function bulkMarkFaceAttendanceWithOffline(
+  records: FaceAttendanceRecord[],
+): Promise<FaceBulkSaveResult> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const localId = await enqueueAttendance(
+      { records } as unknown as Record<string, unknown>,
+      "face-bulk",
+    );
+    return { queued: true, localId };
+  }
+  const response = await bulkMarkFaceAttendance(records);
+  return { queued: false, response };
 }

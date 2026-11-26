@@ -22,6 +22,7 @@ export const exportAuditLogsQuerySchema = z.object({
   search: z.string().trim().optional(),
   from: dateOnlySchema.optional(),
   to: dateOnlySchema.optional(),
+  format: z.enum(["xlsx", "csv"]).default("xlsx"),
 });
 
 export type ListAuditLogsQueryInput = z.infer<typeof listAuditLogsQuerySchema>;

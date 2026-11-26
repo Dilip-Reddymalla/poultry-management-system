@@ -190,6 +190,60 @@ export async function exportAuditLogs(
     orderBy: { createdAt: "desc" },
   });
 
+  if (query.format === "csv") {
+    const headers = [
+      "Timestamp",
+      "Action",
+      "Entity",
+      "Entity ID",
+      "Actor Name",
+      "Actor Email",
+      "Roles",
+      "Company",
+      "Farm",
+      "Summary",
+      "Changes (JSON)",
+      "IP Address",
+    ];
+    const csvEscape = (value: unknown): string => {
+      const raw = value === null || value === undefined ? "" : String(value);
+      return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+    };
+    const lines = [headers.join(",")];
+    for (const record of records) {
+      lines.push(
+        [
+          record.createdAt.toISOString().replace("T", " ").slice(0, 19),
+          record.action,
+          record.entity,
+          record.entityId ?? "",
+          record.actorName,
+          record.actorEmail ?? "",
+          Array.isArray(record.actorRoles)
+            ? (record.actorRoles as string[]).join(", ")
+            : "SYSTEM_ADMIN",
+          record.companyName ?? "",
+          record.farmName ?? "",
+          record.summary,
+          record.changes ? JSON.stringify(record.changes) : "",
+          record.ipAddress ?? "",
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="System_Audit_Log_${dateStr}.csv"`,
+    );
+    // Prepend a BOM so Excel opens UTF-8 CSV correctly.
+    res.status(200).send("\uFEFF" + lines.join("\n"));
+    return;
+  }
+
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Poultry Management System - System Admin Audit";
 

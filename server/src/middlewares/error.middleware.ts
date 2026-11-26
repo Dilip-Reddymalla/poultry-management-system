@@ -4,9 +4,7 @@ import { z } from "zod";
 
 import { AppError } from "../utils/app-error.js";
 import { logger } from "../config/logger.js";
-
-import { notifySystemAdmin500Error } from "../modules/notifications/error-alerter.js";
-import { recordSystemError } from "../modules/system-errors/system-error.service.js";
+import { reportUnhandledServerError } from "../services/unhandled-error.service.js";
 
 // Prisma error codes that represent an expected client-caused outcome. Modules
 // normally translate their own constraint violations into a domain message; this
@@ -145,25 +143,9 @@ export const errorMiddleware: ErrorRequestHandler = (
   // real defects rather than a stream of ordinary validation/permission noise.
   reqLogger.error({ err, path: req?.originalUrl || req?.url }, "Unhandled internal server error");
 
-  // Record into system_error_logs and alert System Admin via Web Push and in-app critical alert
-  const reqId = (req as { id?: string })?.id;
-  const user = (req as { userId?: string })?.userId;
-  void (async () => {
-    try {
-      const errorLog = await recordSystemError({ err, req, statusCode: 500 });
-      await notifySystemAdmin500Error({
-        path: req?.originalUrl || req?.url || "unknown",
-        method: req?.method || "UNKNOWN",
-        errorName: (err as Error)?.name || "Error",
-        errorMessage: (err as Error)?.message || "Internal server error",
-        requestId: reqId,
-        userId: user,
-        systemErrorId: errorLog?.id,
-      });
-    } catch (recordErr) {
-      reqLogger.error({ recordErr }, "Failed to record system error and dispatch alert");
-    }
-  })();
+  // Persist to system_error_logs, alert the System Admin, and report to Sentry
+  // via the central unhandled-error service (single dependency, lower coupling).
+  void reportUnhandledServerError(err, req);
 
   res.status(500).json({
     success: false,

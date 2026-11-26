@@ -35,6 +35,13 @@ A full-stack industrial poultry farm management and workforce intelligence platf
    - HTTP-only JWT cookies with server-side session revocation.
    - Tamper-resistant immutable audit logs recording all state mutations.
    - Multi-tier rate limiting protecting public demo endpoints and internal gateways.
+   - Security hardening response headers (HSTS, CSP, `nosniff`, frame protections); optional Sentry error reporting.
+
+7. **Offline-First & Multi-Device Sync**:
+   - Installable PWA queues attendance (single, bulk, and face) in IndexedDB while offline and replays it automatically on reconnect.
+   - Read caching lets previously-viewed data render without a connection.
+   - A server-side `/sync/attendance` endpoint systematically ingests offline updates from any number of devices, deduplicating via the unique date/shift/person key plus a client-generated idempotency ref (`syncRef`).
+   - Audit log export is available as Excel (`.xlsx`) or CSV.
 
 ---
 
@@ -61,18 +68,23 @@ The biometric subsystem runs optimized ONNX models with 512-dimensional ArcFace 
 poultry-management-system/
 ├── client/                     # Vite + React 19 + TypeScript frontend
 │   ├── src/
+│   │   ├── api/                # Per-domain API modules + single HTTP client
 │   │   ├── features/about/     # Interactive About page (Framer Motion)
 │   │   ├── features/analytics/ # Public operations telemetry dashboard
 │   │   ├── features/face-ai/   # Ephemeral Face AI demo sandbox
 │   │   ├── features/attendance/# Shift attendance & facial recognition UI
+│   │   ├── hooks/              # Offline sync engine (queue replay / read-cache)
 │   │   ├── layout/             # Responsive shell & navigation
+│   │   ├── lib/                # IndexedDB stores (offline queue, HTTP cache)
 │   │   └── pwa/                # Installable Progressive Web App
 ├── server/                     # Express 5 + TypeScript + Prisma API
 │   ├── src/
 │   │   ├── modules/analytics/  # Public Zero-PII telemetry service
 │   │   ├── modules/face-ai/    # Ephemeral 10m TTL store & Face-AI proxy
-│   │   ├── modules/attendance/ # Attendance CRUD, shifts, GPS, Excel export
-│   │   └── middlewares/        # Scoped RBAC, CORS headers, rate limits
+│   │   ├── modules/attendance/ # Attendance CRUD, shifts, GPS, Excel/CSV export
+│   │   ├── modules/sync/       # Multi-device offline attendance sync endpoint
+│   │   ├── services/           # Shared services (Face-AI proxy, vector search, error reporting)
+│   │   └── middlewares/        # Scoped RBAC, security headers, CORS, rate limits
 │   └── prisma/                 # PostgreSQL schema, migrations, and seeds
 ├── server/face-ai/             # FastAPI + ONNX Runtime Python microservice
 │   ├── app/                    # Multi-face detection, liveness & recognition
@@ -153,6 +165,8 @@ cd ../server && npm run typecheck
 - **Ephemeral Sandbox Sessions**: Demo visitors receive a self-cleaning session where face embeddings are held exclusively in RAM and deleted after 10 minutes.
 - **HttpOnly Cookie Authentication**: JWT access tokens are inaccessible to browser JavaScript, mitigating XSS token theft.
 - **Rate-Limited Gateways**: Public demo endpoints enforce strict request limits per minute (60 req/min authenticated, 20 req/min public).
+- **Security Headers**: HSTS, Content-Security-Policy, and `nosniff`/frame guards are applied in production via a dedicated middleware.
+- **Offline Queue Stays Local**: attendance queued offline is stored only in the device's IndexedDB and is never transmitted until the device is back online.
 
 ---
 

@@ -25,7 +25,8 @@ export function AttendanceKpiGrid({
   onResetShift: () => void;
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
 
   if (isMobile) {
     return (

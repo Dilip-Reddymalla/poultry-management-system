@@ -96,6 +96,7 @@ export const createAttendanceSchema = z
       .default("GPS_EXACT"),
     accuracy: z.number().min(0).optional(),
     ipAddress: z.string().trim().optional(),
+    syncRef: z.string().trim().max(128).optional(),
     notes: notesSchema.optional(),
   })
   .refine(

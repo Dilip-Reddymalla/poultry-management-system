@@ -37,6 +37,7 @@ const faceAttendanceRecordSchema = z.object({
     .default("GPS_EXACT"),
   accuracy: z.number().min(0).optional(),
   ipAddress: z.string().trim().optional(),
+  syncRef: z.string().trim().max(128).optional(),
   livenessScore: z.number().min(0).max(1).optional(),
   qualityScore: z.number().min(0).max(1).optional(),
   confidenceScore: z.number().min(0).max(1).optional(),

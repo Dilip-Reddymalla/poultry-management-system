@@ -28,6 +28,11 @@ import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { logger } from "./config/logger.js";
 
 import { systemErrorRouter } from "./modules/system-errors/system-error.routes.js";
+import syncRouter from "./modules/sync/sync.routes.js";
+import { securityHeaders } from "./middlewares/security-headers.middleware.js";
+import { initSentry } from "./config/sentry.js";
+
+initSentry();
 
 initializeWebPush();
 
@@ -77,6 +82,9 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Security hardening response headers (HSTS, nosniff, CSP in production, etc.)
+app.use(securityHeaders);
 
 // Request status & IP logger middleware with structured Pino logging & request IDs
 app.use((req, res, next) => {
@@ -163,6 +171,7 @@ apiRouter.use("/reference", referenceRouter);
 apiRouter.use("/designations", designationRouter);
 apiRouter.use("/roles", roleRouter);
 apiRouter.use("/notifications", notificationRoutes);
+apiRouter.use("/sync", syncRouter);
 
 // Mount API version 1 and root /api
 app.use("/api/v1", apiRouter);

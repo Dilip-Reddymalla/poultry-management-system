@@ -53,9 +53,6 @@ export function AttendancePage({
   // If executive visits the global attendance roster (not a worker/employee subtab), redirect to Attendance Report
   const isTargetedPersonView = Boolean(propEmployeeId || propWorkerId);
   const isExecutive = Boolean(user?.isSystemAdmin || user?.scope.level === "COMPANY" || user?.role === "Company Admin");
-  if (isExecutive && !isTargetedPersonView) {
-    return <Navigate to="/attendance/reports" replace />;
-  }
 
   const [params, setParams] = useSearchParams();
 
@@ -183,6 +180,10 @@ export function AttendancePage({
     setCreating(false);
     notify("success", t("attendance.recorded"));
     attendance.reload();
+  }
+
+  if (isExecutive && !isTargetedPersonView) {
+    return <Navigate to="/attendance/reports" replace />;
   }
 
   return (

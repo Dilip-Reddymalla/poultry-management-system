@@ -48,7 +48,8 @@ export function AttendanceRosterTable({
   onSnapshotPreview: (preview: SnapshotPreviewData) => void;
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
 
   // Tab badge counts: when viewing All Shifts, take the max of the day's all shifts
   // so counts represent peak workforce deployment rather than summing multiple shifts.

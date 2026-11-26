@@ -14,7 +14,8 @@ export function ShiftPerformanceTable({
   onShiftSelect: (shift: Shift | "") => void;
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
 
   return (
     <Panel

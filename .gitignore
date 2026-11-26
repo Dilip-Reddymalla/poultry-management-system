@@ -86,6 +86,7 @@ prisma/*.db
 src/generated/
 **/generated/
 *.tsbuildinfo
+client/dev-dist/
 
 # Database backups & maintenance scripts
 backups/

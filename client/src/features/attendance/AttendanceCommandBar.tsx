@@ -34,7 +34,8 @@ export function AttendanceCommandBar({
   onRefresh: () => void;
   isMobile?: boolean;
 }): React.ReactElement {
-  const isMobile = isMobileProp ?? useIsMobile();
+  const resolvedIsMobile = useIsMobile();
+  const isMobile = isMobileProp ?? resolvedIsMobile;
   const isToday = date === todayInputValue();
 
   if (isMobile) {

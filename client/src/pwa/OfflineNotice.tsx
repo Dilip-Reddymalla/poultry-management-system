@@ -1,25 +1,32 @@
 import { useTranslation } from "react-i18next";
 import { OfflineIcon } from "../components/icons.js";
-import { useOnlineStatus } from "./useOnlineStatus.js";
+import { useOfflineQueue } from "../hooks/useOfflineQueue.js";
 import "./Pwa.css";
 
 /**
- * A single quiet line, shown only while the device reports no network. The shell
- * is cached so the app still opens offline; business data is not, so this says
- * plainly that nothing on screen will refresh and nothing can be saved.
+ * A single quiet line about connectivity and queued work. Shown while the device
+ * is offline, or while queued attendance records are waiting to sync (or are
+ * mid-sync). The shell is cached so the app still opens offline; queued records
+ * are replayed by `OfflineQueueProvider` when connectivity returns.
  */
 export function OfflineNotice(): React.ReactElement | null {
   const { t } = useTranslation();
-  const online = useOnlineStatus();
+  const { online, pendingCount, syncing } = useOfflineQueue();
 
-  if (online) {
+  if (online && pendingCount === 0) {
     return null;
   }
+
+  const statusText = online
+    ? syncing
+      ? t("offline.syncing")
+      : t("offline.pending", { count: pendingCount })
+    : t("offline.notice");
 
   return (
     <div className="offline-notice" role="status">
       <OfflineIcon className="offline-notice__icon" />
-      <span>{t("offline.notice")}</span>
+      <span>{statusText}</span>
     </div>
   );
 }

@@ -209,6 +209,18 @@ export async function bulkMarkFaceAttendance(
           : record.notes
         : geo.flagNote ?? null;
 
+      // Idempotency (offline sync / multi-device retries).
+      if (record.syncRef) {
+        const existing = await prisma.attendance.findFirst({
+          where: { syncRef: record.syncRef },
+          select: { id: true },
+        });
+        if (existing) {
+          markedCount++;
+          continue;
+        }
+      }
+
       const created = await prisma.attendance.create({
         data: {
           date: record.date,
@@ -228,6 +240,7 @@ export async function bulkMarkFaceAttendance(
           locationSource: finalLocationSource,
           accuracy: record.accuracy ?? null,
           ipAddress: record.ipAddress ?? null,
+          ...(record.syncRef ? { syncRef: record.syncRef } : {}),
           recordedById: scope.userId,
           approvedById: requiresApproval ? null : scope.userId,
           approvedAt: requiresApproval ? null : new Date(),

@@ -3,6 +3,8 @@
  * the session cookie, JSON handling and error shape are decided in one place.
  */
 
+import { cacheGet, cachePut } from "../lib/http-cache.js";
+
 const rawBaseUrl: unknown =
   import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
@@ -188,11 +190,12 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const { method = "GET", body, query, signal } = options;
+  const url = buildUrl(path, query);
 
   let response: Response;
 
   try {
-    response = await fetch(buildUrl(path, query), {
+    response = await fetch(url, {
       method,
       // The session lives in an httpOnly cookie, so every call must carry it.
       credentials: "include",
@@ -203,6 +206,13 @@ export async function apiRequest<T>(
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw error;
+    }
+
+    // Offline fallback: serve the last successful response for this GET if we
+    // have one cached, so the app stays usable without a connection.
+    const cached = await cacheGet(url);
+    if (cached !== undefined) {
+      return cached as T;
     }
 
     throw new ApiError(
@@ -243,6 +253,11 @@ export async function apiRequest<T>(
       readFieldErrors(envelope.errors),
       readFormErrors(envelope.formErrors),
     );
+  }
+
+  // Cache successful GET responses for offline reads.
+  if (method === "GET" && response.status === 200) {
+    void cachePut(url, payload);
   }
 
   return payload as T;

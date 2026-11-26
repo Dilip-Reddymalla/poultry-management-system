@@ -77,8 +77,6 @@ export interface AnalyticsSummary {
     verificationChannels: {
       faceAiRate: number;
       manualRate: number;
-      faceAiAvgTimeMs: number;
-      manualAvgTimeMs: number;
     };
     capacityUtilization: {
       activeCapacity: number;
@@ -103,6 +101,8 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
   const [
     farmStats,
     shedStats,
+    employeeStats,
+    workerStats,
     todayAttendance,
     monthAttendance,
     modeBreakdownStats,
@@ -123,6 +123,18 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
       by: ["status"],
       _count: { id: true },
       _sum: { capacity: true },
+    }),
+
+    // 2. Employees by status (real counts)
+    prisma.employee.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
+
+    // 3. Workers by status (real counts)
+    prisma.worker.groupBy({
+      by: ["status"],
+      _count: { id: true },
     }),
 
     // 5. Today's attendance
@@ -223,6 +235,30 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
     };
   });
 
+  // Transform workforce (real counts from the employees/workers tables)
+  let totalEmployees = 0;
+  let activeEmployees = 0;
+  let inactiveEmployees = 0;
+  for (const item of employeeStats) {
+    totalEmployees += item._count.id;
+    if (item.status === "ACTIVE") activeEmployees = item._count.id;
+    else if (item.status === "INACTIVE") inactiveEmployees = item._count.id;
+  }
+
+  let totalWorkers = 0;
+  let activeWorkers = 0;
+  let inactiveWorkers = 0;
+  let promotedWorkers = 0;
+  for (const item of workerStats) {
+    totalWorkers += item._count.id;
+    if (item.status === "ACTIVE") activeWorkers = item._count.id;
+    else if (item.status === "INACTIVE") inactiveWorkers = item._count.id;
+    else if (item.status === "PROMOTED") promotedWorkers = item._count.id;
+  }
+
+  const totalStaff = totalEmployees + totalWorkers;
+  const activeStaff = activeEmployees + activeWorkers;
+
   // Transform Today's attendance
   let todayPresent = 0;
   let todayAbsent = 0;
@@ -318,7 +354,7 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
     count,
     percentage: totalShiftCount > 0
       ? Math.round((count / totalShiftCount) * 100)
-      : (shiftKey === "MORNING_SHIFT" ? 65 : shiftKey === "AFTERNOON_SHIFT" ? 30 : 5),
+      : 0,
   }));
 
   // Shed capacity operational readiness
@@ -335,8 +371,6 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
     verificationChannels: {
       faceAiRate,
       manualRate: modeTotal > 0 ? 100 - faceAiRate : 0,
-      faceAiAvgTimeMs: 85,
-      manualAvgTimeMs: 45000,
     },
     capacityUtilization: {
       activeCapacity,
@@ -347,21 +381,21 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
       todayRate,
       monthRate,
       hasTodayData: todayTotal > 0,
-      complianceRate: monthRate > 0 ? monthRate : 96,
+      complianceRate: monthRate,
     },
   };
 
   return {
     workforce: {
-      totalEmployees: 0,
-      activeEmployees: 0,
-      inactiveEmployees: 0,
-      totalWorkers: 0,
-      activeWorkers: 0,
-      inactiveWorkers: 0,
-      promotedWorkers: 0,
-      totalStaff: 0,
-      activeStaff: 0,
+      totalEmployees,
+      activeEmployees,
+      inactiveEmployees,
+      totalWorkers,
+      activeWorkers,
+      inactiveWorkers,
+      promotedWorkers,
+      totalStaff,
+      activeStaff,
     },
     infrastructure: {
       totalFarms,

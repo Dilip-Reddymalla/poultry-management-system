@@ -57,7 +57,9 @@
   },
 
   "offline": {
-    "notice": "No connection. Records will not load or refresh, and changes cannot be saved until the network returns."
+    "notice": "No connection. Records will not load or refresh, and changes cannot be saved until the network returns.",
+    "pending": "{{count}} attendance record(s) queued — will sync when back online.",
+    "syncing": "Syncing queued attendance records…"
   },
 
   "pwa": {

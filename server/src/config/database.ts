@@ -34,6 +34,24 @@ const sslConfig = isLocalhost
       rejectUnauthorized: env.DB_SSL_REJECT_UNAUTHORIZED !== false,
     };
 
+// Safety guard: refuse to silently use the production (Neon) database during
+// local development. This prevents a stray `npm run dev` from writing to the
+// live database. Set ALLOW_PRODUCTION_DB=1 to intentionally override.
+if (
+  env.NODE_ENV === "development" &&
+  env.USE_PRODUCTION_DB &&
+  process.env.ALLOW_PRODUCTION_DB !== "1" &&
+  process.env.ALLOW_PRODUCTION_DB !== "true"
+) {
+  console.error(
+    "❌ Refusing to start in development while USE_PRODUCTION_DB=true " +
+      "(this would connect to the PRODUCTION Neon database). " +
+      "Set USE_PRODUCTION_DB=false to use local Postgres, " +
+      "or set ALLOW_PRODUCTION_DB=1 to explicitly allow the production DB.",
+  );
+  process.exit(1);
+}
+
 const pool = new Pool({
   connectionString,
   max: 20,

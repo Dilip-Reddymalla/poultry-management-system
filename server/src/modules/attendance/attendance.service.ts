@@ -770,7 +770,21 @@ export async function bulkCreateAttendance(
           ? `${recordInput.notes} [${geo.flagNote}]`
           : recordInput.notes
         : geo.flagNote;
-      
+
+      // Idempotency: if the client already sent this syncRef, treat the
+      // resubmission as fulfilled instead of creating a duplicate (handles
+      // retries after lost responses / multi-device replays).
+      if (recordInput.syncRef) {
+        const existing = await prisma.attendance.findFirst({
+          where: { syncRef: recordInput.syncRef },
+          select: { id: true },
+        });
+        if (existing) {
+          results.push({ status: "fulfilled", value: { id: existing.id } as never });
+          continue;
+        }
+      }
+
       const record = await prisma.attendance.create({
         data: {
           date: recordInput.date,
@@ -784,6 +798,7 @@ export async function bulkCreateAttendance(
           locationSource: finalLocationSource,
           ...(recordInput.accuracy !== undefined && { accuracy: recordInput.accuracy }),
           ...(recordInput.ipAddress !== undefined && { ipAddress: recordInput.ipAddress }),
+          ...(recordInput.syncRef ? { syncRef: recordInput.syncRef } : {}),
           ...(finalNotes !== null && { notes: finalNotes }),
           recordedById: scope.userId,
           approvedById: requiresApproval ? null : scope.userId,

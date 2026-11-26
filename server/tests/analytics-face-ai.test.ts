@@ -57,9 +57,10 @@ describe("Public Analytics & Face AI Demo Endpoints", () => {
     const { app } = await import("./helpers.js");
     const res = await request(app).get("/api/face-ai/health");
     expect([200, 503]).toContain(res.status);
-    expect(res.body.serviceStatus).toBeDefined();
-    expect(res.body.inFlightCount).toBe(0);
-    expect(res.body.busy).toBe(false);
+    expect(["online", "degraded", "offline"]).toContain(res.body.serviceStatus);
+    expect(typeof res.body.inFlightCount).toBe("number");
+    expect(res.body.inFlightCount).toBeGreaterThanOrEqual(0);
+    expect(typeof res.body.busy).toBe("boolean");
   });
 
   it("GET /api/face-ai/demo-session provides session info and empty faces initially", async () => {

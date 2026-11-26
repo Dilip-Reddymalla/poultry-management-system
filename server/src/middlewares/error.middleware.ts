@@ -143,8 +143,8 @@ export const errorMiddleware: ErrorRequestHandler = (
   // real defects rather than a stream of ordinary validation/permission noise.
   reqLogger.error({ err, path: req?.originalUrl || req?.url }, "Unhandled internal server error");
 
-  // Persist to system_error_logs, alert the System Admin, and report to Sentry
-  // via the central unhandled-error service (single dependency, lower coupling).
+  // Persist to system_error_logs and alert the System Admin via the central
+  // unhandled-error service (single dependency, lower coupling).
   void reportUnhandledServerError(err, req);
 
   res.status(500).json({

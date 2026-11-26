@@ -31,9 +31,6 @@ import { recordRequest, renderMetrics } from "./config/metrics.js";
 import { systemErrorRouter } from "./modules/system-errors/system-error.routes.js";
 import syncRouter from "./modules/sync/sync.routes.js";
 import { securityHeaders } from "./middlewares/security-headers.middleware.js";
-import { initSentry } from "./config/sentry.js";
-
-initSentry();
 
 initializeWebPush();
 

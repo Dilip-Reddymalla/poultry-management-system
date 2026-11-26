@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Client: typecheck (blocking) + lint + audit (non-blocking backlog)
+  # ───────────────────────────────────────────────────────────────────────────
+  client-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install
+        working-directory: client
+        run: npm ci
+      - name: Typecheck
+        working-directory: client
+        run: npm run typecheck
+      - name: Lint
+        working-directory: client
+        run: npm run lint
+      - name: npm audit (high+)
+        working-directory: client
+        continue-on-error: true # 4 moderate remain (vite-plugin-pwa/workbox/glob) — requires a breaking PWA plugin upgrade; documented
+        run: npm audit --omit=dev --audit-level=high
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Server: typecheck (blocking) + audit (non-blocking)
+  # ───────────────────────────────────────────────────────────────────────────
+  server-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install
+        working-directory: server
+        run: npm ci
+      - name: Generate Prisma client
+        working-directory: server
+        run: npx prisma generate
+      - name: Typecheck
+        working-directory: server
+        run: npm run typecheck
+      - name: npm audit (high+)
+        working-directory: server
+        continue-on-error: true # 3 high remain in the Prisma CLI (@prisma/config→effect ReDoS); the only 'fix' is downgrading Prisma 7→6, which is not viable. Documented/known.
+        run: npm audit --omit=dev --audit-level=high
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Server integration tests against a real Postgres + pgvector service
+  # ───────────────────────────────────────────────────────────────────────────
+  server-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: poultry_admin
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: poultry_management
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U poultry_admin -d poultry_management"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://poultry_admin:changeme@localhost:5432/poultry_management?schema=public
+      USE_PRODUCTION_DB: "false"
+      JWT_SECRET: ci-only-jwt-secret-this-is-long-enough-32-chars
+      HTTPSMS_API_KEY: ci-only-key
+      HTTPSMS_FROM_PHONE: "+10000000000"
+      SYSTEM_ADMIN_EMAIL: admin@example.test
+      SYSTEM_ADMIN_PASSWORD: CiAdminPassword123456
+      SYSTEM_ADMIN_PHONE: "+10000000001"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install
+        working-directory: server
+        run: npm ci
+      - name: Apply migrations
+        working-directory: server
+        run: npx prisma migrate deploy
+      - name: Seed
+        working-directory: server
+        run: npm run seed
+      - name: Run test suite
+        working-directory: server
+        run: npm test
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Face AI microservice: install, lint-free subset, tests
+  # ───────────────────────────────────────────────────────────────────────────
+  face-ai-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/face-ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests (subset)
+        run: |
+          python -m pytest tests/test_api_health.py tests/test_face_matcher.py \
+            tests/test_edgeface.py tests/test_yunet_detector.py -q
+      - name: Dependency audit (non-blocking)
+        continue-on-error: true # TODO: make blocking once zero known advisories
+        run: |
+          pip install pip-audit
+          pip-audit

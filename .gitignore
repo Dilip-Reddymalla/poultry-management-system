@@ -98,7 +98,6 @@ backups/
 server/src/scripts/neon-backup.ts
 server/src/scripts/scheduled-jobs.ts
 .github/workflows/db-backup.yml
-.github/
 
 # docs
 EFFORT_ESTIMATION_AND_PRICING.md

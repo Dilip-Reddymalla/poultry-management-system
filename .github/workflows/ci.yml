@@ -112,6 +112,10 @@ jobs:
       - name: Sync schema to database
         working-directory: server
         run: npx prisma db push --accept-data-loss
+      - name: Ensure pgvector face-embedding columns exist
+        working-directory: server
+        run: |
+          node -e "const {Pool}=require('pg');const p=new Pool({connectionString:process.env.DATABASE_URL});(async()=>{await p.query('CREATE EXTENSION IF NOT EXISTS vector');await p.query('ALTER TABLE employees ADD COLUMN IF NOT EXISTS face_embedding vector(512)');await p.query('ALTER TABLE workers ADD COLUMN IF NOT EXISTS face_embedding vector(512)');console.log('vector columns ready');process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})"
       - name: Seed
         working-directory: server
         run: npm run seed

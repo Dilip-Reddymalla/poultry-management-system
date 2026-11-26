@@ -1,3 +1,11 @@
+-- Create Enum "Shift" (referenced by shift_timings below; was missing from migration history)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'Shift') THEN
+    CREATE TYPE "Shift" AS ENUM ('MORNING_SHIFT', 'AFTERNOON_SHIFT', 'NIGHT_SHIFT', 'OVERTIME');
+  END IF;
+END $$;
+
 -- AlterTable roles
 ALTER TABLE "roles" ADD COLUMN IF NOT EXISTS "companyId" UUID;
 ALTER TABLE "roles" ADD COLUMN IF NOT EXISTS "farmId" UUID;

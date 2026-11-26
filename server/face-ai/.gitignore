@@ -43,3 +43,15 @@ test_data/
 !models/**/*.data
 !models/**/*.json
 !models/**/*.pth
+
+# Track only the CI-required Face AI test fixtures (everything else under test_data stays ignored)
+test_data/*
+!test_data/
+!test_data/test.jpg
+!test_data/recognition/
+!test_data/recognition/person1/
+!test_data/recognition/person1/*.jpg
+!test_data/recognition/person2/
+!test_data/recognition/person2/*.jpg
+!test_data/recognition/person3/
+!test_data/recognition/person3/*.jpg

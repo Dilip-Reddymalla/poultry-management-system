@@ -66,6 +66,7 @@ export function FaceAttendanceControls({
 
         {/* Shed Select */}
         <select
+          data-tour="face-shed"
           style={styles.select}
           value={selectedShedId}
           disabled={!selectedFarmId}
@@ -101,6 +102,7 @@ export function FaceAttendanceControls({
 
         {/* Camera Select */}
         <select
+          data-tour="face-camera"
           style={styles.select}
           value={facingMode}
           onChange={(e) => onChangeFacingMode(e.target.value as "user" | "environment")}

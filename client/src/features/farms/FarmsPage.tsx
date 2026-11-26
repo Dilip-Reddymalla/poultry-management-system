@@ -44,7 +44,6 @@ export function FarmsPage(): React.ReactElement {
       <PageHeader
         eyebrow={t("farms.pageEyebrow")}
         title={t("farms.pageTitle")}
-        description={t("farms.pageDescription")}
         actions={
           can("farm:create") ? (
             <Button

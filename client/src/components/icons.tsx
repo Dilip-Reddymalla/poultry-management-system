@@ -202,3 +202,109 @@ export function CheckIcon({ className, style }: IconProps): React.ReactElement {
     </svg>
   );
 }
+
+/* ---------------------------------------------------------------------------
+ * Status glyphs — the "meaning at a glance" set. Each maps to a status tone
+ * so colour + symbol together tell the story without reading a word.
+ * ------------------------------------------------------------------------- */
+
+/** Ready / present: a filled check inside a circle. */
+export function StatusReadyIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" />
+    </svg>
+  );
+}
+
+/** Busy / half-day: a clock. */
+export function StatusBusyIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/** Attention / absent: an alert triangle. */
+export function StatusAttentionIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M10.3 4.2 2.7 17.5a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4M12 16.5h.01" />
+    </svg>
+  );
+}
+
+/** Idle / parked: a minus. */
+export function StatusIdleIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M7.5 12h9" />
+    </svg>
+  );
+}
+
+/** Promoted: an upward arrow. */
+export function StatusPromotedIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  );
+}
+
+/** Face/camera capture — the flagship attendance method. */
+export function CameraIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+      <circle cx="12" cy="13.5" r="3.2" />
+    </svg>
+  );
+}
+
+/** Empty state: an open crate, "nothing here yet". */
+export function EmptyCrateIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="M4 7 9 5l6 2 5-2 2 3-5 2-8-3-5 3Z" />
+      <path d="M4 7v10l5 3 6-2 5 2V7" />
+      <path d="M9 5v10M15 7v10" />
+    </svg>
+  );
+}
+
+/** Down chevron — scroll cue. */
+export function ChevronDownIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+/** Help / tutorial replay. */
+export function HelpIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 0 1 4.8 1c0 1.5-2.3 2-2.3 3.2" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+/** More actions (the "⋯" menu trigger). */
+export function MoreIcon({ className, style }: IconProps): React.ReactElement {
+  return (
+    <svg {...svgProps(className, style)}>
+      <circle cx="5" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="19" cy="12" r="1.4" />
+    </svg>
+  );
+}

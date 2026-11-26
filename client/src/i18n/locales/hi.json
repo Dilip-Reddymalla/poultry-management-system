@@ -28,6 +28,7 @@
     "farm": "फार्म",
     "allFarms": "सभी फार्म",
     "actions": "एक्शन",
+    "more": "और",
     "yes": "हाँ",
     "no": "नहीं",
     "notRecorded": "रिकॉर्ड नहीं है",
@@ -45,6 +46,24 @@
     "approved": "मंजूर",
     "of": "में"
   },
+
+  "status": {
+    "active": "सक्रिय",
+    "inactive": "निष्क्रिय",
+    "promoted": "पदोन्नत",
+    "available": "उपलब्ध",
+    "occupied": "व्यस्त",
+    "maintenance": "रखरखाव",
+    "present": "उपस्थित",
+    "absent": "अनुपस्थित",
+    "halfDay": "आधा दिन",
+    "leave": "छुट्टी",
+    "morningShift": "सुबह",
+    "afternoonShift": "दोपहर",
+    "nightShift": "रात",
+    "overtime": "ओवरटाइम"
+  },
+
   "error": {
     "notAvailableToRole": "आपके रोल में यह सुविधा नहीं है",
     "couldNotLoad": "लोड नहीं हो पाया",
@@ -78,8 +97,46 @@
     "myProfile": "मेरी प्रोफाइल",
     "menu": "मेन्यू",
     "closeMenu": "मेन्यू बंद करें",
-    "signOut": "लॉग आउट करें"
+    "signOut": "लॉग आउट करें",
+    "sectionMain": "मुख्य",
+    "sectionAttendance": "हाजिरी",
+    "sectionManage": "प्रबंधन",
+    "sectionAccount": "खाता"
   },
+
+  "guide": {
+    "title": "त्वरित शुरुआत",
+    "stepRecord": "फोटो से हाजिरी दर्ज करने के लिए Face का उपयोग करें।",
+    "stepCheck": "आज कौन आया यह देखने के लिए Attendance खोलें।",
+    "stepShed": "खाली जगह देखने के लिए Shed बोर्ड देखें।",
+    "gotIt": "समझ गया"
+  },
+
+  "tour": {
+    "ariaLabel": "मार्गदर्शन",
+    "skip": "छोड़ें",
+    "back": "पीछे",
+    "next": "आगे",
+    "done": "हो गया",
+    "introTitle": "हाजिरी दर्ज करें",
+    "introBody": "मैं आपको सबसे ज़्यादा इस्तेमाल होने वाला बटन दिखाऊँगा।",
+    "faceTitle": "फोटो लें",
+    "faceBody": "इस बटन को दबाएं, फिर व्यक्ति की फोटो लेकर उसे उपस्थित करें।",
+    "faceIntroTitle": "फेस हाजिरी",
+    "faceIntroBody": "किसी व्यक्ति को उसकी फोटो से उपस्थित करें।",
+    "faceStartTitle": "कैमरा खोलें",
+    "faceStartBody": "नीचे \"Start Live Camera\" दबाएं।",
+    "faceCaptureTitle": "फोटो लें",
+    "faceCaptureBody": "व्यक्ति की फेस पढ़ने के लिए \"Capture & Recognize\" दबाएं।",
+    "faceScrollTitle": "नीचे स्क्रॉल करें",
+    "faceScrollBody": "कैमरा कंट्रोल पाने के लिए नीचे जाएं।",
+    "faceShedTitle": "शेड चुनें",
+    "faceShedBody": "इस व्यक्ति की कार्यस्थल चुनें।",
+    "faceCameraTitle": "कैमरा चुनें",
+    "faceCameraBody": "पोर्ट्रेट के लिए फ्रंट, चौड़े शॉट के लिए बैक।",
+    "replay": "ट्यूटोरियल"
+  },
+
   "auth": {
     "login": {
       "title": "लॉगिन करें",
@@ -157,6 +214,8 @@
     "eyebrow": "ओवरव्यू",
     "title": "नमस्ते, {{name}}",
     "description": "अभी फार्मों की स्थिति यहाँ देखें।",
+    "quickActionEyebrow": "आज",
+    "quickActionTitle": "आप क्या करना चाहेंगे?",
     "noAccess": {
       "title": "अभी दिखाने के लिए कुछ नहीं है",
       "description": "आपके रोल में कर्मचारी, फार्म या शेड देखने की अनुमति नहीं है। जरूरत हो तो मैनेजर से पूछें।"

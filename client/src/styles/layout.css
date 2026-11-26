@@ -164,6 +164,45 @@
   flex: none;
 }
 
+/* Section grouping ------------------------------------------------ */
+
+.sidebar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar__section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-4) var(--space-3) var(--space-1);
+  border: 0;
+  background: none;
+  color: rgb(242 240 233 / 40%);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar__section-caret {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.sidebar__section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .sidebar__foot {
   margin-top: auto;
   padding: var(--space-4) var(--space-3) 0;
@@ -400,6 +439,8 @@
     padding-left: max(var(--space-4), env(safe-area-inset-left));
     padding-right: max(var(--space-4), env(safe-area-inset-right));
     gap: var(--space-3);
+    row-gap: var(--space-2);
+    flex-wrap: wrap;
   }
 
   .content {
@@ -416,7 +457,15 @@
 @media (max-width: 560px) {
   .topbar {
     gap: var(--space-2);
+    row-gap: var(--space-2);
     padding: 0 var(--space-3);
+    flex-wrap: wrap;
+    min-height: 48px;
+  }
+
+  /* The install action is non-essential on phones; the sidebar still offers it. */
+  .topbar .install-button {
+    display: none;
   }
 
   .topbar .button__label {

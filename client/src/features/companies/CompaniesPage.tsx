@@ -37,7 +37,6 @@ export function CompaniesPage(): React.ReactElement {
       <PageHeader
         eyebrow={t("companies.pageEyebrow")}
         title={t("companies.pageTitle")}
-        description={t("companies.pageDescription")}
         actions={
           can("company:create") ? (
             <Button

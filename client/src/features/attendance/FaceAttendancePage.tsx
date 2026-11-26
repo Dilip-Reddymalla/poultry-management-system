@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { Farm, Shed, Shift } from "../../api/types.js";
 import { apiClient } from "../../api/client.js";
 import { fetchSheds } from "../../api/resources.js";
@@ -23,11 +24,14 @@ import { FaceAttendanceControls } from "./face-attendance/FaceAttendanceControls
 import { FaceViewfinder } from "./face-attendance/FaceViewfinder.js";
 import { FaceAttendanceFeedback } from "./face-attendance/FaceAttendanceFeedback.js";
 import { FaceCard } from "./face-attendance/FaceCard.js";
+import { TourOverlay } from "../../components/TourOverlay.js";
+import { HelpIcon } from "../../components/icons.js";
 import "./Attendance.css";
 
 export function FaceAttendancePage(): React.ReactElement {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Face AI Circuit Breaker & Health Hook
   const {
@@ -73,6 +77,15 @@ export function FaceAttendancePage(): React.ReactElement {
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // First-run interactive tour for this page.
+  const [tourOpen, setTourOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("poultryops_face_tour_seen") !== "1";
+    } catch {
+      return true;
+    }
+  });
 
   // Image & Processing State
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -622,6 +635,17 @@ export function FaceAttendancePage(): React.ReactElement {
         </p>
       </div>
 
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <button
+          type="button"
+          className="replay-tour"
+          onClick={() => setTourOpen(true)}
+        >
+          <HelpIcon />
+          {t("tour.replay")}
+        </button>
+      </div>
+
       {/* Face AI Circuit Breaker & Warm-up Banners */}
       <FaceAiHealthBanners
         faceAiStatus={faceAiStatus}
@@ -715,6 +739,49 @@ export function FaceAttendancePage(): React.ReactElement {
           ))}
         </div>
       )}
+
+      {tourOpen ? (
+        <TourOverlay
+          steps={[
+            { titleKey: "tour.faceIntroTitle", bodyKey: "tour.faceIntroBody" },
+            {
+              titleKey: "tour.faceScrollTitle",
+              bodyKey: "tour.faceScrollBody",
+              scrollHint: true,
+            },
+            {
+              target: "[data-tour='face-shed']",
+              titleKey: "tour.faceShedTitle",
+              bodyKey: "tour.faceShedBody",
+              waitForChange: true,
+            },
+            {
+              target: "[data-tour='face-camera']",
+              titleKey: "tour.faceCameraTitle",
+              bodyKey: "tour.faceCameraBody",
+              waitForChange: true,
+            },
+            {
+              target: "[data-tour='face-start']",
+              titleKey: "tour.faceStartTitle",
+              bodyKey: "tour.faceStartBody",
+            },
+            {
+              target: "[data-tour='face-capture']",
+              titleKey: "tour.faceCaptureTitle",
+              bodyKey: "tour.faceCaptureBody",
+            },
+          ]}
+          onComplete={() => {
+            try {
+              localStorage.setItem("poultryops_face_tour_seen", "1");
+            } catch {
+              // ignore
+            }
+            setTourOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

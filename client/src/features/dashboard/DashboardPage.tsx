@@ -1,11 +1,15 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { fetchEmployees, fetchFarms, fetchSheds } from "../../api/resources.js";
 import type { Shed } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
+import { CameraIcon, HelpIcon } from "../../components/icons.js";
 import { ShedLegend, ShedStrip } from "../../components/ShedStrip.js";
+import { TourOverlay } from "../../components/TourOverlay.js";
 import {
+  Button,
   CardSkeleton,
   EmptyState,
   ErrorState,
@@ -14,6 +18,7 @@ import {
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
+import { FirstRunGuide } from "./FirstRunGuide.js";
 import "./DashboardPage.css";
 
 function Kpi({
@@ -58,10 +63,22 @@ function groupByFarm(sheds: Shed[]): { farm: Shed["farm"]; sheds: Shed[] }[] {
 export function DashboardPage(): React.ReactElement {
   const { t } = useTranslation();
   const { user, can } = useAuth();
+  const navigate = useNavigate();
 
   const canViewEmployees = can("employee:view");
   const canViewFarms = can("farm:view");
   const canViewSheds = can("shed:view");
+  const canCreateAttendance = can("attendance:create");
+
+  // First-run interactive tour (teaches the Face-attendance flow). Seen once,
+  // stays hidden.
+  const [tourOpen, setTourOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("poultryops_tour_seen") !== "1";
+    } catch {
+      return true;
+    }
+  });
 
   // Each read is gated on its own permission: the overview shows what this
   // user is allowed to see, and nothing else.
@@ -98,8 +115,39 @@ export function DashboardPage(): React.ReactElement {
       <PageHeader
         eyebrow={t("dashboard.eyebrow")}
         title={t("dashboard.title", { name: firstName })}
-        description={t("dashboard.description")}
+        actions={
+          canCreateAttendance ? (
+            <button
+              type="button"
+              className="replay-tour"
+              onClick={() => setTourOpen(true)}
+            >
+              <HelpIcon />
+              {t("tour.replay")}
+            </button>
+          ) : undefined
+        }
       />
+
+      <FirstRunGuide />
+
+      {canCreateAttendance ? (
+        <section className="quick-action">
+          <div className="quick-action__text">
+            <p className="eyebrow">{t("dashboard.quickActionEyebrow")}</p>
+            <h2 className="quick-action__title">{t("dashboard.quickActionTitle")}</h2>
+          </div>
+          <Button
+            variant="primary"
+            className="quick-action__button"
+            data-tour="face-action"
+            onClick={() => navigate("/attendance/face")}
+          >
+            <CameraIcon className="button__icon" />
+            <span className="button__label">{t("attendance.faceAttendance")}</span>
+          </Button>
+        </section>
+      ) : null}
 
       {!canViewEmployees && !canViewFarms && !canViewSheds ? (
         <Panel>
@@ -199,6 +247,27 @@ export function DashboardPage(): React.ReactElement {
             </div>
           )}
         </Panel>
+      ) : null}
+
+      {tourOpen && canCreateAttendance ? (
+        <TourOverlay
+          steps={[
+            { titleKey: "tour.introTitle", bodyKey: "tour.introBody" },
+            {
+              target: "[data-tour='face-action']",
+              titleKey: "tour.faceTitle",
+              bodyKey: "tour.faceBody",
+            },
+          ]}
+          onComplete={() => {
+            try {
+              localStorage.setItem("poultryops_tour_seen", "1");
+            } catch {
+              // ignore
+            }
+            setTourOpen(false);
+          }}
+        />
       ) : null}
     </div>
   );

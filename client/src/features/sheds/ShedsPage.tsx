@@ -76,7 +76,6 @@ export function ShedsPage(): React.ReactElement {
       <PageHeader
         eyebrow={t("sheds.pageEyebrow")}
         title={t("sheds.pageTitle")}
-        description={t("sheds.pageDescription")}
         actions={
           can("shed:create") ? (
             <Button

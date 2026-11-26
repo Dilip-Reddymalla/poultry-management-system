@@ -190,3 +190,93 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Attendance header actions — one obvious action plus a "More" menu.
+ * ------------------------------------------------------------------------- */
+
+.attendance-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The single call to action is intentionally the biggest, boldest thing on
+ * the header: taller, filled with the brand colour, and carries a plus. */
+.attendance-actions__primary {
+  min-height: 44px;
+  padding-left: var(--space-5);
+  padding-right: var(--space-5);
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgb(22 33 28 / 14%);
+}
+
+/* The dropdown trigger and menu. */
+.attendance-actions__more {
+  position: relative;
+}
+
+.attendance-actions__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 220px;
+  padding: var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  box-shadow: 0 8px 24px rgb(22 33 28 / 16%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attendance-actions__menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.attendance-actions__menu button:hover {
+  background-color: var(--surface-sunk);
+}
+
+.attendance-actions__menu .attendance-actions__danger {
+  color: var(--rust, #b91c1c);
+}
+
+@media (max-width: 560px) {
+  .attendance-actions {
+    width: 100%;
+  }
+
+  .attendance-actions__primary {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .attendance-actions__more {
+    flex-shrink: 0;
+  }
+
+  /* Keep the menu inside the viewport on phones. */
+  .attendance-actions__menu {
+    min-width: 200px;
+    max-width: calc(100vw - 24px);
+    right: 0;
+    left: auto;
+  }
+}
+

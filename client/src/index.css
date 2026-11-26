@@ -31,8 +31,8 @@
   --font-body: "Archivo", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
 
-  --step--1: 0.78rem;
-  --step-0: 0.9375rem;
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
   --step-1: 1.125rem;
   --step-2: 1.5rem;
   --step-3: 2rem;
@@ -46,8 +46,8 @@
   --space-6: 2rem;
   --space-7: 3rem;
 
-  --radius: 3px;
-  --radius-lg: 5px;
+  --radius: 6px;
+  --radius-lg: 10px;
 
   --shadow-sm: 0 1px 2px rgb(22 33 28 / 8%);
   --shadow-md: 0 8px 24px -12px rgb(22 33 28 / 35%);
@@ -120,6 +120,14 @@ a {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* On phones — the main user base — drop page descriptions entirely to keep
+ * every screen as light on words as possible. Titles and actions remain. */
+@media (max-width: 640px) {
+  .page-header__description {
+    display: none;
   }
 }
 

@@ -566,6 +566,7 @@ export function FaceViewfinder({
       >
         {!cameraActive ? (
           <button
+            data-tour="face-start"
             style={{ ...styles.btn, ...styles.btnPrimary, padding: "12px 24px", fontSize: 15 }}
             onClick={() => onStartCamera()}
           >
@@ -574,6 +575,7 @@ export function FaceViewfinder({
         ) : (
           <>
             <button
+              data-tour="face-capture"
               style={{
                 ...styles.btn,
                 ...styles.btnPrimary,

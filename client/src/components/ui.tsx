@@ -3,7 +3,16 @@ import { useTranslation } from "react-i18next";
 
 import type { ApiError } from "../api/client.js";
 import type { Pagination as PaginationMeta } from "../api/types.js";
-import { statusLabel, statusTone } from "../lib/display.js";
+import { statusLabel, statusTone, type StatusTone } from "../lib/display.js";
+import {
+  EmptyCrateIcon,
+  StatusAttentionIcon,
+  StatusBusyIcon,
+  StatusIdleIcon,
+  StatusPromotedIcon,
+  StatusReadyIcon,
+  type IconProps,
+} from "./icons.js";
 
 /* Buttons ----------------------------------------------------------------- */
 
@@ -74,11 +83,30 @@ export function Panel({
   );
 }
 
+/**
+ * A status chip that is *read without reading*: the tone drives both the
+ * colour and a matching symbol, so a present day and an absent day never look
+ * alike even to a user who cannot read the label. The text label stays as a
+ * secondary cue, and the full word is still exposed to screen readers.
+ */
+const STATUS_TONE_ICONS: Record<StatusTone, (p: IconProps) => React.ReactElement> = {
+  running: StatusReadyIcon,
+  busy: StatusBusyIcon,
+  attention: StatusAttentionIcon,
+  idle: StatusIdleIcon,
+  promoted: StatusPromotedIcon,
+};
+
 export function StatusTag({ status }: { status: string }): React.ReactElement {
+  const tone = statusTone(status);
+  const Icon = STATUS_TONE_ICONS[tone];
+
   return (
-    <span className={`tag tag--${statusTone(status)}`}>
-      <span className="tag__dot" aria-hidden="true" />
-      {statusLabel(status)}
+    <span className={`tag tag--${tone}`}>
+      <span className="tag__glyph" aria-hidden="true">
+        <Icon />
+      </span>
+      <span className="tag__label">{statusLabel(status)}</span>
     </span>
   );
 }
@@ -287,13 +315,19 @@ export function EmptyState({
   title,
   description,
   action,
+  icon,
 }: {
   title: string;
   description: string;
   action?: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
 }): React.ReactElement {
+  const Icon = icon ?? EmptyCrateIcon;
   return (
     <div className="empty">
+      <span className="empty__icon" aria-hidden="true">
+        <Icon />
+      </span>
       <h3 className="empty__title">{title}</h3>
       <p className="empty__text">{description}</p>
       {action ? <div className="empty__action">{action}</div> : null}
@@ -311,10 +345,15 @@ export function ErrorState({
   const { t } = useTranslation();
   return (
     <div className="alert alert--error" role="alert">
-      <p className="alert__title">
-        {error.isForbidden ? t("error.notAvailableToRole") : t("error.couldNotLoad")}
-      </p>
-      <p className="alert__text">{error.message}</p>
+      <span className="alert__icon" aria-hidden="true">
+        <StatusAttentionIcon />
+      </span>
+      <div className="alert__body">
+        <p className="alert__title">
+          {error.isForbidden ? t("error.notAvailableToRole") : t("error.couldNotLoad")}
+        </p>
+        <p className="alert__text">{error.message}</p>
+      </div>
       {onRetry && !error.isForbidden ? (
         <Button variant="secondary" onClick={onRetry}>
           {t("common.tryAgain")}

@@ -28,6 +28,7 @@
     "farm": "ఫారం",
     "allFarms": "అన్ని ఫారాలు",
     "actions": "చర్యలు",
+    "more": "మరింత",
     "yes": "అవును",
     "no": "కాదు",
     "notRecorded": "నమోదు కాలేదు",
@@ -45,6 +46,24 @@
     "approved": "ఆమోదించబడింది",
     "of": "లో"
   },
+
+  "status": {
+    "active": "చురుకైన",
+    "inactive": "నిష్క్రియం",
+    "promoted": "పదోన్నతి పొందిన",
+    "available": "అందుబాటులో ఉంది",
+    "occupied": "ఆక్రమించబడింది",
+    "maintenance": "మరమ్మత్తు",
+    "present": "హాజరు",
+    "absent": "గైర్హాజరు",
+    "halfDay": "సగం రోజు",
+    "leave": "సెలవు",
+    "morningShift": "ఉదయం",
+    "afternoonShift": "మధ్యాహ్నం",
+    "nightShift": "రాత్రి",
+    "overtime": "ఓవర్టైమ్"
+  },
+
   "error": {
     "notAvailableToRole": "మీ రోల్‌కు ఇది అందుబాటులో లేదు",
     "couldNotLoad": "లోడ్ చేయలేకపోయాం",
@@ -78,8 +97,46 @@
     "myProfile": "నా ప్రొఫైల్",
     "menu": "మెను",
     "closeMenu": "మెను మూసివేయండి",
-    "signOut": "లాగ్ అవుట్ చేయండి"
+    "signOut": "లాగ్ అవుట్ చేయండి",
+    "sectionMain": "ప్రధాన",
+    "sectionAttendance": "హాజరు",
+    "sectionManage": "నిర్వహణ",
+    "sectionAccount": "ఖాతా"
   },
+
+  "guide": {
+    "title": "శీఘ్ర ప్రారంభం",
+    "stepRecord": "ఫోటోతో హాజరు నమోదు చేయడానికి Face ఉపయోగించండి.",
+    "stepCheck": "ఈరోజు ఎవరు వచ్చారో చూడటానికి Attendance తెరవండి.",
+    "stepShed": "ఖాళీ స్థలం చూడటానికి Shed బోర్డును చూడండి.",
+    "gotIt": "సరే"
+  },
+
+  "tour": {
+    "ariaLabel": "మార్గదర్శకం",
+    "skip": "దాటవేయి",
+    "back": "వెనుకకు",
+    "next": "తదుపరి",
+    "done": "పూర్తయింది",
+    "introTitle": "హాజరు నమోదు చేయండి",
+    "introBody": "అత్యధికంగా ఉపయోగించే బటన్ చూపిస్తాను.",
+    "faceTitle": "ఫోటో తీయండి",
+    "faceBody": "ఈ బటన్ నొక్కి, వ్యక్తి ఫోటో తీసి హాజరు చేయండి.",
+    "faceIntroTitle": "ఫేస్ హాజరు",
+    "faceIntroBody": "వ్యక్తి ఫోటో ద్వారా హాజరు చేయండి.",
+    "faceStartTitle": "కెమెరా తెరవండి",
+    "faceStartBody": "క్రింద \"Start Live Camera\" నొక్కండి.",
+    "faceCaptureTitle": "ఫోటో తీయండి",
+    "faceCaptureBody": "వ్యక్తి ముఖాన్ని చదవడానికి \"Capture & Recognize\" నొక్కండి.",
+    "faceScrollTitle": "క్రిందికి స్క్రోల్ చేయండి",
+    "faceScrollBody": "కెమెరా నియంత్రణలను కనుగొనడానికి క్రిందికి వెళ్లండి.",
+    "faceShedTitle": "షెడ్ ఎంచుకోండి",
+    "faceShedBody": "ఈ వ్యక్తి పనిచేసే చోటు ఎంచుకోండి.",
+    "faceCameraTitle": "కెమెరా ఎంచుకోండి",
+    "faceCameraBody": "పోర్ట్రెయిట్‌కు ముందు, వెడల్పాటి దృశ్యానికి వెనుక కెమెరా.",
+    "replay": "ట్యుటోరియల్"
+  },
+
   "auth": {
     "login": {
       "title": "లాగిన్ చేయండి",
@@ -157,6 +214,8 @@
     "eyebrow": "ఓవerview",
     "title": "శుభదినం, {{name}}",
     "description": "ప్రస్తుతం ఫారాల్లో పరిస్థితి ఎలా ఉందో ఇక్కడ చూడండి.",
+    "quickActionEyebrow": "ఈరోజు",
+    "quickActionTitle": "మీరు ఏమి చేయాలనుకుంటున్నారు?",
     "noAccess": {
       "title": "ఇంకా చూపించడానికి ఏమీ లేదు",
       "description": "మీ రోల్‌లో ఉద్యోగులు, ఫారాలు లేదా షెడ్‌లకు యాక్సెస్ లేదు. అవసరమైతే మేనేజర్‌ను అడగండి."

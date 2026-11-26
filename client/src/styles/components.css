@@ -139,21 +139,31 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 2px var(--space-2);
+  padding: 3px var(--space-3) 3px var(--space-2);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background-color: var(--surface-sunk);
   font-size: var(--step--1);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
+  line-height: 1.25;
 }
 
-.tag__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: currentcolor;
+/* The symbol carries the meaning; it is a filled glyph, not a dot. */
+.tag__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
   flex-shrink: 0;
+}
+
+.tag__glyph .icon {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2;
 }
 
 .tag--running {
@@ -269,8 +279,8 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 36px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-5);
   border: 1px solid transparent;
   border-radius: var(--radius);
   font-size: var(--step-0);
@@ -392,7 +402,7 @@
 }
 
 .button--sm {
-  min-height: 30px;
+  min-height: 34px;
   padding: var(--space-1) var(--space-3);
   font-size: var(--step--1);
 }
@@ -471,7 +481,7 @@
 
 .input {
   width: 100%;
-  min-height: 36px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
@@ -609,6 +619,205 @@
 .empty__action,
 .empty-state__action {
   margin-top: var(--space-2);
+}
+
+.empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  color: var(--ink-faint);
+}
+
+.empty__icon .icon {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+}
+
+.alert__icon {
+  display: inline-flex;
+  align-self: flex-start;
+  width: 22px;
+  height: 22px;
+  color: var(--rust);
+}
+
+.alert__icon .icon {
+  width: 100%;
+  height: 100%;
+}
+
+.alert__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Guided tour spotlight ------------------------------------------- */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  /* Let clicks pass through the overlay to the page below, except where a
+     child (dim bars / card) explicitly captures them. This is what lets the
+     user actually press the highlighted button. */
+  pointer-events: none;
+}
+
+.tour__dim {
+  position: fixed;
+  background: rgb(12 20 16 / 0.45);
+  pointer-events: auto;
+}
+
+.tour__dim--top {
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+.tour__dim--bottom {
+  left: 0;
+  right: 0;
+}
+
+.tour__dim--left {
+  left: 0;
+}
+
+.tour__dim--full {
+  inset: 0;
+}
+
+.tour__hole {
+  position: fixed;
+  z-index: 1001;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--clay);
+  pointer-events: none;
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tour-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--clay);
+  }
+  50% {
+    box-shadow: 0 0 0 4px #fff,
+      0 0 0 11px color-mix(in srgb, var(--clay) 40%, transparent);
+  }
+}
+
+.tour__card {
+  position: fixed;
+  z-index: 1002;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+
+.tour__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tour__title {
+  font-size: var(--step-1);
+  margin-top: var(--space-1);
+}
+
+.tour__body {
+  color: var(--ink-soft);
+  margin-top: var(--space-2);
+}
+
+.tour__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.tour__skip {
+  margin-top: var(--space-3);
+  background: none;
+  border: 0;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tour__scrollcue {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 1002;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--moss);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgb(22 33 28 / 0.32);
+  pointer-events: none;
+  animation: tour-bounce 1.4s ease-in-out infinite;
+}
+
+.tour__scrollcue .icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.4;
+}
+
+@keyframes tour-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(10px);
+  }
+}
+
+/* Replay-tutorial button */
+
+.replay-tour {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.replay-tour .icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* Skeletons --------------------------------------------------------------- */

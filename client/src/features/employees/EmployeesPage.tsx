@@ -178,7 +178,6 @@ export function EmployeesPage(): React.ReactElement {
       <PageHeader
         eyebrow={t("employees.pageEyebrow")}
         title={t("employees.pageTitle")}
-        description={t("employees.pageDescription")}
         actions={
           can("employee:create") ? (
             <div style={{ display: "flex", gap: 8 }}>

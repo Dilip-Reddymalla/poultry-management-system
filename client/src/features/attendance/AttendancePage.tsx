@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -13,7 +13,7 @@ import type {
 } from "../../api/types.js";
 import { ATTENDANCE_STATUSES, SHIFTS } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
-import { PlusIcon } from "../../components/icons.js";
+import { CameraIcon, MoreIcon } from "../../components/icons.js";
 import {
   Button,
   EmptyState,
@@ -117,6 +117,38 @@ export function AttendancePage({
   const [markingUnmarkedAbsent, setMarkingUnmarkedAbsent] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // "More" actions menu: the one obvious action (Record) sits front and centre;
+  // the rest live behind this trigger so the screen offers a single clear call
+  // to action instead of a row of competing buttons.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (moreRef.current && !moreRef.current.contains(target)) {
+        setMoreOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [moreOpen]);
+
   // Opening a different person's history resets paging. Adjusting state during
   // render (the sanctioned pattern) rather than in an effect avoids a wasted
   // first fetch on the stale page.
@@ -191,63 +223,93 @@ export function AttendancePage({
       <PageHeader
         eyebrow={t("attendance.pageEyebrow")}
         title={t("attendance.pageTitle")}
-        description={
-          personMode
-            ? t("attendance.pageDescriptionPerson")
-            : t("attendance.pageDescriptionRoster")
-        }
         actions={
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {can("report:export") ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setExporting(true);
-                }}
-              >
-                {t("common.exportExcel")}
-              </Button>
-            ) : null}
-            {can("attendance:create") ? (
-              <>
+          can("attendance:create") || can("report:export") ? (
+            <div className="attendance-actions">
+              {/* The one obvious thing to do here: face attendance — the main method. */}
+              {can("attendance:create") ? (
                 <Button
-                  variant="secondary"
+                  variant="primary"
+                  className="attendance-actions__primary"
                   onClick={() => {
                     navigate("/attendance/face");
                   }}
                 >
-                  🎯 {t("attendance.faceAttendance")}
+                  <CameraIcon className="button__icon" />
+                  <span className="button__label">{t("attendance.faceAttendance")}</span>
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setBulkCreating(true);
-                  }}
-                >
-                  {t("attendance.bulkMark")}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setMarkingUnmarkedAbsent(true);
-                  }}
-                  style={{ color: "var(--rust, #b91c1c)" }}
-                  title={t("attendance.markUnmarkedAbsent")}
-                >
-                  ⚠️ {t("attendance.markUnmarkedAbsent")}
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setCreating(true);
-                  }}
-                >
-                  <PlusIcon className="button__icon" />
-                  {t("attendance.recordAttendance")}
-                </Button>
-              </>
-            ) : null}
-          </div>
+              ) : null}
+
+              {/* Everything else is secondary and lives behind "More". */}
+              {can("attendance:create") || can("report:export") ? (
+                <div className="attendance-actions__more" ref={moreRef}>
+                  <Button
+                    variant="secondary"
+                    aria-haspopup="menu"
+                    aria-expanded={moreOpen}
+                    onClick={() => {
+                      setMoreOpen((open) => !open);
+                    }}
+                  >
+                    <MoreIcon className="button__icon" />
+                    <span className="button__label">{t("common.more")}</span>
+                  </Button>
+
+                  {moreOpen ? (
+                    <div className="attendance-actions__menu" role="menu">
+                      {can("attendance:create") ? (
+                        <>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              setCreating(true);
+                            }}
+                          >
+                            {t("attendance.recordAttendance")}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              setBulkCreating(true);
+                            }}
+                          >
+                            {t("attendance.bulkMark")}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="attendance-actions__danger"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              setMarkingUnmarkedAbsent(true);
+                            }}
+                          >
+                            ⚠️ {t("attendance.markUnmarkedAbsent")}
+                          </button>
+                        </>
+                      ) : null}
+                      {can("report:export") ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMoreOpen(false);
+                            setExporting(true);
+                          }}
+                        >
+                          {t("common.exportExcel")}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : undefined
         }
       />
 
@@ -399,7 +461,6 @@ export function AttendancePage({
                     <th scope="col">{t("attendance.shed")}</th>
                     <th scope="col">{t("attendance.shift")}</th>
                     <th scope="col">{t("common.status")}</th>
-                    <th scope="col">{t("attendance.gpsLocation")}</th>
                     <th scope="col">{t("attendance.approval")}</th>
                   </tr>
                 </thead>
@@ -448,15 +509,6 @@ export function AttendancePage({
                       </td>
                       <td data-label={t("common.status")}>
                         <StatusTag status={record.status} />
-                      </td>
-                      <td className="numeric" data-label={t("attendance.gpsLocation")}>
-                        {record.latitude != null && record.longitude != null ? (
-                          <span title={`${record.latitude}, ${record.longitude}`}>
-                            📍 {record.latitude.toFixed(4)}, {record.longitude.toFixed(4)}
-                          </span>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
                       </td>
                       <td data-label={t("attendance.approval")}>
                         {record.approvedAt ? (

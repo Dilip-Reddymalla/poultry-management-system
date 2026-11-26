@@ -1,3 +1,4 @@
+import i18n from "../i18n/index.js";
 import type {
   AttendanceStatus,
   EmployeeStatus,
@@ -54,7 +55,38 @@ const STATUS_LABELS: Record<string, string> = {
   OVERTIME: "Overtime",
 };
 
+/**
+ * Map a raw status/shift code to an i18n key. When the active language has a
+ * translation it wins; otherwise we fall back to the English table below so the
+ * UI never shows a bare code (e.g. "MORNING_SHIFT") to the user.
+ */
+const STATUS_I18N_KEYS: Record<string, string> = {
+  ACTIVE: "status.active",
+  INACTIVE: "status.inactive",
+  PROMOTED: "status.promoted",
+  AVAILABLE: "status.available",
+  OCCUPIED: "status.occupied",
+  MAINTENANCE: "status.maintenance",
+  PRESENT: "status.present",
+  ABSENT: "status.absent",
+  HALF_DAY: "status.halfDay",
+  LEAVE: "status.leave",
+  MORNING_SHIFT: "status.morningShift",
+  AFTERNOON_SHIFT: "status.afternoonShift",
+  NIGHT_SHIFT: "status.nightShift",
+  OVERTIME: "status.overtime",
+};
+
 export function statusLabel(status: string): string {
+  const key = STATUS_I18N_KEYS[status];
+  if (key) {
+    const localized = i18n.t(key);
+    // i18n returns the bare key when the resource is missing; treat that as
+    // "untranslated" and fall back to the English table.
+    if (localized && localized !== key) {
+      return localized;
+    }
+  }
   return STATUS_LABELS[status] ?? status;
 }
 

@@ -359,23 +359,38 @@ export function AttendancePage({
               </label>
             ) : null}
 
-            <label className="filters__field">
-              <span className="visually-hidden">{t("attendance.shift")}</span>
-              <select
-                className="input select"
-                value={shift}
-                onChange={(event) => {
-                  updateFilters({ shift: event.target.value });
-                }}
+            <div className="segmented" role="group" aria-label={t("attendance.shift")}>
+              <button
+                type="button"
+                className={shift === "" ? "segmented__item segmented__item--active" : "segmented__item"}
+                aria-pressed={shift === ""}
+                title={t("attendance.allShifts")}
+                onClick={() => updateFilters({ shift: "" })}
               >
-                <option value="">{t("attendance.allShifts")}</option>
-                {SHIFTS.map((value) => (
-                  <option key={value} value={value}>
-                    {statusLabel(value)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {t("common.all", { defaultValue: "All" })}
+              </button>
+              {SHIFTS.map((value) => {
+                const iconMap: Record<Shift, string> = {
+                  MORNING_SHIFT: "☀️",
+                  AFTERNOON_SHIFT: "🌤️",
+                  NIGHT_SHIFT: "🌙",
+                  OVERTIME: "⏱️",
+                };
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    className={shift === value ? "segmented__item segmented__item--active" : "segmented__item"}
+                    aria-pressed={shift === value}
+                    aria-label={statusLabel(value)}
+                    title={statusLabel(value)}
+                    onClick={() => updateFilters({ shift: value })}
+                  >
+                    {iconMap[value]}
+                  </button>
+                );
+              })}
+            </div>
 
             <label className="filters__field">
               <span className="visually-hidden">{t("common.status")}</span>

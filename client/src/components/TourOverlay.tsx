@@ -37,7 +37,8 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
   const { t } = useTranslation();
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const step = steps[idx]!;
+  const safeIdx = Math.min(idx, Math.max(0, steps.length - 1));
+  const step = steps[safeIdx]!;
 
   // Keep the latest onComplete in a ref so the effect below can depend only on
   // the step index (and not re-run / re-scroll on every parent re-render).
@@ -73,7 +74,12 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
       return;
     }
 
-    const update = () => setRect((el?.getBoundingClientRect() ?? null) as DOMRect | null);
+    const update = () => {
+      const targetEl = step.target
+        ? (document.querySelector(step.target) as HTMLElement | null)
+        : null;
+      setRect((targetEl?.getBoundingClientRect() ?? null) as DOMRect | null);
+    };
 
     // Make the highlighted element visible so the user sees what to click.
     el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -116,7 +122,7 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
           },
         });
         if (inside) {
-          if (idx >= steps.length - 1) {
+          if (safeIdx >= steps.length - 1) {
             console.log("[tour] last step completed — finishing");
             onCompleteRef.current();
           } else {
@@ -133,6 +139,8 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
     window.addEventListener("scroll", update, true);
     const ro = new ResizeObserver(update);
     ro.observe(el);
+    const mo = new MutationObserver(update);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
 
     return () => {
       window.clearTimeout(settleTimer);
@@ -140,8 +148,9 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
       ro.disconnect();
+      mo.disconnect();
     };
-  }, [idx, step.target, step.scrollHint, step.waitForChange]);
+  }, [safeIdx, steps.length, step.target, step.scrollHint, step.waitForChange]);
 
   function finish(): void {
     console.log("[tour] finish called (Done/Skip)");

@@ -82,10 +82,14 @@ export function ConfirmDialog({
   return (
     <Dialog title={title} description={description} onClose={onClose}>
       <div className="dialog__footer">
-        <Button variant="ghost" onClick={onClose} disabled={busy}>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>
           {t("common.cancel")}
         </Button>
-        <Button variant={confirmVariant} onClick={onConfirm} busy={busy}>
+        <Button
+          variant={confirmVariant === "primary" ? "success" : confirmVariant}
+          onClick={onConfirm}
+          busy={busy}
+        >
           {confirmLabel}
         </Button>
       </div>

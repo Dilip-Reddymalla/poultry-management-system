@@ -355,6 +355,15 @@
   background-color: #822f23;
 }
 
+.button--success {
+  background-color: var(--moss);
+  color: var(--paper);
+}
+
+.button--success:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--moss) 85%, #000);
+}
+
 /* Page Sub-navigation Tabs ------------------------------------------------ */
 
 .page-tab-nav {

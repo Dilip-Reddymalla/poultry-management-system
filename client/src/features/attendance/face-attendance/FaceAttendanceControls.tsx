@@ -46,46 +46,55 @@ export function FaceAttendanceControls({
   );
   const regularSheds = sheds.filter((s) => s.id !== acRoomShed?.id);
   const shiftCheck = validateShiftTiming(selectedShift);
+  const hideFarmSelect = farms.length === 1 && selectedFarmId === farms[0]?.id;
+  const hideShedSelect = sheds.length === 1 && selectedShedId === sheds[0]?.id;
+
+  const gpsDot = isGpsLoading ? "🟡" : hasValidLocation ? "🟢" : "🔴";
+  const gpsShortLabel = isGpsLoading ? "GPS…" : hasValidLocation ? "GPS" : "No GPS";
 
   return (
     <>
       <div style={styles.controls} className="face-controls">
-        {/* Farm Select */}
-        <select
-          style={styles.select}
-          value={selectedFarmId}
-          onChange={(e) => onSelectFarmId(e.target.value)}
-        >
-          <option value="">Select Farm</option>
-          {farms.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name} ({f.code})
-            </option>
-          ))}
-        </select>
+        {/* Farm Select (hidden when user only has 1 farm) */}
+        {!hideFarmSelect && (
+          <select
+            style={styles.select}
+            value={selectedFarmId}
+            onChange={(e) => onSelectFarmId(e.target.value)}
+          >
+            <option value="">Select Farm</option>
+            {farms.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.code})
+              </option>
+            ))}
+          </select>
+        )}
 
-        {/* Shed Select */}
-        <select
-          data-tour="face-shed"
-          style={styles.select}
-          value={selectedShedId}
-          disabled={!selectedFarmId}
-          onChange={(e) => onSelectShedId(e.target.value)}
-        >
-          <option value="">🏢 General / Unassigned</option>
-          {acRoomShed ? (
-            <option value={acRoomShed.id}>❄️ AC Room</option>
-          ) : (
-            <option value="AC_ROOM">❄️ AC Room</option>
-          )}
-          {regularSheds.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.number.toLowerCase().startsWith("shed")
-                ? s.number.replace("-", " ")
-                : `Shed ${s.number}`}
-            </option>
-          ))}
-        </select>
+        {/* Shed Select (hidden when farm only has 1 shed) */}
+        {!hideShedSelect && (
+          <select
+            data-tour="face-shed"
+            style={styles.select}
+            value={selectedShedId}
+            disabled={!selectedFarmId}
+            onChange={(e) => onSelectShedId(e.target.value)}
+          >
+            <option value="">🏢 General / Unassigned</option>
+            {acRoomShed ? (
+              <option value={acRoomShed.id}>❄️ AC Room</option>
+            ) : (
+              <option value="AC_ROOM">❄️ AC Room</option>
+            )}
+            {regularSheds.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.number.toLowerCase().startsWith("shed")
+                  ? s.number.replace("-", " ")
+                  : `Shed ${s.number}`}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Shift Select */}
         <select
@@ -110,50 +119,50 @@ export function FaceAttendanceControls({
           <option value="user">📷 Front</option>
           <option value="environment">📸 Back</option>
         </select>
-      </div>
 
-      {/* GPS & Shift Status Info Banner */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        {/* Traffic-light GPS indicator */}
         <div
+          title={locationStatus}
           style={{
-            ...styles.card,
-            flex: 1,
-            padding: "10px 16px",
-            marginBottom: 0,
-            fontSize: 13,
-            background: hasValidLocation ? "#f0fdf4" : "#fef2f2",
-            border: `1px solid ${hasValidLocation ? "#bbf7d0" : "#fecaca"}`,
-            color: hasValidLocation ? "#166534" : "#991b1b",
-            display: "flex",
-            justifyContent: "space-between",
+            display: "inline-flex",
             alignItems: "center",
+            gap: 8,
+            padding: "6px 12px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 600,
+            background: hasValidLocation ? "#f0fdf4" : isGpsLoading ? "#fefce8" : "#fef2f2",
+            border: `1px solid ${hasValidLocation ? "#bbf7d0" : isGpsLoading ? "#fde68a" : "#fecaca"}`,
+            color: hasValidLocation ? "#166534" : isGpsLoading ? "#854d0e" : "#991b1b",
           }}
         >
-          <span>
-            <strong>{locationStatus}</strong>
-          </span>
+          <span>{gpsDot} {gpsShortLabel}</span>
           <button
             type="button"
             disabled={isGpsLoading}
+            title={locationStatus}
             style={{
-              padding: "4px 10px",
+              padding: "2px 8px",
               fontSize: 12,
-              borderRadius: 6,
+              borderRadius: 999,
               border: "1px solid #d1d5db",
               background: isGpsLoading ? "#f3f4f6" : "#fff",
               cursor: isGpsLoading ? "not-allowed" : "pointer",
             }}
             onClick={onRequestGpsLocation}
           >
-            {isGpsLoading ? "⏳ GPS…" : "🔄 GPS"}
+            🔄
           </button>
         </div>
-        {!shiftCheck.allowed && (
-          <div style={{ ...styles.card, flex: 2, padding: 12, marginBottom: 0, ...styles.warning }}>
+      </div>
+
+      {!shiftCheck.allowed && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ ...styles.card, padding: 12, marginBottom: 0, ...styles.warning }}>
             ⚠️ <strong>Shift Timing Warning:</strong> {shiftCheck.message}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }

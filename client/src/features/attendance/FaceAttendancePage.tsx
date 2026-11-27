@@ -749,12 +749,16 @@ export function FaceAttendancePage(): React.ReactElement {
               bodyKey: "tour.faceScrollBody",
               scrollHint: true,
             },
-            {
-              target: "[data-tour='face-shed']",
-              titleKey: "tour.faceShedTitle",
-              bodyKey: "tour.faceShedBody",
-              waitForChange: true,
-            },
+            ...(sheds.length === 1 && selectedShedId === sheds[0]?.id
+              ? []
+              : [
+                  {
+                    target: "[data-tour='face-shed']",
+                    titleKey: "tour.faceShedTitle",
+                    bodyKey: "tour.faceShedBody",
+                    waitForChange: true,
+                  },
+                ]),
             {
               target: "[data-tour='face-camera']",
               titleKey: "tour.faceCameraTitle",

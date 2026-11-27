@@ -291,6 +291,7 @@ export function FaceViewfinder({
               {/* Shutter Capture Button */}
               <button
                 type="button"
+                className={!processing && selectedFarmId && hasValidLocation ? "capture-ready-pulse" : undefined}
                 onClick={handleCapture}
                 disabled={processing || !selectedFarmId || !hasValidLocation}
                 style={{
@@ -576,6 +577,7 @@ export function FaceViewfinder({
           <>
             <button
               data-tour="face-capture"
+              className={!processing && selectedFarmId && hasValidLocation ? "capture-ready-pulse" : undefined}
               style={{
                 ...styles.btn,
                 ...styles.btnPrimary,

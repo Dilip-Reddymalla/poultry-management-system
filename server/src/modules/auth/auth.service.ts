@@ -4,6 +4,8 @@ import { prisma } from "../../config/database.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { generateAccessToken } from "../../utils/jwt.js";
 import { AppError } from "../../utils/app-error.js";
+import { analyzeProfilePhoto, faceAiCircuitBreaker } from "../../services/face-ai.service.js";
+import { cosineSimilarity, searchByEmbedding } from "../../services/vector-search.service.js";
 
 import type { ChangePasswordInput, LoginInput, PhoneLoginInput, ResetPasswordInput } from "./auth.schema.js";
 import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
@@ -12,6 +14,8 @@ import { broadestScopeLevel, invalidateScopeCache } from "./scope.js";
 import {
   SYSTEM_ADMIN_USER_ID,
   buildSystemAdminSafeUser,
+  getSystemAdminBiometrics,
+  systemAdminEnabled,
   isSystemAdminEmail,
   isSystemAdminId,
   verifySystemAdminPassword,
@@ -240,6 +244,127 @@ export async function login(
     token,
     refreshToken,
     user: toSafeUser(user),
+  };
+}
+
+// Sweet-spot biometric thresholds: stricter than attendance (0.40) to prevent
+// false logins, while tolerating real-world farm/webcam lighting.
+const FACE_LOGIN_MIN_SIMILARITY = 0.62;
+const FACE_LOGIN_MIN_MARGIN = 0.08;
+
+export async function loginWithFace(
+  imageBuffer: Buffer,
+  filename: string,
+): Promise<{ token: string; refreshToken: string; user: SafeUser; similarity: number }> {
+  if (faceAiCircuitBreaker.isOpen()) {
+    throw new AppError(
+      "Face AI service is temporarily unavailable. Please use password or OTP login.",
+      503,
+    );
+  }
+
+  const enrollResult = await analyzeProfilePhoto(imageBuffer, filename);
+  const face = enrollResult.selected_face;
+
+  if (!face) {
+    throw new AppError(
+      enrollResult.selection_reason || "No clear face detected. Please look directly at the camera.",
+      400,
+    );
+  }
+
+  if (!face.quality.usable) {
+    const reasons = face.quality.reasons.join(", ");
+    throw new AppError(
+      `Face not clear enough: ${reasons || "please improve lighting and hold steady"}`,
+      400,
+    );
+  }
+
+  if (!face.liveness || face.liveness.decision !== "LIVE") {
+    throw new AppError("Liveness check failed. Please use a live camera photo.", 401);
+  }
+
+  if (!face.embedding) {
+    throw new AppError("Could not extract face features. Please try again.", 400);
+  }
+
+  const [matches, sysAdminBiometrics] = await Promise.all([
+    searchByEmbedding(face.embedding, {
+      threshold: 0.4,
+      limit: 5,
+    }),
+    systemAdminEnabled() ? getSystemAdminBiometrics() : Promise.resolve(null),
+  ]);
+
+  type FaceLoginCandidate = { kind: "EMPLOYEE" | "SYSTEM_ADMIN"; id: string; similarity: number };
+  const allCandidates: FaceLoginCandidate[] = matches
+    .filter((m) => m.personType === "EMPLOYEE")
+    .map((m) => ({ kind: "EMPLOYEE", id: m.id, similarity: m.similarity }));
+
+  if (sysAdminBiometrics?.faceEmbedding) {
+    const sysSim = cosineSimilarity(face.embedding, sysAdminBiometrics.faceEmbedding);
+    if (sysSim >= 0.4) {
+      allCandidates.push({ kind: "SYSTEM_ADMIN", id: SYSTEM_ADMIN_USER_ID, similarity: sysSim });
+    }
+  }
+
+  allCandidates.sort((a, b) => b.similarity - a.similarity);
+
+  const candidates = allCandidates.filter((c) => c.similarity >= FACE_LOGIN_MIN_SIMILARITY);
+  const topMatch = candidates[0];
+  const secondMatch = candidates[1];
+
+  if (!topMatch) {
+    const best = allCandidates[0];
+    if (best) {
+      const pct = Math.round(best.similarity * 100);
+      const reqPct = Math.round(FACE_LOGIN_MIN_SIMILARITY * 100);
+      throw new AppError(
+        `Face confidence too low (${pct}% — need ${reqPct}%+). Move to better lighting or sign in with password.`,
+        401,
+      );
+    }
+    throw new AppError(
+      "Face not recognized. Update your profile photo first or sign in with password.",
+      401,
+    );
+  }
+
+  if (secondMatch && topMatch.similarity - secondMatch.similarity < FACE_LOGIN_MIN_MARGIN) {
+    throw new AppError(
+      "Ambiguous face match. Please move to better lighting or sign in with password.",
+      401,
+    );
+  }
+
+  if (topMatch.kind === "SYSTEM_ADMIN") {
+    const refreshToken = await createAndStoreRefreshToken({ isSystemAdmin: true });
+    return {
+      token: generateAccessToken(SYSTEM_ADMIN_USER_ID),
+      refreshToken,
+      user: await buildSystemAdminSafeUser(),
+      similarity: topMatch.similarity,
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { employeeId: topMatch.id },
+    select: sessionUserSelect,
+  });
+
+  if (!user || !user.isActive || user.employee.status !== "ACTIVE") {
+    throw new AppError("No active login account linked to this face.", 401);
+  }
+
+  const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
+
+  return {
+    token,
+    refreshToken,
+    user: toSafeUser(user),
+    similarity: topMatch.similarity,
   };
 }
 

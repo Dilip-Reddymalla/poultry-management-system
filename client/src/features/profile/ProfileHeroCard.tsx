@@ -105,7 +105,7 @@ export function ProfileHeroCard({
             )}
           </dl>
 
-          {!user.isSystemAdmin && (onUpdatePhoto || onChangePassword) && (
+          {(onUpdatePhoto || (!user.isSystemAdmin && onChangePassword)) && (
             <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {onUpdatePhoto && (
                 <button
@@ -125,7 +125,7 @@ export function ProfileHeroCard({
                   📷 {t("profile.updatePhoto", { defaultValue: "Update photo" })}
                 </button>
               )}
-              {onChangePassword && (
+              {!user.isSystemAdmin && onChangePassword && (
                 <button
                   type="button"
                   className="button button--secondary"

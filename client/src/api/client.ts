@@ -191,6 +191,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { method = "GET", body, query, signal } = options;
   const url = buildUrl(path, query);
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   let response: Response;
 
@@ -199,8 +200,11 @@ export async function apiRequest<T>(
       method,
       // The session lives in an httpOnly cookie, so every call must carry it.
       credentials: "include",
-      headers: body === undefined ? {} : { "Content-Type": "application/json" },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      headers:
+        body === undefined || isFormData ? {} : { "Content-Type": "application/json" },
+      ...(body === undefined
+        ? {}
+        : { body: isFormData ? body : JSON.stringify(body) }),
       ...(signal ? { signal } : {}),
     });
   } catch (error) {

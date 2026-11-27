@@ -11,6 +11,7 @@ import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { InstallButton } from "../../pwa/InstallButton.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
+import { AuthMethodTabs } from "./AuthMethodTabs.js";
 import "./AuthPages.css";
 
 interface LocationState {
@@ -115,12 +116,35 @@ export function LoginPage(): React.ReactElement {
           </Link>
         </div>
         <form className="signin__form" onSubmit={handleSubmit} noValidate>
+          <AuthMethodTabs />
           <h1 className="signin__title">{t("auth.login.title")}</h1>
           <p className="signin__subtitle">
             {t("auth.login.subtitle")}
           </p>
 
           <OfflineNotice />
+
+          <Link
+            to="/otp-login"
+            className="button button--success"
+            style={{ width: "100%", fontSize: "1rem", justifyContent: "center" }}
+          >
+            📱 {t("auth.login.signInWithPhone")}
+          </Link>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              color: "var(--ink-faint)",
+              fontSize: "0.8rem",
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+            <span>or</span>
+            <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+          </div>
 
           <FormAlert error={error} />
 
@@ -170,11 +194,6 @@ export function LoginPage(): React.ReactElement {
           <Button type="submit" variant="primary" busy={busy}>
             {t("auth.login.signInButton")}
           </Button>
-
-          <p className="signin__alt">
-            {t("auth.login.noPassword")}{" "}
-            <Link to="/otp-login">{t("auth.login.signInWithPhone")}</Link>
-          </p>
 
           <p className="signin__alt signin__install-link">
             <span>Using a mobile device? </span>

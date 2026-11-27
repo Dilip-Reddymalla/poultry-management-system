@@ -38,6 +38,18 @@ export function signIn(
   });
 }
 
+export function signInWithFace(
+  photoFile: File,
+): Promise<SessionResponse & { similarity?: number }> {
+  const formData = new FormData();
+  formData.append("photo", photoFile);
+  return apiRequest<SessionResponse & { similarity?: number }>("/auth/face/login", {
+    method: "POST",
+    body: formData,
+    keepSessionOnUnauthorized: true,
+  });
+}
+
 export function signOut(): Promise<{ message: string }> {
   return apiRequest<{ message: string }>("/auth/logout", { method: "POST" });
 }

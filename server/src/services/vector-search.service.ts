@@ -23,7 +23,7 @@ const DEFAULT_THRESHOLD = 0.40;
 // Default maximum number of candidates to return per face.
 const DEFAULT_LIMIT = 5;
 
-function cosineSimilarity(a: number[], b: number[]): number {
+export function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   let normA = 0;
   let normB = 0;

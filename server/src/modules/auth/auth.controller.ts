@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from "../../middlewares/auth.middleware.js"
 import { AppError } from "../../utils/app-error.js";
 import { processFacePhoto } from "../employee/employee.controller.js";
 import { updateEmployeePhotoById } from "../employee/employee.service.js";
+import { updateSystemAdminBiometrics } from "./system-admin.js";
 import {
   AUTH_COOKIE_NAME,
   authCookieOptions,
@@ -16,6 +17,7 @@ import {
 import {
   getCurrentUser,
   login,
+  loginWithFace,
   loginWithPhone,
   requestOtp,
   verifyPhoneOtp,
@@ -55,6 +57,28 @@ export async function loginController(
     success: true,
     message: "Login successful",
     user: result.user,
+  });
+}
+
+export async function faceLoginController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const file = req.file;
+  if (!file) {
+    throw new AppError("Face photo is required", 400);
+  }
+
+  const result = await loginWithFace(file.buffer, file.originalname);
+
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Face login successful",
+    user: result.user,
+    similarity: result.similarity,
   });
 }
 
@@ -114,12 +138,15 @@ export async function updateCurrentUserPhotoController(
   }
 
   const currentUser = await getCurrentUser(authReq.userId);
-  if (currentUser.isSystemAdmin || !currentUser.employee?.id) {
-    throw new AppError("System admin accounts do not have an employee profile photo", 400);
+  if (currentUser.isSystemAdmin) {
+    const faceData = await processFacePhoto(file, "system-admin/profiles");
+    await updateSystemAdminBiometrics(faceData.photoUrl, faceData.faceEmbedding);
+  } else if (currentUser.employee?.id) {
+    const faceData = await processFacePhoto(file, "employees/profiles");
+    await updateEmployeePhotoById(currentUser.employee.id, faceData);
+  } else {
+    throw new AppError("No employee profile found for this account", 400);
   }
-
-  const faceData = await processFacePhoto(file, "employees/profiles");
-  await updateEmployeePhotoById(currentUser.employee.id, faceData);
 
   const updatedUser = await getCurrentUser(authReq.userId);
 

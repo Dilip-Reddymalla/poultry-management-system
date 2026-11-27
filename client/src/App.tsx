@@ -101,6 +101,9 @@ const WorkersPage = lazy(() =>
 const NotFoundPage = lazy(() =>
   import("./routes/NotFoundPage.js").then((m) => ({ default: m.NotFoundPage }))
 );
+const FaceLoginPage = lazy(() =>
+  import("./features/auth/FaceLoginPage.js").then((m) => ({ default: m.FaceLoginPage }))
+);
 
 function RouteLoadingFallback(): React.ReactElement {
   return (
@@ -137,6 +140,7 @@ export default function App(): React.ReactElement {
         <Routes>
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/face-login" element={<FaceLoginPage />} />
             <Route path="/otp-login" element={<OtpLoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>

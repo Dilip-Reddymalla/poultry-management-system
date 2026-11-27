@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/database.js";
+import { deleteImageByUrl } from "../../services/cloudinary.service.js";
 import type { SafeUser } from "./auth.types.js";
 
 // The System Admin is not a database user. It authenticates against environment
@@ -51,15 +52,79 @@ export function verifySystemAdminPassword(password: string): boolean {
   return timingSafeEqual(provided, expected);
 }
 
+let sysAdminTableReady = false;
+
+async function ensureSystemAdminTable(): Promise<void> {
+  if (sysAdminTableReady) return;
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS system_admin_profiles (
+      id TEXT PRIMARY KEY,
+      photo_url TEXT,
+      face_embedding DOUBLE PRECISION[],
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  sysAdminTableReady = true;
+}
+
+export async function getSystemAdminBiometrics(): Promise<{
+  photoUrl: string | null;
+  faceEmbedding: number[] | null;
+}> {
+  try {
+    await ensureSystemAdminTable();
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{ photo_url: string | null; face_embedding: number[] | null }>
+    >(
+      `SELECT photo_url, face_embedding FROM system_admin_profiles WHERE id = $1`,
+      SYSTEM_ADMIN_USER_ID,
+    );
+    const row = rows[0];
+    return {
+      photoUrl: row?.photo_url ?? null,
+      faceEmbedding: Array.isArray(row?.face_embedding) ? row.face_embedding : null,
+    };
+  } catch {
+    return { photoUrl: null, faceEmbedding: null };
+  }
+}
+
+export async function updateSystemAdminBiometrics(
+  photoUrl: string,
+  faceEmbedding?: number[],
+): Promise<void> {
+  await ensureSystemAdminTable();
+  const existing = await getSystemAdminBiometrics();
+
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO system_admin_profiles (id, photo_url, face_embedding, updated_at)
+     VALUES ($1, $2, $3::float8[], NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       photo_url = EXCLUDED.photo_url,
+       face_embedding = COALESCE(EXCLUDED.face_embedding, system_admin_profiles.face_embedding),
+       updated_at = NOW()`,
+    SYSTEM_ADMIN_USER_ID,
+    photoUrl,
+    faceEmbedding ?? null,
+  );
+
+  if (existing.photoUrl && existing.photoUrl !== photoUrl) {
+    void deleteImageByUrl(existing.photoUrl);
+  }
+}
+
 // The System Admin has no employee/designation row, so it is presented with a
 // synthetic but shape-compatible SafeUser. `permissions` is the full seeded set
 // so the frontend enables every control; the backend authorizes it by the
 // isSystemAdmin flag, never by this list.
 export async function buildSystemAdminSafeUser(): Promise<SafeUser> {
-  const permissions = await prisma.permission.findMany({
-    select: { name: true },
-    orderBy: { name: "asc" },
-  });
+  const [permissions, biometrics] = await Promise.all([
+    prisma.permission.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
+    getSystemAdminBiometrics(),
+  ]);
 
   return {
     id: SYSTEM_ADMIN_USER_ID,
@@ -76,7 +141,7 @@ export async function buildSystemAdminSafeUser(): Promise<SafeUser> {
     employee: {
       id: SYSTEM_ADMIN_USER_ID,
       name: "System Administrator",
-      photoUrl: null,
+      photoUrl: biometrics.photoUrl,
       joiningDate: null,
       phone: null,
       designation: {

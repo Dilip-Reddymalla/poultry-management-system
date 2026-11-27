@@ -17,6 +17,7 @@ import { PhoneField } from "../../components/PhoneField.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
+import { AuthMethodTabs } from "./AuthMethodTabs.js";
 import "./AuthPages.css";
 
 type Step =
@@ -154,6 +155,8 @@ export function OtpLoginPage(): React.ReactElement {
           </div>
 
           <OfflineNotice />
+
+          <AuthMethodTabs />
 
           {step.name === "phone" ? (
             <form onSubmit={handlePhoneSubmit} className="stack" noValidate>

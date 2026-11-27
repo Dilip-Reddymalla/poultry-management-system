@@ -17,6 +17,7 @@ import {
   WorkerIcon,
 } from "../components/icons.js";
 import { isStandalone } from "../pwa/useInstallPrompt.js";
+import { AttendanceAvatar } from "../features/attendance/AttendanceAvatar.js";
 
 type NavSection = "overview" | "attendance" | "manage" | "account";
 
@@ -176,10 +177,17 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="sidebar__foot">
-        <p className="eyebrow">{t("common.signedInAs")}</p>
-        <p className="sidebar__user">{user?.employee.name}</p>
-        <p className="sidebar__role">{user?.employee.designation.name}</p>
+      <div className="sidebar__foot" style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+        <AttendanceAvatar
+          photoUrl={(user?.employee as { photoUrl?: string | null } | undefined)?.photoUrl ?? null}
+          name={user?.employee.name ?? ""}
+          type="EMPLOYEE"
+          size={36}
+        />
+        <div style={{ minWidth: 0 }}>
+          <p className="sidebar__user" style={{ marginTop: 0 }}>{user?.employee.name}</p>
+          <p className="sidebar__role">{user?.employee.designation.name}</p>
+        </div>
       </div>
     </div>
   );

@@ -326,18 +326,49 @@ export function AttendancePage({
       <Panel bleed>
         <div className="filters">
           {!personMode ? (
-            <label className="filters__field">
-              <span className="visually-hidden">{t("attendance.date")}</span>
-              <input
-                type="date"
-                className="input"
-                aria-label={t("attendance.date")}
-                value={date}
-                onChange={(event) => {
-                  updateFilters({ date: event.target.value === todayInputValue() ? "" : event.target.value });
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <button
+                type="button"
+                className="button button--secondary button--sm"
+                aria-label="Previous day"
+                title="Previous day"
+                onClick={() => {
+                  const d = new Date(`${date}T00:00:00`);
+                  d.setDate(d.getDate() - 1);
+                  const prev = d.toISOString().slice(0, 10);
+                  updateFilters({ date: prev === todayInputValue() ? "" : prev });
                 }}
-              />
-            </label>
+              >
+                ◀
+              </button>
+              <label className="filters__field">
+                <span className="visually-hidden">{t("attendance.date")}</span>
+                <input
+                  type="date"
+                  className="input"
+                  aria-label={t("attendance.date")}
+                  value={date}
+                  onChange={(event) => {
+                    updateFilters({ date: event.target.value === todayInputValue() ? "" : event.target.value });
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="button button--secondary button--sm"
+                aria-label="Next day"
+                title="Next day"
+                disabled={date >= todayInputValue()}
+                onClick={() => {
+                  const d = new Date(`${date}T00:00:00`);
+                  d.setDate(d.getDate() + 1);
+                  const next = d.toISOString().slice(0, 10);
+                  updateFilters({ date: next === todayInputValue() ? "" : next });
+                }}
+              >
+                ▶
+              </button>
+            </div>
           ) : null}
 
           {showFarm && !personMode ? (
@@ -385,23 +416,38 @@ export function AttendancePage({
               ))}
             </div>
 
-            <label className="filters__field">
-              <span className="visually-hidden">{t("common.status")}</span>
-              <select
-                className="input select"
-                value={status}
-                onChange={(event) => {
-                  updateFilters({ status: event.target.value });
-                }}
+            <div className="segmented" role="group" aria-label={t("common.status")}>
+              <button
+                type="button"
+                className={status === "" ? "segmented__item segmented__item--active" : "segmented__item"}
+                aria-pressed={status === ""}
+                title={t("common.allStatuses")}
+                onClick={() => updateFilters({ status: "" })}
               >
-                <option value="">{t("common.allStatuses")}</option>
-                {ATTENDANCE_STATUSES.map((value) => (
-                  <option key={value} value={value}>
-                    {statusLabel(value)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {t("common.all", { defaultValue: "All" })}
+              </button>
+              {ATTENDANCE_STATUSES.map((value) => {
+                const statusDot: Record<AttendanceStatus, string> = {
+                  PRESENT: "🟢",
+                  ABSENT: "🔴",
+                  HALF_DAY: "🟡",
+                  LEAVE: "⚪",
+                };
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    className={status === value ? "segmented__item segmented__item--active" : "segmented__item"}
+                    aria-pressed={status === value}
+                    aria-label={statusLabel(value)}
+                    title={statusLabel(value)}
+                    onClick={() => updateFilters({ status: value })}
+                  >
+                    {statusDot[value]}
+                  </button>
+                );
+              })}
+            </div>
             <label className="filters__field">
               <span className="visually-hidden">{t("common.search")}</span>
               <input

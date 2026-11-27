@@ -1,57 +1,18 @@
-import { useState } from "react";
+import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../../auth/use-auth.js";
-import { Button } from "../../components/ui.js";
 
 /**
- * A short, plain-language "how do I start" card shown once on the dashboard.
- * It only lists the steps the signed-in role can actually do, so a supervisor
- * is pointed at recording attendance and a manager at reviewing numbers —
- * never at screens they cannot open. Dismissed once (kept in localStorage).
+ * A short, plain-language "how do I start" card on the dashboard. It lists the
+ * steps the signed-in role can actually do, so a supervisor is pointed at
+ * recording attendance and a manager at reviewing numbers — never at screens
+ * they cannot open. Permanently visible; no dismiss state.
  */
-const GUIDE_HIDDEN_KEY = "poultryops_guide_hidden";
-
-/**
- * Illustrated, text-free 3-step demo of the core daily flow: phone → camera →
- * checkmark. Loops via CSS so it communicates without reading. The real,
- * actionable buttons are rendered below it from `steps`.
- */
-function FlowDemo(): React.ReactElement {
-  return (
-    <div className="guide__flow" aria-hidden="true">
-      <span className="guide__flow-step guide__flow-step--phone">📱</span>
-      <span className="guide__flow-arrow">➡️</span>
-      <span className="guide__flow-step guide__flow-step--camera">📸</span>
-      <span className="guide__flow-arrow">➡️</span>
-      <span className="guide__flow-step guide__flow-step--done">✅</span>
-    </div>
-  );
-}
-
-export function FirstRunGuide(): React.ReactElement | null {
+export function FirstRunGuide(): React.ReactElement {
   const { t } = useTranslation();
   const { can } = useAuth();
-
-  const [hidden, setHidden] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(GUIDE_HIDDEN_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  if (hidden) return null;
-
-  function dismiss(): void {
-    try {
-      localStorage.setItem(GUIDE_HIDDEN_KEY, "1");
-    } catch {
-      // Private mode etc. — just hide for this session.
-    }
-    setHidden(true);
-  }
 
   const steps: React.ReactElement[] = [];
   if (can("attendance:create")) {
@@ -86,12 +47,8 @@ export function FirstRunGuide(): React.ReactElement | null {
     <section className="guide" aria-label={t("guide.title")}>
       <div className="guide__content">
         <h2 className="guide__title">{t("guide.title")}</h2>
-        <FlowDemo />
         <ul className="guide__list">{steps}</ul>
       </div>
-      <Button variant="primary" onClick={dismiss} className="guide__dismiss">
-        {t("guide.gotIt")}
-      </Button>
     </section>
   );
 }

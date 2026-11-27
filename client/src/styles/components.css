@@ -1243,49 +1243,6 @@
   background: rgba(255, 255, 255, 0.28);
 }
 
-/* First-run illustrated flow demo -------------------------------------- */
-
-.guide__flow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 0 4px;
-  min-height: 64px;
-}
-
-.guide__flow-step {
-  width: 52px;
-  height: 52px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  background: var(--surface-sunk);
-  border-radius: 14px;
-  border: 1px solid var(--line);
-}
-
-.guide__flow-arrow {
-  font-size: 20px;
-  color: var(--ink-faint);
-}
-
-@keyframes guidePulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.12);
-    opacity: 0.85;
-  }
-}
-
-.guide__flow-step--camera {
-  animation: guidePulse 2.4s ease-in-out infinite;
-}
-
 /* Dashboard greeting avatar next to title ------------------------------- */
 
 .page-header__title-inline {

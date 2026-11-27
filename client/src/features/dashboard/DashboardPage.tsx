@@ -128,7 +128,7 @@ export function DashboardPage(): React.ReactElement {
               photoUrl={user?.employee.photoUrl ?? null}
               name={user?.employee.name ?? ""}
               type="EMPLOYEE"
-              size={36}
+              size={52}
             />
             <span>{t("dashboard.title", { name: firstName })}</span>
           </span>

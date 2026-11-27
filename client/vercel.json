@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://poultry-management-system-production-server.up.railway.app/api/$1"
+      "destination": "https://poultry-management-system-production.up.railway.app/api/$1"
     },
     {
       "source": "/(.*)",

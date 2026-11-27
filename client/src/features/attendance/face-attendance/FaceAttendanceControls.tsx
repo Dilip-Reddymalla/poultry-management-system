@@ -1,7 +1,7 @@
 import type React from "react";
 import type { Farm, Shed, Shift } from "../../../api/types.js";
 import { SHIFTS } from "../../../api/types.js";
-import { SHIFT_TIMINGS, validateShiftTiming } from "../../../lib/shift-timing.js";
+import { SHIFT_ICONS, SHIFT_TIMINGS, validateShiftTiming } from "../../../lib/shift-timing.js";
 import { styles } from "./face-attendance.styles.js";
 
 function shiftLabel(shift: Shift): string {
@@ -96,18 +96,22 @@ export function FaceAttendanceControls({
           </select>
         )}
 
-        {/* Shift Select */}
-        <select
-          style={styles.select}
-          value={selectedShift}
-          onChange={(e) => onSelectShift(e.target.value as Shift)}
-        >
+        {/* Shift Emoji Tabs */}
+        <div className="segmented" role="group" aria-label="Shift" style={{ width: "auto" }}>
           {SHIFTS.map((sh) => (
-            <option key={sh} value={sh}>
-              {shiftLabel(sh)}
-            </option>
+            <button
+              key={sh}
+              type="button"
+              className={selectedShift === sh ? "segmented__item segmented__item--active" : "segmented__item"}
+              aria-pressed={selectedShift === sh}
+              aria-label={shiftLabel(sh)}
+              title={shiftLabel(sh)}
+              onClick={() => onSelectShift(sh)}
+            >
+              {SHIFT_ICONS[sh]}
+            </button>
           ))}
-        </select>
+        </div>
 
         {/* Camera Select */}
         <select

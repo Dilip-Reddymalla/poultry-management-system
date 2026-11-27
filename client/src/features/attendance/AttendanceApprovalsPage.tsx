@@ -14,6 +14,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { useResource } from "../../hooks/useResource.js";
 import { useToast } from "../../components/use-toast.js";
 import { statusLabel, todayInputValue, formatDate } from "../../lib/display.js";
+import { SHIFT_ICONS } from "../../lib/shift-timing.js";
 import {
   Button,
   Panel,
@@ -557,24 +558,31 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               </select>
             )}
 
-            {/* Shift Picker */}
-            <select
-              className="input"
-              value={shift}
-              onChange={(e) => setParam("shift", e.target.value)}
-              style={{
-                padding: "0.3rem 0.5rem",
-                fontSize: "0.82rem",
-                minWidth: 110,
-              }}
-            >
-              <option value="">All Shifts</option>
+            {/* Shift Emoji Tabs */}
+            <div className="segmented" role="group" aria-label="Shift">
+              <button
+                type="button"
+                className={shift === "" ? "segmented__item segmented__item--active" : "segmented__item"}
+                aria-pressed={shift === ""}
+                title="All Shifts"
+                onClick={() => setParam("shift", "")}
+              >
+                All
+              </button>
               {SHIFTS.map((s) => (
-                <option key={s} value={s}>
-                  {statusLabel(s)}
-                </option>
+                <button
+                  key={s}
+                  type="button"
+                  className={shift === s ? "segmented__item segmented__item--active" : "segmented__item"}
+                  aria-pressed={shift === s}
+                  aria-label={statusLabel(s)}
+                  title={statusLabel(s)}
+                  onClick={() => setParam("shift", s)}
+                >
+                  {SHIFT_ICONS[s]}
+                </button>
               ))}
-            </select>
+            </div>
 
             {/* Reason / Source Filter */}
             <select

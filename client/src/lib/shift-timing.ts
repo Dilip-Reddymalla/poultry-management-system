@@ -14,6 +14,13 @@ export interface ShiftTimingRule {
   source?: "FARM" | "COMPANY" | "DEFAULT";
 }
 
+export const SHIFT_ICONS: Record<Shift, string> = {
+  MORNING_SHIFT: "☀️",
+  AFTERNOON_SHIFT: "🌤️",
+  NIGHT_SHIFT: "🌙",
+  OVERTIME: "⏱️",
+};
+
 export const SHIFT_TIMINGS: Record<Shift, ShiftTimingRule> = {
   MORNING_SHIFT: {
     shift: "MORNING_SHIFT",

@@ -64,9 +64,9 @@
 }
 
 .segmented__item--active {
-  background-color: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgb(22 33 28 / 12%);
+  background-color: var(--moss);
+  color: var(--paper);
+  box-shadow: 0 1px 3px rgb(22 33 28 / 22%);
 }
 
 /*

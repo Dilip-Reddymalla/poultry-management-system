@@ -29,6 +29,7 @@ import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatDate, statusLabel, todayInputValue } from "../../lib/display.js";
 import { useAutoSelectFarm } from "../../lib/farm-selection.js";
+import { SHIFT_ICONS } from "../../lib/shift-timing.js";
 import { AttendanceEntryDialog } from "./AttendanceEntryDialog.js";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog.js";
 import { ExportAttendanceDialog } from "./ExportAttendanceDialog.js";
@@ -369,27 +370,19 @@ export function AttendancePage({
               >
                 {t("common.all", { defaultValue: "All" })}
               </button>
-              {SHIFTS.map((value) => {
-                const iconMap: Record<Shift, string> = {
-                  MORNING_SHIFT: "☀️",
-                  AFTERNOON_SHIFT: "🌤️",
-                  NIGHT_SHIFT: "🌙",
-                  OVERTIME: "⏱️",
-                };
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    className={shift === value ? "segmented__item segmented__item--active" : "segmented__item"}
-                    aria-pressed={shift === value}
-                    aria-label={statusLabel(value)}
-                    title={statusLabel(value)}
-                    onClick={() => updateFilters({ shift: value })}
-                  >
-                    {iconMap[value]}
-                  </button>
-                );
-              })}
+              {SHIFTS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={shift === value ? "segmented__item segmented__item--active" : "segmented__item"}
+                  aria-pressed={shift === value}
+                  aria-label={statusLabel(value)}
+                  title={statusLabel(value)}
+                  onClick={() => updateFilters({ shift: value })}
+                >
+                  {SHIFT_ICONS[value]}
+                </button>
+              ))}
             </div>
 
             <label className="filters__field">

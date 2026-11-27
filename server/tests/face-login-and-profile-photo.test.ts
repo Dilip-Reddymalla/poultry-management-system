@@ -35,7 +35,7 @@ import * as vectorSearch from "../src/services/vector-search.service.js";
 import { env } from "../src/config/env.js";
 
 function makeUnitVector(seed: number): number[] {
-  const vec = new Array<number>(128).fill(0);
+  const vec = new Array<number>(512).fill(0);
   vec[0] = Math.cos(seed);
   vec[1] = Math.sin(seed);
   return vec;

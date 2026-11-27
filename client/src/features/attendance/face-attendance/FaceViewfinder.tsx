@@ -600,7 +600,7 @@ export function FaceViewfinder({
               title="Expand viewfinder to full mobile screen (great for group photos)"
               aria-label="Expand Fullscreen"
             >
-              ⛶ <span className="mobile-hide-label">Fullscreen</span>
+              ⛶ <span>Fullscreen</span>
             </button>
             <button
               style={{ ...styles.btn, background: "#e0e7ff", color: "#3730a3" }}
@@ -608,14 +608,14 @@ export function FaceViewfinder({
               title="Switch between front and back camera"
               aria-label={facingMode === "user" ? "Use Back Cam" : "Use Front Cam"}
             >
-              🔄 <span className="mobile-hide-label">{facingMode === "user" ? "Back" : "Front"}</span>
+              🔄 <span>{facingMode === "user" ? "Back" : "Front"}</span>
             </button>
             <button
               style={{ ...styles.btn, background: "#fee2e2", color: "#991b1b" }}
               onClick={onStopCamera}
               aria-label="Stop Camera"
             >
-              ⏹ <span className="mobile-hide-label">Stop</span>
+              ⏹ <span>Stop</span>
             </button>
           </>
         )}

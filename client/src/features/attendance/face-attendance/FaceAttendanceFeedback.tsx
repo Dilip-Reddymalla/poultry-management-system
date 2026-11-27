@@ -90,13 +90,26 @@ export function FaceAttendanceFeedback({
 
       {/* Submit result */}
       {submitResult && (
-        <div style={styles.summary}>
-          <strong>✅ Attendance Submitted!</strong>
-          <p style={{ margin: "4px 0 0" }}>
-            {submitResult.markedCount} marked
-            {submitResult.duplicateCount > 0 &&
-              ` • ${submitResult.duplicateCount} already recorded`}
-          </p>
+        <div
+          style={{
+            ...styles.summary,
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            padding: "16px 20px",
+          }}
+        >
+          <span style={{ fontSize: 32, lineHeight: 1 }} aria-hidden="true">
+            ✅
+          </span>
+          <div>
+            <strong style={{ fontSize: 18 }}>{submitResult.markedCount} Marked</strong>
+            {submitResult.duplicateCount > 0 && (
+              <p style={{ margin: "2px 0 0", fontSize: 13 }}>
+                {submitResult.duplicateCount} already recorded
+              </p>
+            )}
+          </div>
         </div>
       )}
 

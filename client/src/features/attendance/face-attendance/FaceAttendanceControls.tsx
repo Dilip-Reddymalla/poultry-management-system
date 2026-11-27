@@ -113,16 +113,29 @@ export function FaceAttendanceControls({
           ))}
         </div>
 
-        {/* Camera Select */}
-        <select
-          data-tour="face-camera"
-          style={styles.select}
-          value={facingMode}
-          onChange={(e) => onChangeFacingMode(e.target.value as "user" | "environment")}
-        >
-          <option value="user">📷 Front</option>
-          <option value="environment">📸 Back</option>
-        </select>
+        {/* Visual Camera Toggle */}
+        <div className="segmented" data-tour="face-camera" role="group" aria-label="Camera">
+          <button
+            type="button"
+            className={facingMode === "user" ? "segmented__item segmented__item--active" : "segmented__item"}
+            aria-pressed={facingMode === "user"}
+            aria-label="Front Camera"
+            title="📷 Front (Selfie)"
+            onClick={() => onChangeFacingMode("user")}
+          >
+            🤳
+          </button>
+          <button
+            type="button"
+            className={facingMode === "environment" ? "segmented__item segmented__item--active" : "segmented__item"}
+            aria-pressed={facingMode === "environment"}
+            aria-label="Back Camera"
+            title="📸 Back (Group)"
+            onClick={() => onChangeFacingMode("environment")}
+          >
+            👥
+          </button>
+        </div>
 
         {/* Traffic-light GPS indicator */}
         <div

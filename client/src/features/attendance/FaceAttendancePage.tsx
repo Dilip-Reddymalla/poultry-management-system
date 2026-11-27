@@ -763,7 +763,6 @@ export function FaceAttendancePage(): React.ReactElement {
               target: "[data-tour='face-camera']",
               titleKey: "tour.faceCameraTitle",
               bodyKey: "tour.faceCameraBody",
-              waitForChange: true,
             },
             {
               target: "[data-tour='face-start']",

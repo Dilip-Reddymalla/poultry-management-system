@@ -138,13 +138,13 @@ export function DashboardPage(): React.ReactElement {
             <h2 className="quick-action__title">{t("dashboard.quickActionTitle")}</h2>
           </div>
           <Button
-            variant="primary"
+            variant="success"
             className="quick-action__button"
             data-tour="face-action"
             onClick={() => navigate("/attendance/face")}
           >
             <CameraIcon className="button__icon" />
-            <span className="button__label">{t("attendance.faceAttendance")}</span>
+            <span className="button__label">📸 {t("attendance.faceAttendance")}</span>
           </Button>
         </section>
       ) : null}

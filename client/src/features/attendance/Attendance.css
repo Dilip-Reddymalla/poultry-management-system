@@ -174,8 +174,9 @@
     align-items: stretch;
   }
 
-  .face-controls select,
-  .face-controls button {
+  .face-controls > select,
+  .face-controls > button,
+  .face-controls > .segmented {
     width: 100% !important;
     min-width: 100% !important;
     justify-content: center;

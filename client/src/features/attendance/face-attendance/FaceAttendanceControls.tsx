@@ -97,7 +97,7 @@ export function FaceAttendanceControls({
         )}
 
         {/* Shift Emoji Tabs */}
-        <div className="segmented" role="group" aria-label="Shift" style={{ width: "auto" }}>
+        <div className="segmented" role="group" aria-label="Shift">
           {SHIFTS.map((sh) => (
             <button
               key={sh}

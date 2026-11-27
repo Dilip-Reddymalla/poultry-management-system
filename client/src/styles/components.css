@@ -139,6 +139,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  max-width: 100%;
   padding: 3px var(--space-3) 3px var(--space-2);
   border: 1px solid var(--line-strong);
   border-radius: 999px;
@@ -147,6 +148,8 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.25;
 }
 
@@ -279,6 +282,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  max-width: 100%;
   min-height: 44px;
   padding: var(--space-3) var(--space-5);
   border: 1px solid transparent;
@@ -289,6 +293,8 @@
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .button:disabled,
@@ -999,6 +1005,9 @@
 
   .button {
     min-height: 40px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
   }
 
   .input {

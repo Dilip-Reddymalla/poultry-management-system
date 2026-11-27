@@ -41,6 +41,7 @@
 
 .dialog__footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-3);
   padding-top: var(--space-2);

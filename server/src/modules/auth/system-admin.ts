@@ -52,27 +52,17 @@ export function verifySystemAdminPassword(password: string): boolean {
   return timingSafeEqual(provided, expected);
 }
 
-let sysAdminTableReady = false;
-
-async function ensureSystemAdminTable(): Promise<void> {
-  if (sysAdminTableReady) return;
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS system_admin_profiles (
-      id TEXT PRIMARY KEY,
-      photo_url TEXT,
-      face_embedding DOUBLE PRECISION[],
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-  sysAdminTableReady = true;
-}
+// The `system_admin_profiles` table is provisioned by a Prisma migration (see
+// prisma/migrations/...add_system_admin_profiles). It must NOT be created at
+// runtime: many managed Postgres providers (e.g. Neon) run the app with a role
+// that cannot CREATE TABLE in the `public` schema. The runtime only reads and
+// writes the table, which is already provisioned.
 
 export async function getSystemAdminBiometrics(): Promise<{
   photoUrl: string | null;
   faceEmbedding: number[] | null;
 }> {
   try {
-    await ensureSystemAdminTable();
     const rows = await prisma.$queryRawUnsafe<
       Array<{ photo_url: string | null; face_embedding: number[] | null }>
     >(
@@ -93,7 +83,6 @@ export async function updateSystemAdminBiometrics(
   photoUrl: string,
   faceEmbedding?: number[],
 ): Promise<void> {
-  await ensureSystemAdminTable();
   const existing = await getSystemAdminBiometrics();
 
   await prisma.$executeRawUnsafe(

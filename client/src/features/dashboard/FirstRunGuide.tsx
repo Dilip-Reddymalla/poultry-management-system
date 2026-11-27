@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { useAuth } from "../../auth/use-auth.js";
-import { CalendarIcon, ShedIcon, StatusReadyIcon } from "../../components/icons.js";
 import { Button } from "../../components/ui.js";
 
 /**
@@ -40,30 +40,27 @@ export function FirstRunGuide(): React.ReactElement | null {
   if (can("attendance:create")) {
     steps.push(
       <li className="guide__item" key="record">
-        <span className="guide__icon" aria-hidden="true">
-          <StatusReadyIcon />
-        </span>
-        <span>{t("guide.stepRecord")}</span>
+        <Link className="button button--secondary" to="/attendance/face">
+          📸 {t("guide.stepRecord")}
+        </Link>
       </li>,
     );
   }
   if (can("attendance:view")) {
     steps.push(
       <li className="guide__item" key="check">
-        <span className="guide__icon" aria-hidden="true">
-          <CalendarIcon />
-        </span>
-        <span>{t("guide.stepCheck")}</span>
+        <Link className="button button--secondary" to="/attendance">
+          📋 {t("guide.stepCheck")}
+        </Link>
       </li>,
     );
   }
   if (can("shed:view")) {
     steps.push(
       <li className="guide__item" key="shed">
-        <span className="guide__icon" aria-hidden="true">
-          <ShedIcon />
-        </span>
-        <span>{t("guide.stepShed")}</span>
+        <Link className="button button--secondary" to="/sheds">
+          🏠 {t("guide.stepShed")}
+        </Link>
       </li>,
     );
   }

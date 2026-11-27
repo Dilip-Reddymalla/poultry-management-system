@@ -130,20 +130,6 @@ export function ShedDetailPage(): React.ReactElement {
             ]}
           />
         </Panel>
-
-        <Panel title={t("sheds.detail.statusMeaningPanel")}>
-          <DetailList
-            items={[
-              { label: t("sheds.available"), value: t("sheds.detail.availableDesc") },
-              {
-                label: t("sheds.occupied"),
-                value: t("sheds.detail.occupiedDesc"),
-              },
-              { label: t("sheds.maintenance"), value: t("sheds.detail.maintenanceDesc") },
-              { label: t("common.inactive"), value: t("sheds.detail.inactiveDesc") },
-            ]}
-          />
-        </Panel>
       </div>
 
       {editing ? (

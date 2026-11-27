@@ -106,9 +106,9 @@
 
   "guide": {
     "title": "శీఘ్ర ప్రారంభం",
-    "stepRecord": "ఫోటోతో హాజరు నమోదు చేయడానికి Face ఉపయోగించండి.",
-    "stepCheck": "ఈరోజు ఎవరు వచ్చారో చూడటానికి Attendance తెరవండి.",
-    "stepShed": "ఖాళీ స్థలం చూడటానికి Shed బోర్డును చూడండి.",
+    "stepRecord": "ఫేస్ హాజరు",
+    "stepCheck": "నేటి హాజరు",
+    "stepShed": "షెడ్ బోర్డు",
     "gotIt": "సరే"
   },
 
@@ -125,9 +125,9 @@
     "faceIntroTitle": "ఫేస్ హాజరు",
     "faceIntroBody": "వ్యక్తి ఫోటో ద్వారా హాజరు చేయండి.",
     "faceStartTitle": "కెమెరా తెరవండి",
-    "faceStartBody": "క్రింద \"Start Live Camera\" నొక్కండి.",
+    "faceStartBody": "క్రింద \"🎥 Start\" నొక్కండి.",
     "faceCaptureTitle": "ఫోటో తీయండి",
-    "faceCaptureBody": "వ్యక్తి ముఖాన్ని చదవడానికి \"Capture & Recognize\" నొక్కండి.",
+    "faceCaptureBody": "ముఖాన్ని చదవడానికి \"📸 Capture\" నొక్కండి.",
     "faceScrollTitle": "క్రిందికి స్క్రోల్ చేయండి",
     "faceScrollBody": "కెమెరా నియంత్రణలను కనుగొనడానికి క్రిందికి వెళ్లండి.",
     "faceShedTitle": "షెడ్ ఎంచుకోండి",

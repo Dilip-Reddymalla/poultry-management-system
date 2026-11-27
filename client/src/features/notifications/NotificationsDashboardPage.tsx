@@ -85,8 +85,7 @@ export function NotificationsDashboardPage(): React.ReactElement {
   return (
     <div className="notification-dashboard">
       <PageHeader
-        title="Notification Center"
-        description="Unified audit notifications, IP Fallback approvals, and real-time system alerts."
+        title="Notifications"
         actions={
           unreadCount > 0 ? (
             <Button variant="secondary" onClick={handleMarkAllRead}>
@@ -274,8 +273,8 @@ export function NotificationsDashboardPage(): React.ReactElement {
         </Panel>
       ) : notifications.length === 0 ? (
         <EmptyState
-          title="No notifications in this view"
-          description="You are all caught up! New alerts will appear here."
+          title="All caught up"
+          description="No new alerts."
         />
       ) : (
         <div className="notification-cards-list">

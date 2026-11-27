@@ -570,7 +570,7 @@ export function FaceViewfinder({
             style={{ ...styles.btn, ...styles.btnPrimary, padding: "12px 24px", fontSize: 15 }}
             onClick={() => onStartCamera()}
           >
-            {imagePreviewUrl ? "📸 Retake / Open Live Camera" : "🎥 Start Live Camera"}
+            {imagePreviewUrl ? "📸 Retake" : "🎥 Start"}
           </button>
         ) : (
           <>
@@ -590,7 +590,7 @@ export function FaceViewfinder({
               title={!hasValidLocation ? "GPS location is required before taking attendance" : undefined}
             >
               {processing && <span style={styles.spinner} />}
-              {processing ? "Analyzing Frame…" : "📸 Capture & Recognize"}
+              {processing ? "Analyzing…" : "📸 Capture"}
             </button>
             <button
               style={{ ...styles.btn, background: "#1e1b4b", color: "#c7d2fe", border: "1px solid #4338ca" }}
@@ -627,7 +627,7 @@ export function FaceViewfinder({
           disabled={true}
           title="Image upload is disabled for attendance. Live camera capture is required to verify real-time presence."
         >
-          📁 Upload Image (Disabled for Attendance)
+          📁 Upload (Off)
         </button>
 
         {result && liveFaces.length > 0 && (

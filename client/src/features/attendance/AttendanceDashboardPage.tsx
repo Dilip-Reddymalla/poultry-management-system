@@ -732,9 +732,8 @@ export function AttendanceDashboardPage(): React.ReactElement {
         </div>
       ) : (
         <PageHeader
-          eyebrow="Workforce Operations"
-          title="Attendance Command Center"
-          description="Real-time shift rosters, face AI verification status, and shed allocations."
+          eyebrow="Operations"
+          title="Live Attendance"
           actions={
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
               <Button

@@ -28,13 +28,13 @@ function Kpi({
 }: {
   label: string;
   value: string;
-  detail: string;
+  detail?: string;
 }): React.ReactElement {
   return (
     <div className="kpi">
       <p className="kpi__label eyebrow">{label}</p>
       <p className="kpi__value numeric">{value}</p>
-      <p className="kpi__detail">{detail}</p>
+      {detail ? <p className="kpi__detail">{detail}</p> : null}
     </div>
   );
 }
@@ -168,7 +168,6 @@ export function DashboardPage(): React.ReactElement {
             <Kpi
               label={t("dashboard.kpi.activeEmployees")}
               value={formatNumber(employees.data?.pagination.total ?? 0)}
-              detail={t("dashboard.kpi.activeEmployeesDetail")}
             />
           )
         ) : null}
@@ -182,7 +181,6 @@ export function DashboardPage(): React.ReactElement {
             <Kpi
               label={t("dashboard.kpi.activeFarms")}
               value={formatNumber(activeFarms.length)}
-              detail={`${formatNumber(farms.data?.length ?? 0)} ${t("dashboard.kpi.activeFarmsDetail")}`}
             />
           )
         ) : null}
@@ -202,7 +200,6 @@ export function DashboardPage(): React.ReactElement {
               <Kpi
                 label={t("dashboard.kpi.birdCapacity")}
                 value={formatNumber(capacity)}
-                detail={t("dashboard.kpi.birdCapacityDetail")}
               />
             </>
           )

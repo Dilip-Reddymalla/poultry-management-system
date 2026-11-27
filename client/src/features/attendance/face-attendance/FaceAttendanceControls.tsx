@@ -107,8 +107,8 @@ export function FaceAttendanceControls({
           value={facingMode}
           onChange={(e) => onChangeFacingMode(e.target.value as "user" | "environment")}
         >
-          <option value="user">📷 Front Camera (Portrait)</option>
-          <option value="environment">📸 Back Camera (16:9 Widescreen)</option>
+          <option value="user">📷 Front</option>
+          <option value="environment">📸 Back</option>
         </select>
       </div>
 
@@ -145,7 +145,7 @@ export function FaceAttendanceControls({
             }}
             onClick={onRequestGpsLocation}
           >
-            {isGpsLoading ? "⏳ Detecting…" : "🔄 Refresh GPS"}
+            {isGpsLoading ? "⏳ GPS…" : "🔄 GPS"}
           </button>
         </div>
         {!shiftCheck.allowed && (

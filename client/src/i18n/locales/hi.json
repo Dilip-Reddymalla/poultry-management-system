@@ -106,9 +106,9 @@
 
   "guide": {
     "title": "त्वरित शुरुआत",
-    "stepRecord": "फोटो से हाजिरी दर्ज करने के लिए Face का उपयोग करें।",
-    "stepCheck": "आज कौन आया यह देखने के लिए Attendance खोलें।",
-    "stepShed": "खाली जगह देखने के लिए Shed बोर्ड देखें।",
+    "stepRecord": "फेस हाजिरी",
+    "stepCheck": "आज की हाजिरी",
+    "stepShed": "शेड बोर्ड",
     "gotIt": "समझ गया"
   },
 
@@ -125,9 +125,9 @@
     "faceIntroTitle": "फेस हाजिरी",
     "faceIntroBody": "किसी व्यक्ति को उसकी फोटो से उपस्थित करें।",
     "faceStartTitle": "कैमरा खोलें",
-    "faceStartBody": "नीचे \"Start Live Camera\" दबाएं।",
+    "faceStartBody": "नीचे \"🎥 Start\" दबाएं।",
     "faceCaptureTitle": "फोटो लें",
-    "faceCaptureBody": "व्यक्ति की फेस पढ़ने के लिए \"Capture & Recognize\" दबाएं।",
+    "faceCaptureBody": "चेहरा पढ़ने के लिए \"📸 Capture\" दबाएं।",
     "faceScrollTitle": "नीचे स्क्रॉल करें",
     "faceScrollBody": "कैमरा कंट्रोल पाने के लिए नीचे जाएं।",
     "faceShedTitle": "शेड चुनें",

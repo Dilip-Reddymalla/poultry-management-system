@@ -376,10 +376,7 @@ export function AttendanceApprovalsPage(): React.ReactElement {
 
   return (
     <div className="stack" style={{ gap: isMobile ? "0.85rem" : "1.25rem" }}>
-      <PageHeader
-        title="Attendance Approvals & Audit"
-        description="Review attendance requiring managerial verification: out-of-geofence locations, IP network fallbacks, and biometric exceptions."
-      />
+      <PageHeader title="Attendance Approvals" />
 
       {/* KPI Insight Metric Cards */}
       <div
@@ -797,15 +794,15 @@ export function AttendanceApprovalsPage(): React.ReactElement {
               <EmptyState
                 title={
                   approvalTab === "PENDING"
-                    ? "No pending approval records"
+                    ? "No pending approvals"
                     : "No records found"
                 }
                 description={
                   approvalTab === "PENDING"
                     ? date
-                      ? `All attendance records for ${date} have been signed off.`
-                      : "No records across any farm are currently awaiting approval."
-                    : "No records match your selected filters."
+                      ? `All signed off for ${date}.`
+                      : "Nothing awaiting approval."
+                    : "Try another filter."
                 }
               />
             )}

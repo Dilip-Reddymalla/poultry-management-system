@@ -110,9 +110,9 @@
 
   "guide": {
     "title": "Quick start",
-    "stepRecord": "Use Face to mark attendance with a photo.",
-    "stepCheck": "Open Attendance to see who came today.",
-    "stepShed": "Check the Shed board to see empty space.",
+    "stepRecord": "Face attendance",
+    "stepCheck": "Today's roster",
+    "stepShed": "Shed board",
     "gotIt": "Got it"
   },
 
@@ -129,9 +129,9 @@
     "faceIntroTitle": "Face attendance",
     "faceIntroBody": "Mark a person present from their photo.",
     "faceStartTitle": "Open the camera",
-    "faceStartBody": "Tap \"Start Live Camera\" below.",
+    "faceStartBody": "Tap \"🎥 Start\" below.",
     "faceCaptureTitle": "Take the photo",
-    "faceCaptureBody": "Tap \"Capture & Recognize\" to read the person's face.",
+    "faceCaptureBody": "Tap \"📸 Capture\" to read the face.",
     "faceScrollTitle": "Scroll down",
     "faceScrollBody": "Move down to find the camera controls.",
     "faceShedTitle": "Choose a shed",
@@ -271,24 +271,24 @@
       "allWorkers": "All workers",
       "recordPanel": "Record",
       "appAccessPanel": "App access",
-      "appAccessText": "Workers are recorded for attendance only. They do not have a login and cannot sign in to the app.",
+      "appAccessText": "No login (attendance only)",
       "updateSuccess": "Worker updated.",
       "deleteSuccess": "{{name}} deleted.",
       "deactivateTitle": "Deactivate worker?",
       "reactivateTitle": "Reactivate worker?",
-      "deactivateDescription": "{{name}} stays on record but is marked inactive and drops off attendance entry.",
-      "reactivateDescription": "{{name}} goes back to active and can be marked in attendance again.",
+      "deactivateDescription": "Mark {{name}} inactive?",
+      "reactivateDescription": "Mark {{name}} active?",
       "deleteTitle": "Delete {{name}}?",
-      "deleteDescription": "This will permanently delete the worker and direct attendance records. This action cannot be undone.",
+      "deleteDescription": "Permanently deletes worker & records.",
       "deleteConfirmLabel": "Delete worker",
       "deactivatedSuccess": "{{name}} deactivated.",
       "reactivatedSuccess": "{{name}} reactivated.",
       "failedToDelete": "Failed to delete worker.",
-      "promotedBannerTitle": "This worker has been promoted to an Employee",
-      "promotedBannerSubtitle": "Active Staff Record",
-      "viewEmployeeProfile": "View Employee Profile →",
-      "promotedAccessText": "This worker was promoted to employee {{name}} ({{id}}). Manage system access, roles, and attendance on their employee profile.",
-      "promoteSuccess": "Worker promoted to employee successfully."
+      "promotedBannerTitle": "Promoted",
+      "promotedBannerSubtitle": "Active Staff",
+      "viewEmployeeProfile": "View Employee →",
+      "promotedAccessText": "Promoted to {{name}} ({{id}}).",
+      "promoteSuccess": "Promoted to employee."
     },
     "promoteDialog": {
       "title": "Promote to Employee",
@@ -461,9 +461,9 @@
       "description": "Sign in again to see your profile."
     },
     "attendanceAnalyticsTitle": "Attendance Analytics",
-    "attendanceAnalyticsSub": "Your last 30 days at a glance",
+    "attendanceAnalyticsSub": "Last 30 days",
     "attendanceHistoryTitle": "Attendance History",
-    "attendanceHistorySub": "Full record of your attendance entries",
+    "attendanceHistorySub": "Your entries",
     "changePassword": "Change password",
     "employeeID": "Employee ID",
     "email": "Email",
@@ -473,7 +473,7 @@
     "permissions": {
       "title": "Permissions",
       "total": "{{count}} total",
-      "empty": "No permissions assigned yet. Ask a manager to assign a role."
+      "empty": "No permissions assigned."
     },
     "changePasswordDialog": {
       "title": "Change password",

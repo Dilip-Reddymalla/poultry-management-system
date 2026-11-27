@@ -66,7 +66,7 @@ export function TourOverlay({ steps, onComplete }: TourOverlayProps): React.Reac
       setRect(null);
       return;
     }
-    let el = document.querySelector(step.target) as HTMLElement | null;
+    const el = document.querySelector(step.target) as HTMLElement | null;
     console.log("[tour] step", idx, "selector", step.target, "found", Boolean(el));
     if (!el) {
       setRect(null);

@@ -202,11 +202,6 @@ export function AttendanceReportPage(): React.ReactElement {
     <div className="att-report-page">
       <PageHeader
         title={t("nav.attendanceReport", "Attendance Report")}
-        description={
-          isSystemAdmin
-            ? "Enterprise cross-company workforce presence, historical compliance, and farm operations overview."
-            : "Consolidated attendance status, 7-day trend analysis, and performance across all farms under your company."
-        }
       />
 
       {/* ── Filter Panel ─────────────────────────────────────────────────── */}
@@ -903,18 +898,15 @@ export function AttendanceReportPage(): React.ReactElement {
           <div>
             <div style={{ marginBottom: "var(--space-3)" }}>
               <h3 style={{ fontSize: "var(--step-1)", fontWeight: 600 }}>
-                Farm Performance Breakdown ({report.farms.length})
+                Farms ({report.farms.length})
               </h3>
-              <p className="kpi__detail">
-                Click any farm name to navigate directly to its detailed operational dashboard.
-              </p>
             </div>
 
             {report.farms.length === 0 ? (
               <Panel>
                 <EmptyState
-                  title="No Farms Found"
-                  description="No active farms found matching the selected filter criteria."
+                  title="No matching farms"
+                  description="Try another filter."
                 />
               </Panel>
             ) : (

@@ -186,9 +186,8 @@ export function AuditLogsPage(): React.ReactElement {
   return (
     <div className="stack" style={{ gap: "1.5rem" }}>
       <PageHeader
-        eyebrow="System Administration"
+        eyebrow="Admin"
         title={t("auditLogs.pageTitle")}
-        description="Comprehensive audit trail of database mutations, system errors, and security investigations."
         actions={
           activeTab === "activity" ? (
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -314,8 +313,8 @@ export function AuditLogsPage(): React.ReactElement {
           ) : logs.length === 0 ? (
             <div className="panel__pad">
               <EmptyState
-                title="No audit logs found"
-                description="No database changes recorded matching your filter criteria."
+                title="No audit logs"
+                description="Try another filter."
               />
             </div>
           ) : (
@@ -445,8 +444,8 @@ export function AuditLogsPage(): React.ReactElement {
           ) : systemErrors.length === 0 ? (
             <div className="panel__pad">
               <EmptyState
-                title="No system errors recorded"
-                description="Zero 500 internal server errors recorded. All systems are operating normally."
+                title="No server errors"
+                description="All systems normal."
               />
             </div>
           ) : (

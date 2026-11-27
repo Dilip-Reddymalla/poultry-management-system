@@ -179,7 +179,6 @@ export function ForgotPasswordPage(): React.ReactElement {
                 type="email"
                 autoComplete="email"
                 value={email}
-                hint={t("auth.forgotPassword.workEmailHint")}
                 errors={error?.fieldErrors.email}
                 onChange={(event) => {
                   setEmail(event.target.value);
@@ -193,7 +192,7 @@ export function ForgotPasswordPage(): React.ReactElement {
                 autoComplete="new-password"
                 required
                 value={newPassword}
-                hint={t("auth.forgotPassword.newPasswordHint")}
+                hint="8+ chars"
                 errors={error?.fieldErrors.newPassword}
                 onChange={(event) => {
                   setNewPassword(event.target.value);

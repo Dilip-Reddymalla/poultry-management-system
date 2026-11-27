@@ -169,7 +169,6 @@ export function OtpLoginPage(): React.ReactElement {
                 label={t("auth.otpLogin.phoneNumber")}
                 required
                 value={phone}
-                hint={t("auth.otpLogin.phoneHint")}
                 errors={error?.fieldErrors.phone}
                 onChange={(val) => setPhone(val)}
               />
@@ -180,7 +179,6 @@ export function OtpLoginPage(): React.ReactElement {
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 value={password}
-                hint={t("auth.otpLogin.passwordHint")}
                 errors={error?.fieldErrors.password}
                 onChange={(event) => {
                   setPassword(event.target.value);

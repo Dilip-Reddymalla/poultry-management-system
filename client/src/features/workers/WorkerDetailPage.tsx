@@ -187,7 +187,7 @@ export function WorkerDetailPage(): React.ReactElement {
       {isPromoted && record.promotedToEmployee ? (
         <div
           style={{
-            padding: "16px 20px",
+            padding: "10px 14px",
             borderRadius: "8px",
             backgroundColor: "rgba(139, 92, 246, 0.08)",
             border: "1px solid rgba(139, 92, 246, 0.3)",
@@ -195,23 +195,18 @@ export function WorkerDetailPage(): React.ReactElement {
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "12px",
+            gap: "10px",
           }}
         >
-          <div>
-            <div style={{ fontWeight: 600, color: "#6d28d9", fontSize: "1rem" }}>
-              🎉 {t("workers.detail.promotedBannerTitle", "This worker has been promoted to an Employee")}
-            </div>
-            <div style={{ color: "#4b5563", fontSize: "0.9rem", marginTop: "2px" }}>
-              {t("workers.detail.promotedBannerSubtitle", "Active Staff Record")}: <strong>{record.promotedToEmployee.name}</strong> ({record.promotedToEmployee.employeeId})
-            </div>
-          </div>
+          <span style={{ fontWeight: 600, color: "#6d28d9", fontSize: "0.92rem" }}>
+            🎉 {t("workers.detail.promotedBannerTitle")} — {record.promotedToEmployee.name} ({record.promotedToEmployee.employeeId})
+          </span>
           <Link
             to={`/employees/${record.promotedToEmployee.id}`}
             className="button button--primary"
             style={{ backgroundColor: "#7c3aed", borderColor: "#7c3aed" }}
           >
-            {t("workers.detail.viewEmployeeProfile", "View Employee Profile →")}
+            {t("workers.detail.viewEmployeeProfile", "View Employee →")}
           </Link>
         </div>
       ) : null}
@@ -252,20 +247,18 @@ export function WorkerDetailPage(): React.ReactElement {
                 ),
               },
               { label: t("common.status"), value: <StatusTag status={record.status} /> },
+              {
+                label: t("workers.detail.appAccessPanel"),
+                value: isPromoted && record.promotedToEmployee ? (
+                  <Link className="table__link" to={`/employees/${record.promotedToEmployee.id}`}>
+                    {record.promotedToEmployee.employeeId} →
+                  </Link>
+                ) : (
+                  <span className="muted">{t("workers.detail.appAccessText")}</span>
+                ),
+              },
             ]}
           />
-        </Panel>
-
-        <Panel title={t("workers.detail.appAccessPanel")}>
-          <p className="panel__text">
-            {isPromoted && record.promotedToEmployee
-              ? t("workers.detail.promotedAccessText", {
-                  name: record.promotedToEmployee.name,
-                  id: record.promotedToEmployee.employeeId,
-                  defaultValue: `This worker was promoted to employee ${record.promotedToEmployee.name} (${record.promotedToEmployee.employeeId}). Manage system access, roles, and attendance on their employee profile.`
-                })
-              : t("workers.detail.appAccessText")}
-          </p>
         </Panel>
       </div>
 

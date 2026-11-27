@@ -335,7 +335,7 @@ export function AttendanceDetailPage(): React.ReactElement {
       {confirmingApprove ? (
         <ConfirmDialog
           title="Approve attendance?"
-          description={`Marks ${record.person.name}'s record for ${formatDate(record.date)} as reviewed and final. A later correction reopens it.`}
+          description={`Approve ${record.person.name} · ${formatDate(record.date)}?`}
           confirmLabel="Approve"
           confirmVariant="primary"
           busy={approveBusy}

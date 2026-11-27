@@ -200,7 +200,7 @@ export function EmployeeDetailPage(): React.ReactElement {
       {record.promotedFromWorker ? (
         <div
           style={{
-            padding: "12px 16px",
+            padding: "8px 14px",
             borderRadius: "8px",
             backgroundColor: "rgba(139, 92, 246, 0.08)",
             border: "1px solid rgba(139, 92, 246, 0.3)",
@@ -208,26 +208,18 @@ export function EmployeeDetailPage(): React.ReactElement {
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "12px",
+            gap: "8px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "1.2rem" }}>⭐</span>
-            <div>
-              <span style={{ fontWeight: 600, color: "#6d28d9" }}>
-                {t("employees.detail.promotedFromTitle", "Promoted from Farm Worker")}
-              </span>
-              <span style={{ color: "#6b7280", marginLeft: "8px", fontSize: "0.9rem" }}>
-                ({record.promotedFromWorker.workerId})
-              </span>
-            </div>
-          </div>
+          <span style={{ fontWeight: 600, color: "#6d28d9", fontSize: "0.9rem" }}>
+            ⭐ {t("employees.detail.promotedFrom", "From")}: {record.promotedFromWorker.workerId}
+          </span>
           <Link
             to={`/workers/${record.promotedFromWorker.id}`}
             className="button button--secondary"
             style={{ fontSize: "0.85rem", padding: "4px 10px" }}
           >
-            {t("employees.detail.viewWorkerRecord", "View Historical Worker Record →")}
+            {t("employees.detail.viewWorkerRecord", "Worker Record →")}
           </Link>
         </div>
       ) : null}

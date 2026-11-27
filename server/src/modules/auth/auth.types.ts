@@ -51,3 +51,11 @@ export interface PhoneLoginUser {
   name: string;
   designation: SafeDesignation;
 }
+
+export interface FaceLoginAccount {
+  kind: "EMPLOYEE" | "SYSTEM_ADMIN";
+  id: string;
+  name: string;
+  employeeId?: string | null;
+  designation?: SafeDesignation | null;
+}

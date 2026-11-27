@@ -8,7 +8,7 @@ import { analyzeProfilePhoto, faceAiCircuitBreaker } from "../../services/face-a
 import { cosineSimilarity, searchByEmbedding } from "../../services/vector-search.service.js";
 
 import type { ChangePasswordInput, LoginInput, PhoneLoginInput, ResetPasswordInput } from "./auth.schema.js";
-import type { SafeUser, PhoneLoginUser } from "./auth.types.js";
+import type { FaceLoginAccount, SafeUser, PhoneLoginUser } from "./auth.types.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 import { broadestScopeLevel, invalidateScopeCache } from "./scope.js";
 import {
@@ -24,6 +24,7 @@ import {
   generatePhoneSelectionToken,
   verifyPhoneSelectionToken,
 } from "../../utils/phone-selection-token.js";
+import { generateFaceSelectionToken, verifyFaceSelectionToken } from "../../utils/face-selection-token.js";
 import { otpProvider } from "./otp/otp-provider.instance.js";
 import {
   generateOtp,
@@ -252,10 +253,30 @@ export async function login(
 const FACE_LOGIN_MIN_SIMILARITY = 0.62;
 const FACE_LOGIN_MIN_MARGIN = 0.08;
 
+interface FaceLoginCandidate {
+  kind: "EMPLOYEE" | "SYSTEM_ADMIN";
+  id: string;
+  similarity: number;
+}
+
+export type FaceLoginResult =
+  | {
+      requiresUserSelection: false;
+      token: string;
+      refreshToken: string;
+      user: SafeUser;
+      similarity: number;
+    }
+  | {
+      requiresUserSelection: true;
+      selectionToken: string;
+      accounts: FaceLoginAccount[];
+    };
+
 export async function loginWithFace(
   imageBuffer: Buffer,
   filename: string,
-): Promise<{ token: string; refreshToken: string; user: SafeUser; similarity: number }> {
+): Promise<FaceLoginResult> {
   if (faceAiCircuitBreaker.isOpen()) {
     throw new AppError(
       "Face AI service is temporarily unavailable. Please use password or OTP login.",
@@ -297,7 +318,6 @@ export async function loginWithFace(
     systemAdminEnabled() ? getSystemAdminBiometrics() : Promise.resolve(null),
   ]);
 
-  type FaceLoginCandidate = { kind: "EMPLOYEE" | "SYSTEM_ADMIN"; id: string; similarity: number };
   const allCandidates: FaceLoginCandidate[] = matches
     .filter((m) => m.personType === "EMPLOYEE")
     .map((m) => ({ kind: "EMPLOYEE", id: m.id, similarity: m.similarity }));
@@ -311,6 +331,9 @@ export async function loginWithFace(
 
   allCandidates.sort((a, b) => b.similarity - a.similarity);
 
+  // Only strong matches may log in or be offered as account choices. A person
+  // with several login accounts will show up here as several strong matches, so
+  // we never silently pick one -- we ask which account to open.
   const candidates = allCandidates.filter((c) => c.similarity >= FACE_LOGIN_MIN_SIMILARITY);
   const topMatch = candidates[0];
   const secondMatch = candidates[1];
@@ -331,21 +354,56 @@ export async function loginWithFace(
     );
   }
 
-  if (secondMatch && topMatch.similarity - secondMatch.similarity < FACE_LOGIN_MIN_MARGIN) {
-    throw new AppError(
-      "Ambiguous face match. Please move to better lighting or sign in with password.",
-      401,
-    );
+  const ambiguous = Boolean(
+    secondMatch && topMatch.similarity - secondMatch.similarity < FACE_LOGIN_MIN_MARGIN,
+  );
+
+  if (ambiguous) {
+    const accounts = await buildFaceAccounts(candidates);
+
+    // Only offer a chooser when more than one account is actually actionable.
+    // A "matches multiple accounts" warning with a single usable account would
+    // be confusing (and worse, sometimes even zero usable accounts).
+    if (accounts.length > 1) {
+      const selectionToken = generateFaceSelectionToken(
+        accounts.map((a) => ({ kind: a.kind, id: a.id })),
+      );
+      return {
+        requiresUserSelection: true,
+        selectionToken,
+        accounts,
+      };
+    }
+
+    // Exactly one resolvable account -> sign into it directly.
+    const onlyAccount = accounts[0];
+    if (onlyAccount) {
+      const session = await issueTokensForAccount(onlyAccount);
+      return {
+        requiresUserSelection: false,
+        ...session,
+        similarity: topMatch.similarity,
+      };
+    }
+
+    // No resolvable account: fall through to the single-match auto-login below.
   }
 
   if (topMatch.kind === "SYSTEM_ADMIN") {
     const refreshToken = await createAndStoreRefreshToken({ isSystemAdmin: true });
     return {
+      requiresUserSelection: false,
       token: generateAccessToken(SYSTEM_ADMIN_USER_ID),
       refreshToken,
       user: await buildSystemAdminSafeUser(),
       similarity: topMatch.similarity,
     };
+  }
+
+  // Defensive: a malformed/empty employee id must never reach a Prisma query,
+  // which would 500 with a validation error instead of a clean rejection.
+  if (typeof topMatch.id !== "string" || topMatch.id.length === 0) {
+    throw new AppError("No active login account linked to this face.", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -361,11 +419,116 @@ export async function loginWithFace(
   const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
 
   return {
+    requiresUserSelection: false,
     token,
     refreshToken,
     user: toSafeUser(user),
     similarity: topMatch.similarity,
   };
+}
+
+interface FaceAccountEntry extends FaceLoginAccount {
+  similarity: number;
+}
+
+// eslint-disable-next-line no-useless-escape
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function buildFaceAccounts(candidates: FaceLoginCandidate[]): Promise<FaceAccountEntry[]> {
+  const employeeCandidates = candidates.filter((c) => c.kind === "EMPLOYEE");
+  const adminCandidates = candidates.filter((c) => c.kind === "SYSTEM_ADMIN");
+
+  const safeEmployeeCandidates = employeeCandidates.filter((c) => UUID_RE.test(c.id));
+  const employees = safeEmployeeCandidates.length
+    ? await prisma.employee.findMany({
+        where: { id: { in: safeEmployeeCandidates.map((c) => c.id) } },
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          designation: { select: { id: true, name: true } },
+          user: { select: { id: true } },
+        },
+      })
+    : [];
+
+  const byEmployeeId = new Map(employees.map((e) => [e.id, e]));
+  const entries: FaceAccountEntry[] = [];
+
+  for (const c of employeeCandidates) {
+    const employee = byEmployeeId.get(c.id);
+    if (!employee?.user) continue;
+    entries.push({
+      kind: "EMPLOYEE",
+      id: employee.user.id,
+      name: employee.name,
+      employeeId: employee.employeeId,
+      designation: employee.designation,
+      similarity: c.similarity,
+    });
+  }
+
+  for (const c of adminCandidates) {
+    entries.push({
+      kind: "SYSTEM_ADMIN",
+      id: SYSTEM_ADMIN_USER_ID,
+      name: "System Administrator",
+      employeeId: null,
+      designation: { id: SYSTEM_ADMIN_USER_ID, name: "System Administrator" },
+      similarity: c.similarity,
+    });
+  }
+
+  return entries.sort((a, b) => b.similarity - a.similarity);
+}
+
+async function issueTokensForAccount(
+  account: Pick<FaceLoginAccount, "kind" | "id">,
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
+  if (account.kind === "SYSTEM_ADMIN") {
+    const refreshToken = await createAndStoreRefreshToken({ isSystemAdmin: true });
+    return {
+      token: generateAccessToken(SYSTEM_ADMIN_USER_ID),
+      refreshToken,
+      user: await buildSystemAdminSafeUser(),
+    };
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: account.id,
+      isActive: true,
+      employee: { is: { status: "ACTIVE" } },
+    },
+    select: sessionUserSelect,
+  });
+
+  if (!user) {
+    throw new AppError("Invalid account selection", 400);
+  }
+
+  const token = generateAccessToken(user.id);
+  const refreshToken = await createAndStoreRefreshToken({ userId: user.id });
+
+  return {
+    token,
+    refreshToken,
+    user: toSafeUser(user),
+  };
+}
+
+export async function selectFaceUser(
+  selectionToken: string,
+  accountId: string,
+): Promise<{ token: string; refreshToken: string; user: SafeUser }> {
+  const selection = verifyFaceSelectionToken(selectionToken);
+  const chosen = selection.candidates.find((c) => c.id === accountId);
+
+  if (!chosen) {
+    throw new AppError("Invalid account selection", 400);
+  }
+
+  return issueTokensForAccount(chosen);
 }
 
 export async function getCurrentUser(userId: string): Promise<SafeUser> {
@@ -1101,12 +1264,11 @@ export async function purgeExpiredRefreshTokens(): Promise<{ deleted: number }> 
 }
 
 export async function listActiveSessions(userId: string) {
+  const isSystemAdmin = isSystemAdminId(userId);
   const tokens = await prisma.refreshToken.findMany({
-    where: {
-      userId,
-      revokedAt: null,
-      expiresAt: { gt: new Date() },
-    },
+    where: isSystemAdmin
+      ? { systemAdmin: true, revokedAt: null, expiresAt: { gt: new Date() } }
+      : { userId, revokedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -1123,8 +1285,9 @@ export async function listActiveSessions(userId: string) {
 }
 
 export async function revokeSession(userId: string, tokenId: string): Promise<void> {
+  const isSystemAdmin = isSystemAdminId(userId);
   const token = await prisma.refreshToken.findFirst({
-    where: { id: tokenId, userId },
+    where: isSystemAdmin ? { id: tokenId, systemAdmin: true } : { id: tokenId, userId },
   });
 
   if (!token) {

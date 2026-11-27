@@ -22,6 +22,7 @@ import {
   requestOtp,
   verifyPhoneOtp,
   selectPhoneUser,
+  selectFaceUser,
   setPassword,
   changePassword,
   resetPasswordWithOtp,
@@ -37,6 +38,7 @@ import {
   requestOtpSchema,
   verifyOtpSchema,
   selectPhoneUserSchema,
+  selectFaceUserSchema,
   setPasswordSchema,
   changePasswordSchema,
   resetPasswordSchema,
@@ -71,14 +73,45 @@ export async function faceLoginController(
 
   const result = await loginWithFace(file.buffer, file.originalname);
 
+  if (result.requiresUserSelection) {
+    res.status(200).json({
+      success: true,
+      message: "Face verified. Select an account.",
+      requiresUserSelection: true,
+      selectionToken: result.selectionToken,
+      users: result.accounts,
+    });
+    return;
+  }
+
   res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
     success: true,
     message: "Face login successful",
+    requiresUserSelection: false,
     user: result.user,
     similarity: result.similarity,
+  });
+}
+
+export async function selectFaceUserController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const input = selectFaceUserSchema.parse(req.body);
+
+  const result = await selectFaceUser(input.selectionToken, input.accountId);
+
+  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  setRefreshTokenCookie(res, result.refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Face login successful",
+    requiresUserSelection: false,
+    user: result.user,
   });
 }
 

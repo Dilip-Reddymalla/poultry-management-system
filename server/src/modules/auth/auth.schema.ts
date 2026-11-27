@@ -30,6 +30,12 @@ export const selectPhoneUserSchema = z.object({
   userId: z.uuid("Invalid user ID"),
 });
 
+export const selectFaceUserSchema = z.object({
+  selectionToken: z.string().min(1, "Selection token is required"),
+  // The System Admin has no DB user id (not a uuid), so accept any id string.
+  accountId: z.string().min(1, "Account id is required"),
+});
+
 // First-login password setup. Same minimum as employee provisioning used before
 // it went passwordless, so the strength floor is unchanged.
 export const setPasswordSchema = z.object({
@@ -41,6 +47,8 @@ export type SetPasswordInput = z.infer<typeof setPasswordSchema>;
 export type SelectPhoneUserInput = z.infer<
   typeof selectPhoneUserSchema
 >;
+
+export type SelectFaceUserInput = z.infer<typeof selectFaceUserSchema>;
 
 export const phoneLoginSchema = z.object({
   phone: z.string().trim().min(1, "Phone number is required"),

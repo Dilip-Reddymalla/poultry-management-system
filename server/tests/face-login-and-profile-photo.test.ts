@@ -43,12 +43,35 @@ function makeUnitVector(seed: number): number[] {
 
 describe("Biometric Face Login & Self-Service Profile Photo", () => {
   let supervisor: TestActor;
+  let secondEmployee: TestActor;
   let adminCookie: string;
   const fakeJpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+  // Snapshot of the real System Admin profile row (if any) so the tests never
+  // destroy a photo/embedding a developer set up in the shared dev DB.
+  let existingAdminProfile: { photoUrl: string | null; faceEmbedding: number[] | null } | null = null;
 
   beforeAll(async () => {
     await cleanupTestData();
     supervisor = await createActor("Supervisor");
+    secondEmployee = await createActor("Supervisor");
+
+    // Preserve the real System Admin biometrics before this suite writes to the
+    // shared system_admin_profiles row.
+    try {
+      const rows = await prisma.$queryRawUnsafe<
+        Array<{ photo_url: string | null; face_embedding: number[] | null }>
+      >(
+        `SELECT photo_url, face_embedding FROM system_admin_profiles WHERE id = $1`,
+        "system-admin",
+      );
+      const row = rows[0];
+      existingAdminProfile = row
+        ? { photoUrl: row.photo_url, faceEmbedding: row.face_embedding }
+        : null;
+    } catch {
+      existingAdminProfile = null;
+    }
 
     // Ensure system admin env is configured for tests and sign in
     env.SYSTEM_ADMIN_EMAIL = env.SYSTEM_ADMIN_EMAIL || "sysadmin-test@poultry.local";
@@ -69,9 +92,20 @@ describe("Biometric Face Login & Self-Service Profile Photo", () => {
 
   afterAll(async () => {
     try {
-      await prisma.$executeRawUnsafe(`DELETE FROM system_admin_profiles WHERE id = 'system-admin'`);
+      if (existingAdminProfile) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE system_admin_profiles
+             SET photo_url = $2, face_embedding = $3::float8[], updated_at = NOW()
+           WHERE id = $1`,
+          "system-admin",
+          existingAdminProfile.photoUrl,
+          existingAdminProfile.faceEmbedding ?? null,
+        );
+      } else {
+        await prisma.$executeRawUnsafe(`DELETE FROM system_admin_profiles WHERE id = 'system-admin'`);
+      }
     } catch {
-      // ignore if table not created
+      // ignore if table not created / restore failure
     }
     await cleanupTestData();
     await prisma.$disconnect();
@@ -210,7 +244,7 @@ describe("Biometric Face Login & Self-Service Profile Photo", () => {
       .attach("photo", fakeJpeg, "spoof.jpg");
     expect(spoofRes.status).toBe(401);
 
-    // Ambiguous close matches (margin < 0.08)
+    // --- Scenario 1: two resolvable accounts -> show the account chooser ---
     mockAnalyzeProfilePhoto.mockResolvedValueOnce({
       selected_face: {
         quality: { usable: true, reasons: [] },
@@ -231,6 +265,56 @@ describe("Biometric Face Login & Self-Service Profile Photo", () => {
         similarity: 0.72,
       },
       {
+        id: secondEmployee.employeeRowId,
+        personType: "EMPLOYEE",
+        personCode: secondEmployee.employeeId,
+        name: "Emp B",
+        photoUrl: null,
+        farmId: secondEmployee.farmId,
+        similarity: 0.69,
+      },
+    ]);
+
+    const pickerRes = await request(app)
+      .post("/api/auth/face/login")
+      .attach("photo", fakeJpeg, "ambiguous.jpg");
+    // Two strong matches that both resolve to accounts -> ask which one.
+    expect(pickerRes.status).toBe(200);
+    expect(pickerRes.body.requiresUserSelection).toBe(true);
+    expect(pickerRes.body.selectionToken).toBeDefined();
+    expect(pickerRes.body.users).toHaveLength(2);
+
+    const selectRes = await request(app)
+      .post("/api/auth/face/select-user")
+      .send({ selectionToken: pickerRes.body.selectionToken, accountId: supervisor.userId });
+    expect(selectRes.status).toBe(200);
+    expect(selectRes.body.user.id).toBe(supervisor.userId);
+    expect(selectRes.headers["set-cookie"]).toBeDefined();
+    searchSpy.mockRestore();
+
+    // --- Scenario 2: second strong match is NOT a resolvable account, so only
+    // one account is actionable -> auto-login, no misleading single-option
+    // picker. ---
+    mockAnalyzeProfilePhoto.mockResolvedValueOnce({
+      selected_face: {
+        quality: { usable: true, reasons: [] },
+        liveness: { decision: "LIVE" },
+        embedding: makeUnitVector(0.1),
+      },
+      selection_reason: "centered",
+    });
+
+    const searchSpy2 = vi.spyOn(vectorSearch, "searchByEmbedding").mockResolvedValueOnce([
+      {
+        id: supervisor.employeeRowId,
+        personType: "EMPLOYEE",
+        personCode: supervisor.employeeId,
+        name: "Emp A",
+        photoUrl: null,
+        farmId: supervisor.farmId,
+        similarity: 0.72,
+      },
+      {
         id: "other-emp-id",
         personType: "EMPLOYEE",
         personCode: "EMP-999",
@@ -241,11 +325,14 @@ describe("Biometric Face Login & Self-Service Profile Photo", () => {
       },
     ]);
 
-    const ambigRes = await request(app)
+    const autoRes = await request(app)
       .post("/api/auth/face/login")
-      .attach("photo", fakeJpeg, "ambiguous.jpg");
-    expect(ambigRes.status).toBe(401);
-    searchSpy.mockRestore();
+      .attach("photo", fakeJpeg, "auto.jpg");
+    expect(autoRes.status).toBe(200);
+    expect(autoRes.body.requiresUserSelection).toBe(false);
+    expect(autoRes.body.user.id).toBe(supervisor.userId);
+    expect(autoRes.headers["set-cookie"]).toBeDefined();
+    searchSpy2.mockRestore();
   });
 
   it("allows system admin to update profile photo + embedding and log in via face unlock", async () => {

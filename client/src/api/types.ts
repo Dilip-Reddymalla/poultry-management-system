@@ -257,6 +257,17 @@ export interface PhoneAccount {
   otp?: string;
 }
 
+export interface FaceAccount {
+  kind: "EMPLOYEE" | "SYSTEM_ADMIN";
+  id: string;
+  name: string;
+  employeeId?: string | null;
+  designation?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 export type AuditAction = "CREATE" | "UPDATE" | "DELETE";
 
 export interface AuditLog {

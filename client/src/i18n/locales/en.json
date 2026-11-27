@@ -147,6 +147,22 @@
       "analyticsLink": "View Public Analytics",
       "faceAiLink": "Test Face AI Sandbox"
     },
+    "methodTabs": {
+      "ariaLabel": "Sign-in method",
+      "password": "Password",
+      "otp": "OTP",
+      "face": "Face"
+    },
+    "faceLogin": {
+      "title": "Face Unlock",
+      "unlockButton": "Unlock with Face",
+      "cameraError": "Camera access is required for Face Unlock.",
+      "cameraDenied": "Camera access is blocked. Allow the camera in your browser, then retry.",
+      "switchCamera": "Switch camera",
+      "multipleAccounts": "This face matches more than one account.",
+      "systemAdmin": "System Administrator",
+      "tryAgain": "Try again"
+    },
     "otpLogin": {
       "title": "Sign in with your phone",
       "subtitle": "Log in with your password, or enter your number to receive an SMS code.",

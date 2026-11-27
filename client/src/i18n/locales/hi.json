@@ -147,6 +147,21 @@
       "analyticsLink": "पब्लिक एनालिटिक्स देखें",
       "faceAiLink": "Face AI सैंडबॉक्स टेस्ट करें"
     },
+    "methodTabs": {
+      "ariaLabel": "साइन-इन तरीका",
+      "password": "पासवर्ड",
+      "otp": "OTP",
+      "face": "फेस"
+    },
+    "faceLogin": {
+      "title": "फेस अनलॉक",
+      "unlockButton": "फेस से अनलॉक करें",
+      "cameraError": "फेस अनलॉक के लिए कैमरा एक्सेस जरूरी है।",
+      "switchCamera": "कैमरा बदलें",
+      "multipleAccounts": "यह फेस एक से ज्यादा अकाउंट से मैच करता है।",
+      "systemAdmin": "सिस्टम एडमिन",
+      "tryAgain": "फिर से कोशिश करें"
+    },
     "otpLogin": {
       "title": "फोन से लॉगिन करें",
       "subtitle": "पासवर्ड से लॉगिन करें या अपना नंबर डालकर SMS कोड लें।",

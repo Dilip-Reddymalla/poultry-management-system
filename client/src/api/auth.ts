@@ -1,5 +1,5 @@
 import { ApiError, apiRequest, tryRefreshToken } from "./client.js";
-import type { PhoneAccount, SessionUser } from "./types.js";
+import type { FaceAccount, PhoneAccount, SessionUser } from "./types.js";
 
 interface SessionResponse {
   user: SessionUser;
@@ -38,14 +38,31 @@ export function signIn(
   });
 }
 
-export function signInWithFace(
-  photoFile: File,
-): Promise<SessionResponse & { similarity?: number }> {
+export type FaceLoginResponse =
+  | { requiresUserSelection: false; user: SessionUser; similarity?: number }
+  | {
+      requiresUserSelection: true;
+      selectionToken: string;
+      users: FaceAccount[];
+    };
+
+export function signInWithFace(photoFile: File): Promise<FaceLoginResponse> {
   const formData = new FormData();
   formData.append("photo", photoFile);
-  return apiRequest<SessionResponse & { similarity?: number }>("/auth/face/login", {
+  return apiRequest<FaceLoginResponse>("/auth/face/login", {
     method: "POST",
     body: formData,
+    keepSessionOnUnauthorized: true,
+  });
+}
+
+export function selectFaceAccount(
+  selectionToken: string,
+  accountId: string,
+): Promise<SessionResponse> {
+  return apiRequest<SessionResponse>("/auth/face/select-user", {
+    method: "POST",
+    body: { selectionToken, accountId },
     keepSessionOnUnauthorized: true,
   });
 }

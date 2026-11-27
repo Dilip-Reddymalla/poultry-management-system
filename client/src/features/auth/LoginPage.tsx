@@ -124,28 +124,6 @@ export function LoginPage(): React.ReactElement {
 
           <OfflineNotice />
 
-          <Link
-            to="/otp-login"
-            className="button button--success"
-            style={{ width: "100%", fontSize: "1rem", justifyContent: "center" }}
-          >
-            📱 {t("auth.login.signInWithPhone")}
-          </Link>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              color: "var(--ink-faint)",
-              fontSize: "0.8rem",
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
-            <span>or</span>
-            <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
-          </div>
-
           <FormAlert error={error} />
 
           <TextField

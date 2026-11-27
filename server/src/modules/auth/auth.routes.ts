@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   loginController,
   faceLoginController,
+  selectFaceUserController,
   phoneLoginController,
   getCurrentUserController,
   updateCurrentUserPhotoController,
@@ -30,6 +31,7 @@ const router = Router();
 
 router.post("/login", authEndpointRateLimiter, loginController);
 router.post("/face/login", authEndpointRateLimiter, uploadPhoto, faceLoginController);
+router.post("/face/select-user", authEndpointRateLimiter, selectFaceUserController);
 router.post("/phone/login", authEndpointRateLimiter, phoneLoginController);
 router.post("/refresh", tokenRefreshRateLimiter, refreshTokenController);
 router.get("/me", requireAuth, getCurrentUserController);

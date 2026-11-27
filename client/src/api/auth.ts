@@ -75,6 +75,7 @@ export interface SessionInfo {
   id: string;
   createdAt: string;
   expiresAt: string;
+  deviceName?: string;
 }
 
 export function listSessions(): Promise<{ success: boolean; sessions: SessionInfo[] }> {

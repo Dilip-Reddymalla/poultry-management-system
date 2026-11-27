@@ -25,6 +25,7 @@ import { faceAiProxyRouter } from "./modules/face-ai/face-ai-proxy.routes.js";
 import { notificationRoutes } from "./modules/notifications/notification.routes.js";
 import { initializeWebPush } from "./modules/notifications/webpush.config.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
+import { requestContextMiddleware } from "./middlewares/request-context.js";
 import { logger } from "./config/logger.js";
 import { recordRequest, renderMetrics } from "./config/metrics.js";
 
@@ -125,6 +126,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
+app.use(requestContextMiddleware);
 
 // ---------------------------------------------------------------------------
 // Unified Versioned API Router (v1 & backward-compatible /api)

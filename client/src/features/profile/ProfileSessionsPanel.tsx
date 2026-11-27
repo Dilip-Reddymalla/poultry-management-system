@@ -92,9 +92,11 @@ export function ProfileSessionsPanel(): React.ReactElement {
               }}
             >
               <div>
-                <div style={{ fontSize: "0.85rem" }}>Signed in {formatDate(s.createdAt)}</div>
+                <div style={{ fontSize: "0.9rem", fontWeight: 600 }}>
+                  🖥️ {s.deviceName ?? "Unknown device"}
+                </div>
                 <div className="muted" style={{ fontSize: "0.75rem" }}>
-                  Expires {formatDate(s.expiresAt)}
+                  Signed in {formatDate(s.createdAt)} · Expires {formatDate(s.expiresAt)}
                 </div>
               </div>
               <Button

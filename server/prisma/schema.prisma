@@ -517,6 +517,7 @@ model RefreshToken {
   tokenHash   String    @unique
   userId      String?   @db.Uuid
   systemAdmin Boolean   @default(false)
+  deviceName  String?
   expiresAt   DateTime
   revokedAt   DateTime?
   createdAt   DateTime  @default(now())

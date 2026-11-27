@@ -41,6 +41,7 @@ import {
   hashToken,
   verifyRefreshToken,
 } from "../../utils/refresh-token.js";
+import { getRequestUserAgent, parseUserAgent } from "../../middlewares/request-context.js";
 
 export type VerifyPhoneOtpResult =
   | {
@@ -60,11 +61,14 @@ export async function createAndStoreRefreshToken(options: {
   isSystemAdmin?: boolean;
 }): Promise<string> {
   const { token, tokenHash, expiresAt } = generateRefreshToken(options);
+  const deviceName = parseUserAgent(getRequestUserAgent());
+
   await prisma.refreshToken.create({
     data: {
       tokenHash,
       ...(options.userId ? { userId: options.userId } : {}),
       systemAdmin: options.isSystemAdmin === true,
+      ...(deviceName ? { deviceName } : {}),
       expiresAt,
     },
   });
@@ -1274,6 +1278,7 @@ export async function listActiveSessions(userId: string) {
       id: true,
       createdAt: true,
       expiresAt: true,
+      deviceName: true,
     },
   });
 
@@ -1281,6 +1286,7 @@ export async function listActiveSessions(userId: string) {
     id: t.id,
     createdAt: t.createdAt,
     expiresAt: t.expiresAt,
+    deviceName: t.deviceName ?? "Unknown device",
   }));
 }
 

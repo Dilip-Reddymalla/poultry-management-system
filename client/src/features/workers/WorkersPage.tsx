@@ -27,6 +27,7 @@ import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
 import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 import { useAutoSelectFarm } from "../../lib/farm-selection.js";
+import { AttendanceAvatar } from "../attendance/AttendanceAvatar.js";
 
 const PAGE_SIZE = 20;
 
@@ -263,7 +264,42 @@ export function WorkersPage(): React.ReactElement {
           </div>
         ) : (
           <>
-            <div className="table-scroll">
+            <div className="photo-roster">
+              {rows.map((worker) => {
+                const ringTone =
+                  worker.status === "ACTIVE"
+                    ? "running"
+                    : worker.status === "PROMOTED"
+                      ? "promoted"
+                      : "idle";
+                return (
+                  <Link
+                    key={worker.id}
+                    to={`/workers/${worker.id}`}
+                    className="photo-roster__item"
+                  >
+                    <span className={`photo-roster__ring photo-roster__ring--${ringTone}`}>
+                      <AttendanceAvatar
+                        photoUrl={worker.photoUrl ?? null}
+                        name={worker.name}
+                        type="WORKER"
+                        size={46}
+                      />
+                    </span>
+                    <div className="photo-roster__info">
+                      <div className="photo-roster__name">{worker.name}</div>
+                      <div className="photo-roster__meta">
+                        {showFarm && worker.farm?.name ? <span>{worker.farm.name}</span> : null}
+                        {worker.phone ? <span>· {worker.phone}</span> : null}
+                      </div>
+                    </div>
+                    <StatusTag status={worker.status} />
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="table-scroll desktop-table-only">
               <table className="table">
                 <thead>
                   <tr>

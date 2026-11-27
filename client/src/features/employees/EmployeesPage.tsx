@@ -35,6 +35,7 @@ import { formatDate } from "../../lib/display.js";
 import { EmployeeFormDialog } from "./EmployeeFormDialog.js";
 import { ExcelImportDialog } from "../../components/ExcelImportDialog.js";
 import { useAutoSelectFarm } from "../../lib/farm-selection.js";
+import { AttendanceAvatar } from "../attendance/AttendanceAvatar.js";
 
 const PAGE_SIZE = 20;
 
@@ -315,7 +316,37 @@ export function EmployeesPage(): React.ReactElement {
           </div>
         ) : (
           <>
-            <div className="table-scroll">
+            <div className="photo-roster">
+              {rows.map((employee) => {
+                const ringTone = employee.status === "ACTIVE" ? "running" : "idle";
+                return (
+                  <Link
+                    key={employee.id}
+                    to={`/employees/${employee.id}`}
+                    className="photo-roster__item"
+                  >
+                    <span className={`photo-roster__ring photo-roster__ring--${ringTone}`}>
+                      <AttendanceAvatar
+                        photoUrl={employee.photoUrl ?? null}
+                        name={employee.name}
+                        type="EMPLOYEE"
+                        size={46}
+                      />
+                    </span>
+                    <div className="photo-roster__info">
+                      <div className="photo-roster__name">{employee.name}</div>
+                      <div className="photo-roster__meta">
+                        <span>{employee.designation.name}</span>
+                        {showFarm && employee.farm?.name ? <span>· {employee.farm.name}</span> : null}
+                      </div>
+                    </div>
+                    <StatusTag status={employee.status} />
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="table-scroll desktop-table-only">
               <table className="table">
                 <thead>
                   <tr>

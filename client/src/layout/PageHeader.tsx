@@ -4,7 +4,7 @@ import { BackIcon } from "../components/icons.js";
 
 interface PageHeaderProps {
   eyebrow?: string;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   back?: { to: string; label: string };
   actions?: React.ReactNode;

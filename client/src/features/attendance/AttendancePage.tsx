@@ -39,6 +39,18 @@ import { AttendanceAvatar } from "./AttendanceDashboardPage.js";
 
 const PAGE_SIZE = 50;
 
+const WEEKDAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
+
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function startOfWeek(d: Date): Date {
+  const c = new Date(d);
+  c.setDate(c.getDate() - ((c.getDay() + 6) % 7));
+  return c;
+}
+
 export function AttendancePage({
   employeeId: propEmployeeId,
   workerId: propWorkerId,
@@ -326,44 +338,53 @@ export function AttendancePage({
       <Panel bleed>
         <div className="filters">
           {!personMode ? (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <div className="date-strip" role="group" aria-label={t("attendance.date")}>
               <button
                 type="button"
                 className="button button--secondary button--sm"
-                aria-label="Previous day"
-                title="Previous day"
+                aria-label="Previous week"
+                title="Previous week"
                 onClick={() => {
-                  const d = new Date(`${date}T00:00:00`);
-                  d.setDate(d.getDate() - 1);
-                  const prev = d.toISOString().slice(0, 10);
-                  updateFilters({ date: prev === todayInputValue() ? "" : prev });
+                  const base = date ? new Date(`${date}T00:00:00`) : new Date();
+                  base.setDate(base.getDate() - 7);
+                  const val = toISODate(base);
+                  updateFilters({ date: val === todayInputValue() ? "" : val });
                 }}
               >
                 ◀
               </button>
-              <label className="filters__field">
-                <span className="visually-hidden">{t("attendance.date")}</span>
-                <input
-                  type="date"
-                  className="input"
-                  aria-label={t("attendance.date")}
-                  value={date}
-                  onChange={(event) => {
-                    updateFilters({ date: event.target.value === todayInputValue() ? "" : event.target.value });
-                  }}
-                />
-              </label>
+              {Array.from({ length: 7 }, (_, i) => {
+                const base = date ? new Date(`${date}T00:00:00`) : new Date();
+                const day = new Date(startOfWeek(base));
+                day.setDate(day.getDate() + i);
+                const iso = toISODate(day);
+                const active = date === iso || (date === "" && iso === todayInputValue());
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    className={`date-strip__day ${active ? "date-strip__day--active" : ""}`}
+                    aria-pressed={active}
+                    aria-label={iso}
+                    title={iso}
+                    onClick={() => updateFilters({ date: iso === todayInputValue() ? "" : iso })}
+                  >
+                    <span className="date-strip__weekday">{WEEKDAY_SHORT[day.getDay()]}</span>
+                    <span className="date-strip__num">{day.getDate()}</span>
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 className="button button--secondary button--sm"
-                aria-label="Next day"
-                title="Next day"
-                disabled={date >= todayInputValue()}
+                aria-label="Next week"
+                title="Next week"
+                disabled={date !== "" && date >= todayInputValue()}
                 onClick={() => {
-                  const d = new Date(`${date}T00:00:00`);
-                  d.setDate(d.getDate() + 1);
-                  const next = d.toISOString().slice(0, 10);
-                  updateFilters({ date: next === todayInputValue() ? "" : next });
+                  const base = date ? new Date(`${date}T00:00:00`) : new Date();
+                  base.setDate(base.getDate() + 7);
+                  const val = toISODate(base);
+                  updateFilters({ date: val === todayInputValue() ? "" : val });
                 }}
               >
                 ▶

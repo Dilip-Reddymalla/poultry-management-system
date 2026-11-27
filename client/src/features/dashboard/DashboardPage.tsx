@@ -18,6 +18,7 @@ import {
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { formatNumber } from "../../lib/display.js";
+import { AttendanceAvatar } from "../attendance/AttendanceAvatar.js";
 import { FirstRunGuide } from "./FirstRunGuide.js";
 import "./DashboardPage.css";
 
@@ -121,7 +122,17 @@ export function DashboardPage(): React.ReactElement {
     <div className="stack">
       <PageHeader
         eyebrow={t("dashboard.eyebrow")}
-        title={t("dashboard.title", { name: firstName })}
+        title={
+          <span className="page-header__title-inline">
+            <AttendanceAvatar
+              photoUrl={user?.employee.photoUrl ?? null}
+              name={user?.employee.name ?? ""}
+              type="EMPLOYEE"
+              size={36}
+            />
+            <span>{t("dashboard.title", { name: firstName })}</span>
+          </span>
+        }
         actions={
           canCreateAttendance ? (
             <button

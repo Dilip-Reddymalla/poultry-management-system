@@ -1285,3 +1285,67 @@
 .guide__flow-step--camera {
   animation: guidePulse 2.4s ease-in-out infinite;
 }
+
+/* Dashboard greeting avatar next to title ------------------------------- */
+
+.page-header__title-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Attendance visual week strip ------------------------------------------ */
+
+.date-strip {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.date-strip__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 52px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  line-height: 1.1;
+  padding: 2px 4px;
+}
+
+.date-strip__day:hover {
+  background: var(--surface-sunk);
+}
+
+.date-strip__day--active {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: #fff;
+}
+
+.date-strip__weekday {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.date-strip__num {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .date-strip {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .date-strip__day {
+    min-width: 34px;
+    height: 46px;
+  }
+}

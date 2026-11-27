@@ -459,7 +459,48 @@ export function AttendancePage({
           </div>
         ) : (
           <>
-            <div className="table-scroll">
+            {/* Mobile photo roster: face circles with colour-coded status rings */}
+            <div className="photo-roster">
+              {rows.map((record) => {
+                const ringTone =
+                  record.status === "PRESENT"
+                    ? "running"
+                    : record.status === "ABSENT"
+                      ? "attention"
+                      : record.status === "HALF_DAY"
+                        ? "busy"
+                        : "idle";
+                return (
+                  <Link
+                    key={record.id}
+                    to={`/attendance/${record.id}`}
+                    className="photo-roster__item"
+                  >
+                    <span className={`photo-roster__ring photo-roster__ring--${ringTone}`}>
+                      <AttendanceAvatar
+                        photoUrl={record.person.photoUrl}
+                        name={record.person.name}
+                        type={record.person.type}
+                        size={46}
+                      />
+                    </span>
+                    <div className="photo-roster__info">
+                      <div className="photo-roster__name">{record.person.name}</div>
+                      <div className="photo-roster__meta">
+                        <span>{SHIFT_ICONS[record.shift]}</span>
+                        {record.shed?.number ? (
+                          <span>· {t("attendance.shedNumber", { number: record.shed.number })}</span>
+                        ) : null}
+                        {record.approvedAt ? <span>· ✅</span> : null}
+                      </div>
+                    </div>
+                    <StatusTag status={record.status} />
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="table-scroll attendance-roster-table">
               <table className="table">
                 <thead>
                   <tr>

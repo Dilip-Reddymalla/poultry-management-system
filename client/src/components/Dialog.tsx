@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button, type ButtonVariant } from "./ui.js";
+import { AttendanceAvatar } from "../features/attendance/AttendanceAvatar.js";
 import "./Dialog.css";
 
 interface DialogProps {
@@ -64,6 +65,7 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   confirmVariant?: ButtonVariant;
   busy?: boolean;
+  children?: React.ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -74,6 +76,7 @@ export function ConfirmDialog({
   confirmLabel,
   confirmVariant = "primary",
   busy = false,
+  children,
   onConfirm,
   onClose,
 }: ConfirmDialogProps): React.ReactElement {
@@ -81,6 +84,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog title={title} description={description} onClose={onClose}>
+      {children}
       <div className="dialog__footer">
         <Button variant="secondary" onClick={onClose} disabled={busy}>
           {t("common.cancel")}
@@ -94,5 +98,54 @@ export function ConfirmDialog({
         </Button>
       </div>
     </Dialog>
+  );
+}
+
+/** Before/after photo visual for deactivate/reactivate confirmation dialogs. */
+export function StatusTransitionVisual({
+  photoUrl,
+  name,
+  type,
+  deactivating,
+}: {
+  photoUrl?: string | null;
+  name: string;
+  type: "WORKER" | "EMPLOYEE";
+  deactivating: boolean;
+}): React.ReactElement {
+  const inactiveStyle: React.CSSProperties = {
+    filter: "grayscale(1)",
+    opacity: 0.5,
+    borderRadius: "50%",
+    padding: 2,
+    border: "2px dashed var(--line-strong)",
+    display: "inline-flex",
+  };
+  const activeStyle: React.CSSProperties = {
+    borderRadius: "50%",
+    padding: 2,
+    border: "2px solid var(--moss)",
+    display: "inline-flex",
+  };
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        padding: "8px 0 16px",
+      }}
+    >
+      <span style={deactivating ? activeStyle : inactiveStyle}>
+        <AttendanceAvatar photoUrl={photoUrl ?? null} name={name} type={type} size={44} />
+      </span>
+      <span style={{ fontSize: 20, color: "var(--ink-soft)" }}>→</span>
+      <span style={deactivating ? inactiveStyle : activeStyle}>
+        <AttendanceAvatar photoUrl={photoUrl ?? null} name={name} type={type} size={44} />
+      </span>
+    </div>
   );
 }

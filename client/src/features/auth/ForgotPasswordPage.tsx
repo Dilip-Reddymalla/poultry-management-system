@@ -7,6 +7,7 @@ import { ApiError } from "../../api/client.js";
 import { EggIcon } from "../../components/icons.js";
 import { PhoneField } from "../../components/PhoneField.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { PasswordStrengthBar } from "../../components/PasswordStrengthBar.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 import "./AuthPages.css";
@@ -192,12 +193,12 @@ export function ForgotPasswordPage(): React.ReactElement {
                 autoComplete="new-password"
                 required
                 value={newPassword}
-                hint="8+ chars"
                 errors={error?.fieldErrors.newPassword}
                 onChange={(event) => {
                   setNewPassword(event.target.value);
                 }}
               />
+              <PasswordStrengthBar password={newPassword} />
 
               <TextField
                 id="reset-confirm-password"

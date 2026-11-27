@@ -8,10 +8,10 @@ import { MenuIcon, SignOutIcon } from "../components/icons.js";
 import { Button } from "../components/ui.js";
 import { useToast } from "../components/use-toast.js";
 import { LanguageSwitcher } from "../i18n/LanguageSwitcher.js";
-import { initials } from "../lib/display.js";
 import { InstallButton } from "../pwa/InstallButton.js";
 import { OfflineNotice } from "../pwa/OfflineNotice.js";
 import { NotificationBell } from "../components/NotificationBell.js";
+import { AttendanceAvatar } from "../features/attendance/AttendanceAvatar.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function AppLayout(): React.ReactElement {
@@ -113,9 +113,12 @@ export function AppLayout(): React.ReactElement {
           <InstallButton />
 
           <div className="topbar__user">
-            <span className="avatar" aria-hidden="true">
-              {initials(user?.employee.name ?? "")}
-            </span>
+            <AttendanceAvatar
+              photoUrl={user?.employee.photoUrl ?? null}
+              name={user?.employee.name ?? ""}
+              type="EMPLOYEE"
+              size={32}
+            />
             <span className="topbar__identity">
               <span className="topbar__name">{user?.employee.name}</span>
               <span className="topbar__email">{user?.email}</span>

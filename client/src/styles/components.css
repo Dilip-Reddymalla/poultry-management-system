@@ -133,6 +133,54 @@
   color: var(--ink-faint);
 }
 
+.kpi--moss {
+  border-top-color: var(--moss);
+}
+
+.kpi--clay {
+  border-top-color: var(--clay);
+}
+
+.kpi__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.kpi__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.pw-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-1) * -1);
+}
+
+.pw-strength__bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  flex: 1;
+}
+
+.pw-strength__bar {
+  height: 6px;
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+
+.pw-strength__badge {
+  font-size: var(--step--1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2rem;
+  text-align: right;
+}
+
 /* Status tags ------------------------------------------------------------- */
 
 .tag {

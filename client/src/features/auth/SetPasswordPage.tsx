@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { EggIcon } from "../../components/icons.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
+import { PasswordStrengthBar } from "../../components/PasswordStrengthBar.js";
 import { LanguageSwitcher } from "../../i18n/LanguageSwitcher.js";
 import { OfflineNotice } from "../../pwa/OfflineNotice.js";
 import "./AuthPages.css";
@@ -96,7 +97,6 @@ export function SetPasswordPage(): React.ReactElement {
               required
               minLength={MIN_LENGTH}
               value={password}
-              hint={t("auth.setPassword.passwordHint", { count: MIN_LENGTH })}
               errors={error?.fieldErrors.password}
               onChange={(event) => {
                 setPasswordValue(event.target.value);
@@ -114,6 +114,7 @@ export function SetPasswordPage(): React.ReactElement {
                 </button>
               }
             />
+            <PasswordStrengthBar password={password} minLength={MIN_LENGTH} />
 
             <TextField
               id="confirm-password"

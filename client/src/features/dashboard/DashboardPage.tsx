@@ -25,14 +25,21 @@ function Kpi({
   label,
   value,
   detail,
+  icon,
+  tone,
 }: {
   label: string;
   value: string;
   detail?: string;
+  icon?: string;
+  tone?: "moss" | "clay";
 }): React.ReactElement {
   return (
-    <div className="kpi">
-      <p className="kpi__label eyebrow">{label}</p>
+    <div className={tone ? `kpi kpi--${tone}` : "kpi"}>
+      <div className="kpi__head">
+        <p className="kpi__label eyebrow">{label}</p>
+        {icon ? <span className="kpi__icon" aria-hidden="true">{icon}</span> : null}
+      </div>
       <p className="kpi__value numeric">{value}</p>
       {detail ? <p className="kpi__detail">{detail}</p> : null}
     </div>
@@ -168,6 +175,8 @@ export function DashboardPage(): React.ReactElement {
             <Kpi
               label={t("dashboard.kpi.activeEmployees")}
               value={formatNumber(employees.data?.pagination.total ?? 0)}
+              icon="👷"
+              tone="moss"
             />
           )
         ) : null}
@@ -181,6 +190,7 @@ export function DashboardPage(): React.ReactElement {
             <Kpi
               label={t("dashboard.kpi.activeFarms")}
               value={formatNumber(activeFarms.length)}
+              icon="🏠"
             />
           )
         ) : null}
@@ -196,10 +206,14 @@ export function DashboardPage(): React.ReactElement {
                 label={t("dashboard.kpi.shedsAvailable")}
                 value={formatNumber(available.length)}
                 detail={t("dashboard.kpi.shedsAvailableDetail", { total: formatNumber(shedList.length) })}
+                icon="🟢"
+                tone="moss"
               />
               <Kpi
                 label={t("dashboard.kpi.birdCapacity")}
                 value={formatNumber(capacity)}
+                icon="🐔"
+                tone="clay"
               />
             </>
           )

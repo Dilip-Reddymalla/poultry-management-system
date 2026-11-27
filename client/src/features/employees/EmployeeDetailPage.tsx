@@ -11,7 +11,7 @@ import {
 } from "../../api/resources.js";
 import type { Designation, Employee } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
-import { ConfirmDialog } from "../../components/Dialog.js";
+import { ConfirmDialog, StatusTransitionVisual } from "../../components/Dialog.js";
 import {
   Button,
   CardSkeleton,
@@ -398,7 +398,14 @@ export function EmployeeDetailPage(): React.ReactElement {
           onClose={() => {
             setConfirmingStatus(false);
           }}
-        />
+        >
+          <StatusTransitionVisual
+            photoUrl={record.photoUrl ?? null}
+            name={record.name}
+            type="EMPLOYEE"
+            deactivating={active}
+          />
+        </ConfirmDialog>
       ) : null}
 
       {confirmingDelete && record ? (

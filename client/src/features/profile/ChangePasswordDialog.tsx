@@ -5,6 +5,7 @@ import { changePassword } from "../../api/auth.js";
 import { ApiError } from "../../api/client.js";
 import { useAuth } from "../../auth/use-auth.js";
 import { Dialog } from "../../components/Dialog.js";
+import { PasswordStrengthBar } from "../../components/PasswordStrengthBar.js";
 import { Button, FormAlert, TextField } from "../../components/ui.js";
 import { useToast } from "../../components/use-toast.js";
 
@@ -97,12 +98,12 @@ export function ChangePasswordDialog({
           autoComplete="new-password"
           required
           value={newPassword}
-          hint={t("profile.changePasswordDialog.newPasswordHint")}
           errors={error?.fieldErrors.newPassword}
           onChange={(event) => {
             setNewPassword(event.target.value);
           }}
         />
+        <PasswordStrengthBar password={newPassword} />
 
         <TextField
           id="confirm-password"

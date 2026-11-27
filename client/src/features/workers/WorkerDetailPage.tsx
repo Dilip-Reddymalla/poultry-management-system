@@ -6,7 +6,7 @@ import { ApiError } from "../../api/client.js";
 import { deleteWorker, fetchWorker, setWorkerActive } from "../../api/resources.js";
 import type { Worker } from "../../api/types.js";
 import { useAuth } from "../../auth/use-auth.js";
-import { ConfirmDialog } from "../../components/Dialog.js";
+import { ConfirmDialog, StatusTransitionVisual } from "../../components/Dialog.js";
 import {
   Button,
   CardSkeleton,
@@ -305,7 +305,14 @@ export function WorkerDetailPage(): React.ReactElement {
           onClose={() => {
             setConfirmingStatus(false);
           }}
-        />
+        >
+          <StatusTransitionVisual
+            photoUrl={record.photoUrl ?? null}
+            name={record.name}
+            type="WORKER"
+            deactivating={active}
+          />
+        </ConfirmDialog>
       ) : null}
 
       {confirmingDelete && record ? (

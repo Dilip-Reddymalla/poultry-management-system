@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../api/types.js";
 import { initials } from "../../lib/display.js";
@@ -16,6 +17,7 @@ interface Props {
 export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactElement {
   const { t } = useTranslation();
   const { employee, email, employeeId, scope, roles } = user;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="ph-hero">
@@ -25,11 +27,12 @@ export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactE
       <div className="ph-hero__inner">
         {/* Avatar */}
         <div className="ph-hero__avatar-wrap">
-          {employee.photoUrl ? (
+          {employee.photoUrl && !imgError ? (
             <img
               className="ph-hero__photo"
               src={employee.photoUrl}
               alt={employee.name}
+              onError={() => setImgError(true)}
             />
           ) : (
             <span className="ph-hero__initials" aria-hidden="true">

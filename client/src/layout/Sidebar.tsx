@@ -179,7 +179,7 @@ export function Sidebar({
 
       <div className="sidebar__foot" style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
         <AttendanceAvatar
-          photoUrl={(user?.employee as { photoUrl?: string | null } | undefined)?.photoUrl ?? null}
+          photoUrl={user?.employee.photoUrl ?? null}
           name={user?.employee.name ?? ""}
           type="EMPLOYEE"
           size={36}

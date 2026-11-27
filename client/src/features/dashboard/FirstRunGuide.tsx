@@ -13,6 +13,23 @@ import { Button } from "../../components/ui.js";
  */
 const GUIDE_HIDDEN_KEY = "poultryops_guide_hidden";
 
+/**
+ * Illustrated, text-free 3-step demo of the core daily flow: phone → camera →
+ * checkmark. Loops via CSS so it communicates without reading. The real,
+ * actionable buttons are rendered below it from `steps`.
+ */
+function FlowDemo(): React.ReactElement {
+  return (
+    <div className="guide__flow" aria-hidden="true">
+      <span className="guide__flow-step guide__flow-step--phone">📱</span>
+      <span className="guide__flow-arrow">➡️</span>
+      <span className="guide__flow-step guide__flow-step--camera">📸</span>
+      <span className="guide__flow-arrow">➡️</span>
+      <span className="guide__flow-step guide__flow-step--done">✅</span>
+    </div>
+  );
+}
+
 export function FirstRunGuide(): React.ReactElement | null {
   const { t } = useTranslation();
   const { can } = useAuth();
@@ -69,6 +86,7 @@ export function FirstRunGuide(): React.ReactElement | null {
     <section className="guide" aria-label={t("guide.title")}>
       <div className="guide__content">
         <h2 className="guide__title">{t("guide.title")}</h2>
+        <FlowDemo />
         <ul className="guide__list">{steps}</ul>
       </div>
       <Button variant="primary" onClick={dismiss} className="guide__dismiss">

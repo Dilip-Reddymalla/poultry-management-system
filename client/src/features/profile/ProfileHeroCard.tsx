@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../api/types.js";
 import { initials } from "../../lib/display.js";
+import { usePhotoViewer } from "../../components/PhotoViewer.js";
 
 const SCOPE_LABEL: Record<string, string> = {
   FARM: "Farm",
@@ -22,6 +23,7 @@ export function ProfileHeroCard({
 }: Props): React.ReactElement {
   const { t } = useTranslation();
   const { employee, email, employeeId, scope, roles } = user;
+  const { open } = usePhotoViewer();
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export function ProfileHeroCard({
               src={employee.photoUrl}
               alt={employee.name}
               onError={() => setImgError(true)}
+              onClick={() => open({ src: employee.photoUrl!, name: employee.name })}
+              title={`Click to view ${employee.name}'s photo`}
             />
           ) : (
             <span className="ph-hero__initials" aria-hidden="true">

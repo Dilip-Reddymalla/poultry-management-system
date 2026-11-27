@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePhotoViewer } from "../../components/PhotoViewer.js";
 
 export function AttendanceAvatar({
   photoUrl,
@@ -6,13 +7,16 @@ export function AttendanceAvatar({
   type,
   size = 36,
   onPreview,
+  noPreview = false,
 }: {
   photoUrl?: string | null | undefined;
   name: string;
   type?: "EMPLOYEE" | "WORKER" | undefined;
   size?: number | undefined;
   onPreview?: (() => void) | undefined;
+  noPreview?: boolean | undefined;
 }): React.ReactElement {
+  const { open } = usePhotoViewer();
   const [imgError, setImgError] = useState(false);
   const initials = name
     ? name
@@ -24,6 +28,9 @@ export function AttendanceAvatar({
         .toUpperCase()
     : "?";
 
+  const previewable = Boolean(photoUrl) && !noPreview;
+  const canOpen = onPreview || previewable;
+
   if (photoUrl && !imgError) {
     return (
       <img
@@ -34,9 +41,12 @@ export function AttendanceAvatar({
           if (onPreview) {
             e.stopPropagation();
             onPreview();
+          } else if (previewable) {
+            e.stopPropagation();
+            open({ src: photoUrl, name });
           }
         }}
-        title={onPreview ? `Click to view ${name}'s photo` : name}
+        title={canOpen ? `Click to view ${name}'s photo` : name}
         style={{
           width: `${size}px`,
           height: `${size}px`,
@@ -46,17 +56,17 @@ export function AttendanceAvatar({
           boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
           flexShrink: 0,
           display: "block",
-          cursor: onPreview ? "pointer" : "default",
+          cursor: canOpen ? "pointer" : "default",
           transition: "transform 0.15s ease, box-shadow 0.15s ease",
         }}
         onMouseEnter={(e) => {
-          if (onPreview) {
+          if (canOpen) {
             e.currentTarget.style.transform = "scale(1.1)";
             e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
           }
         }}
         onMouseLeave={(e) => {
-          if (onPreview) {
+          if (canOpen) {
             e.currentTarget.style.transform = "scale(1)";
             e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
           }

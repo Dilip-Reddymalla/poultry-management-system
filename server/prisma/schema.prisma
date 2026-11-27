@@ -530,6 +530,21 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// System Admin face/photo biometrics. Provisioned via a Prisma migration for
+// migrate-based environments AND declared here so `prisma db push` (used by CI)
+// also creates the table. The runtime uses raw SQL against this table.
+model SystemAdminProfile {
+  id            String                                   @id
+  photoUrl      String?                                  @map("photo_url")
+  // double precision[] is not representable as a Prisma list (lists are
+  // always NOT NULL), so declare it as Unsupported to keep it nullable and
+  // identical to the raw migration. Runtime code uses raw SQL for this column.
+  faceEmbedding Unsupported("double precision[]")?       @map("face_embedding")
+  updatedAt     DateTime                                 @default(now()) @map("updated_at")
+
+  @@map("system_admin_profiles")
+}
+
 // Push Subscriptions (multi-device support)
 model PushSubscription {
   id        String   @id @default(uuid()) @db.Uuid

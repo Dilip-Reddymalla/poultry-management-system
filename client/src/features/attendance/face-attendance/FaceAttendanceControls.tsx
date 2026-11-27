@@ -120,20 +120,20 @@ export function FaceAttendanceControls({
             className={facingMode === "user" ? "segmented__item segmented__item--active" : "segmented__item"}
             aria-pressed={facingMode === "user"}
             aria-label="Front Camera"
-            title="📷 Front (Selfie)"
+            title="👤📷 Front (Selfie)"
             onClick={() => onChangeFacingMode("user")}
           >
-            🤳
+            👤📷
           </button>
           <button
             type="button"
             className={facingMode === "environment" ? "segmented__item segmented__item--active" : "segmented__item"}
             aria-pressed={facingMode === "environment"}
             aria-label="Back Camera"
-            title="📸 Back (Group)"
+            title="👥📸 Back (Group)"
             onClick={() => onChangeFacingMode("environment")}
           >
-            👥
+            👥📸
           </button>
         </div>
 

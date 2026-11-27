@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionUser } from "../../api/types.js";
 import { initials } from "../../lib/display.js";
@@ -12,12 +12,21 @@ const SCOPE_LABEL: Record<string, string> = {
 interface Props {
   user: SessionUser;
   onChangePassword?: () => void;
+  onUpdatePhoto?: () => void;
 }
 
-export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactElement {
+export function ProfileHeroCard({
+  user,
+  onChangePassword,
+  onUpdatePhoto,
+}: Props): React.ReactElement {
   const { t } = useTranslation();
   const { employee, email, employeeId, scope, roles } = user;
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [employee.photoUrl]);
 
   return (
     <div className="ph-hero">
@@ -96,24 +105,44 @@ export function ProfileHeroCard({ user, onChangePassword }: Props): React.ReactE
             )}
           </dl>
 
-          {!user.isSystemAdmin && onChangePassword && (
-            <div style={{ marginTop: "1rem" }}>
-              <button
-                type="button"
-                className="button button--secondary"
-                onClick={onChangePassword}
-                style={{
-                  fontSize: "0.85rem",
-                  padding: "0.4rem 0.85rem",
-                  borderRadius: "0.375rem",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                }}
-              >
-                {t("profile.changePassword")}
-              </button>
+          {!user.isSystemAdmin && (onUpdatePhoto || onChangePassword) && (
+            <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {onUpdatePhoto && (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={onUpdatePhoto}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.4rem 0.85rem",
+                    borderRadius: "0.375rem",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  📷 {t("profile.updatePhoto", { defaultValue: "Update photo" })}
+                </button>
+              )}
+              {onChangePassword && (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={onChangePassword}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.4rem 0.85rem",
+                    borderRadius: "0.375rem",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  {t("profile.changePassword")}
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -4,7 +4,6 @@
     "code": "en",
     "note": "Source-of-truth file. Every key here must exist in te.json and hi.json."
   },
-
   "common": {
     "appName": "PoultryOps",
     "loading": "Loading",
@@ -47,7 +46,6 @@
     "approved": "Approved",
     "of": "of"
   },
-
   "status": {
     "active": "Active",
     "inactive": "Inactive",
@@ -64,7 +62,6 @@
     "nightShift": "Night",
     "overtime": "Overtime"
   },
-
   "error": {
     "notAvailableToRole": "Not available to your role",
     "couldNotLoad": "Could not load",
@@ -73,17 +70,14 @@
     "farmNotFound": "Farm not found.",
     "shedNotFound": "Shed not found."
   },
-
   "offline": {
     "notice": "No connection. Records will not load or refresh, and changes cannot be saved until the network returns.",
     "pending": "{{count}} attendance record(s) queued — will sync when back online.",
     "syncing": "Syncing queued attendance records…"
   },
-
   "pwa": {
     "installApp": "Install app"
   },
-
   "nav": {
     "dashboard": "Dashboard",
     "overview": "Overview",
@@ -107,7 +101,6 @@
     "sectionManage": "Manage",
     "sectionAccount": "Account"
   },
-
   "guide": {
     "title": "Quick start",
     "stepRecord": "Face attendance",
@@ -115,7 +108,6 @@
     "stepShed": "Shed board",
     "gotIt": "Got it"
   },
-
   "tour": {
     "ariaLabel": "Guided tour",
     "skip": "Skip",
@@ -140,7 +132,6 @@
     "faceCameraBody": "Front for a portrait, back for a wider shot.",
     "replay": "Tutorial"
   },
-
   "auth": {
     "login": {
       "title": "Sign in",
@@ -214,7 +205,6 @@
       "submitButton": "Set password and continue"
     }
   },
-
   "dashboard": {
     "eyebrow": "Overview",
     "title": "Good day, {{name}}",
@@ -244,7 +234,6 @@
       }
     }
   },
-
   "workers": {
     "pageEyebrow": "People",
     "pageTitle": "Workers",
@@ -300,7 +289,6 @@
       "submitButton": "Promote to Employee"
     }
   },
-
   "employees": {
     "pageEyebrow": "People",
     "pageTitle": "Employees",
@@ -339,7 +327,6 @@
       "promotedFrom": "Promoted from"
     }
   },
-
   "farms": {
     "pageEyebrow": "Sites",
     "pageTitle": "Farms",
@@ -381,7 +368,6 @@
       "reactivatedSuccess": "{{name}} reactivated."
     }
   },
-
   "sheds": {
     "pageEyebrow": "Housing",
     "pageTitle": "Sheds",
@@ -418,7 +404,6 @@
       "shedNowStatus": "Shed {{number}} is now {{status}}."
     }
   },
-
   "attendance": {
     "pageEyebrow": "Operations",
     "pageTitle": "Attendance",
@@ -454,7 +439,6 @@
       "description": "Record the first person for this day."
     }
   },
-
   "profile": {
     "noSession": {
       "title": "No session",
@@ -488,26 +472,24 @@
       "changedSuccess": "Password changed successfully.",
       "validationTooShort": "New password must be at least 8 characters",
       "validationMismatch": "Passwords do not match"
-    }
+    },
+    "updatePhoto": "Update photo",
+    "photoUpdated": "Profile photo updated."
   },
-
   "companies": {
     "pageEyebrow": "Account",
     "pageTitle": "Companies",
     "pageDescription": "The organisations that own the farms."
   },
-
   "auditLogs": {
     "pageTitle": "Audit Logs"
   },
-
   "notFound": {
     "pageTitle": "Page not found",
     "title": "That screen does not exist",
     "description": "The link may be out of date. Head back to the overview.",
     "goToOverview": "Go to overview"
   },
-
   "language": {
     "switcherLabel": "Language",
     "en": "EN",

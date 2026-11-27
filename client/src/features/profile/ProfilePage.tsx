@@ -9,12 +9,14 @@ import { ProfilePermissionsPanel } from "./ProfilePermissionsPanel.js";
 import { ProfileDocumentsPanel } from "./ProfileDocumentsPanel.js";
 import { ProfileSessionsPanel } from "./ProfileSessionsPanel.js";
 import { ChangePasswordDialog } from "./ChangePasswordDialog.js";
+import { UpdateProfilePhotoDialog } from "./UpdateProfilePhotoDialog.js";
 import "./ProfilePage.css";
 
 export function ProfilePage(): React.ReactElement {
   const { t } = useTranslation();
   const { user, can } = useAuth();
   const [changingPassword, setChangingPassword] = useState(false);
+  const [updatingPhoto, setUpdatingPhoto] = useState(false);
 
   if (!user) {
     return (
@@ -37,6 +39,7 @@ export function ProfilePage(): React.ReactElement {
       <ProfileHeroCard
         user={user}
         onChangePassword={() => setChangingPassword(true)}
+        onUpdatePhoto={() => setUpdatingPhoto(true)}
       />
 
       {/* ── Attendance analytics (gated on permission) ─────── */}
@@ -80,6 +83,13 @@ export function ProfilePage(): React.ReactElement {
       {changingPassword ? (
         <ChangePasswordDialog
           onClose={() => setChangingPassword(false)}
+        />
+      ) : null}
+
+      {updatingPhoto ? (
+        <UpdateProfilePhotoDialog
+          currentPhotoUrl={user.employee?.photoUrl ?? null}
+          onClose={() => setUpdatingPhoto(false)}
         />
       ) : null}
     </div>

@@ -472,7 +472,9 @@
       "changedSuccess": "పాస్‌వర్డ్ విజయవంతంగా మార్చబడింది.",
       "validationTooShort": "కొత్త పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి",
       "validationMismatch": "రెండు పాస్‌వర్డ్‌లు ఒకేలా లేవు"
-    }
+    },
+    "updatePhoto": "ఫోటో మార్చండి",
+    "photoUpdated": "ప్రొఫైల్ ఫోటో అప్‌డేట్ అయింది."
   },
   "companies": {
     "pageEyebrow": "అకౌంట్",

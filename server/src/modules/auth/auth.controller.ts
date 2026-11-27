@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../../middlewares/auth.middleware.js";
+import { AppError } from "../../utils/app-error.js";
+import { processFacePhoto } from "../employee/employee.controller.js";
+import { updateEmployeePhotoById } from "../employee/employee.service.js";
 import {
   AUTH_COOKIE_NAME,
   authCookieOptions,
@@ -96,6 +99,33 @@ export async function getCurrentUserController(
   res.status(200).json({
     success: true,
     user,
+  });
+}
+
+export async function updateCurrentUserPhotoController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const file = req.file;
+
+  if (!file) {
+    throw new AppError("Photo file is required", 400);
+  }
+
+  const currentUser = await getCurrentUser(authReq.userId);
+  if (currentUser.isSystemAdmin || !currentUser.employee?.id) {
+    throw new AppError("System admin accounts do not have an employee profile photo", 400);
+  }
+
+  const faceData = await processFacePhoto(file, "employees/profiles");
+  await updateEmployeePhotoById(currentUser.employee.id, faceData);
+
+  const updatedUser = await getCurrentUser(authReq.userId);
+
+  res.status(200).json({
+    success: true,
+    user: updatedUser,
   });
 }
 

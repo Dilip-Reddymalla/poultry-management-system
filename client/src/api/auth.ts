@@ -73,6 +73,15 @@ export function setPassword(password: string): Promise<SessionResponse> {
   });
 }
 
+export function updateProfilePhoto(photoFile: File): Promise<SessionResponse> {
+  const formData = new FormData();
+  formData.append("photo", photoFile);
+  return apiRequest<SessionResponse>("/auth/me/photo", {
+    method: "PATCH",
+    body: formData,
+  });
+}
+
 export function requestOtp(phone: string): Promise<{ phone: string }> {
   return apiRequest<{ phone: string }>("/auth/phone/request-otp", {
     method: "POST",

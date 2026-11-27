@@ -472,7 +472,9 @@
       "changedSuccess": "पासवर्ड सफलतापूर्वक बदल गया।",
       "validationTooShort": "नया पासवर्ड कम से कम 8 अक्षरों का होना चाहिए",
       "validationMismatch": "दोनों पासवर्ड एक जैसे नहीं हैं"
-    }
+    },
+    "updatePhoto": "फ़ोटो बदलें",
+    "photoUpdated": "प्रोफ़ाइल फ़ोटो अपडेट हो गई।"
   },
   "companies": {
     "pageEyebrow": "अकाउंट",

@@ -29,7 +29,7 @@ import {
 /**
  * Process an uploaded photo through the Face AI pipeline.
  */
-async function processFacePhoto(
+export async function processFacePhoto(
   file: Express.Multer.File,
   folder: string,
 ): Promise<{ photoUrl: string; faceEmbedding?: number[] | undefined }> {

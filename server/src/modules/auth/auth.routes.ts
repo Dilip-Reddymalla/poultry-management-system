@@ -4,6 +4,7 @@ import {
   loginController,
   phoneLoginController,
   getCurrentUserController,
+  updateCurrentUserPhotoController,
   logoutController,
   requestOtpController,
   verifyOtpController,
@@ -18,6 +19,7 @@ import {
 } from "./auth.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
+import { uploadPhoto } from "../../middlewares/upload.middleware.js";
 import {
   authEndpointRateLimiter,
   tokenRefreshRateLimiter,
@@ -29,6 +31,7 @@ router.post("/login", authEndpointRateLimiter, loginController);
 router.post("/phone/login", authEndpointRateLimiter, phoneLoginController);
 router.post("/refresh", tokenRefreshRateLimiter, refreshTokenController);
 router.get("/me", requireAuth, getCurrentUserController);
+router.patch("/me/photo", requireAuth, uploadPhoto, updateCurrentUserPhotoController);
 router.post("/logout", logoutController);
 router.post("/logout-all", requireAuth, logoutAllController);
 router.get("/sessions", requireAuth, listSessionsController);

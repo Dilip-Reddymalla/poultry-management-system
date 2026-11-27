@@ -360,6 +360,52 @@ export interface FaceEnrollmentData {
   faceEmbedding?: number[] | undefined;
 }
 
+/**
+ * Self-service photo & face embedding update for a logged-in employee.
+ * Deletes the previous Cloudinary image if replaced.
+ */
+export async function updateEmployeePhotoById(
+  employeeId: string,
+  faceData: FaceEnrollmentData,
+): Promise<void> {
+  const existing = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { id: true, photoUrl: true },
+  });
+
+  if (!existing) {
+    throw new AppError("Employee not found", 404);
+  }
+
+  if (faceData.photoUrl !== undefined) {
+    await prisma.employee.update({
+      where: { id: employeeId },
+      data: { photoUrl: faceData.photoUrl },
+    });
+
+    if (existing.photoUrl && existing.photoUrl !== faceData.photoUrl) {
+      void deleteImageByUrl(existing.photoUrl);
+    }
+  }
+
+  if (faceData.faceEmbedding) {
+    try {
+      const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
+      await prisma.$queryRawUnsafe(
+        `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
+        vectorLiteral,
+        employeeId,
+      );
+    } catch {
+      await prisma.$queryRawUnsafe(
+        `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
+        faceData.faceEmbedding,
+        employeeId,
+      );
+    }
+  }
+}
+
 export async function createEmployee(
   scope: AuthScope,
   input: CreateEmployeeInput,

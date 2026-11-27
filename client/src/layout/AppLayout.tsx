@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useTranslation } from "react-i18next";
 
@@ -16,11 +16,15 @@ import { Sidebar } from "./Sidebar.js";
 
 export function AppLayout(): React.ReactElement {
   const { t } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, can, signOut } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  const isExecutive = Boolean(
+    user?.isSystemAdmin || user?.scope.level === "COMPANY" || user?.role === "Company Admin",
+  );
 
   // Listen for push notifications forwarded by service worker
   useEffect(() => {
@@ -133,6 +137,52 @@ export function AppLayout(): React.ReactElement {
           <OfflineNotice />
           <Outlet />
         </main>
+
+        {!isExecutive ? (
+          <nav className="mobile-tabbar" aria-label="Quick navigation">
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                isActive ? "mobile-tabbar__item mobile-tabbar__item--active" : "mobile-tabbar__item"
+              }
+            >
+              <span aria-hidden="true">🏠</span>
+              <span>{t("nav.dashboard")}</span>
+            </NavLink>
+            {can("attendance:create") ? (
+              <NavLink
+                to="/attendance/face"
+                className={({ isActive }) =>
+                  isActive ? "mobile-tabbar__item mobile-tabbar__item--active" : "mobile-tabbar__item"
+                }
+              >
+                <span aria-hidden="true">📸</span>
+                <span>{t("nav.faceAttendance")}</span>
+              </NavLink>
+            ) : null}
+            {can("attendance:view") ? (
+              <NavLink
+                to="/attendance"
+                end
+                className={({ isActive }) =>
+                  isActive ? "mobile-tabbar__item mobile-tabbar__item--active" : "mobile-tabbar__item"
+                }
+              >
+                <span aria-hidden="true">📋</span>
+                <span>{t("nav.attendanceList")}</span>
+              </NavLink>
+            ) : null}
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                isActive ? "mobile-tabbar__item mobile-tabbar__item--active" : "mobile-tabbar__item"
+              }
+            >
+              <span aria-hidden="true">👤</span>
+              <span>{t("nav.myProfile")}</span>
+            </NavLink>
+          </nav>
+        ) : null}
       </div>
     </div>
   );

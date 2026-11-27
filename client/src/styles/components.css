@@ -1019,6 +1019,11 @@
     line-height: 1.25;
   }
 
+  .mobile-hide-label,
+  .mobile-hide-btn {
+    display: none !important;
+  }
+
   .input {
     min-height: 44px;
     font-size: 16px;

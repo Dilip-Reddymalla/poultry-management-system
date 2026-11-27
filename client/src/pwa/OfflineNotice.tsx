@@ -23,10 +23,29 @@ export function OfflineNotice(): React.ReactElement | null {
       : t("offline.pending", { count: pendingCount })
     : t("offline.notice");
 
+  const shortLabel = online
+    ? syncing
+      ? "🔄"
+      : `📋 ${pendingCount}`
+    : pendingCount > 0
+      ? `❌📶 · 📋 ${pendingCount}`
+      : "❌📶";
+
   return (
-    <div className="offline-notice" role="status">
-      <OfflineIcon className="offline-notice__icon" />
-      <span>{statusText}</span>
+    <div
+      className="offline-notice"
+      role="status"
+      title={statusText}
+      aria-label={statusText}
+      style={{ alignItems: "center", justifyContent: "space-between", fontWeight: 600 }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <OfflineIcon className="offline-notice__icon" />
+        <span>{shortLabel}</span>
+      </span>
+      <span className="mobile-hide-label" style={{ fontWeight: 400 }}>
+        {statusText}
+      </span>
     </div>
   );
 }

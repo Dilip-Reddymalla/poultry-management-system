@@ -192,12 +192,19 @@
 }
 
 @media (max-width: 560px) {
-  .face-capture-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .mobile-hide-label,
+  .mobile-hide-btn {
+    display: none !important;
   }
 
-  .face-capture-actions button {
+  .face-capture-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .face-capture-actions button[data-tour="face-capture"],
+  .face-capture-actions button[data-tour="face-start"] {
     flex: 1 1 100%;
     width: 100% !important;
     justify-content: center;

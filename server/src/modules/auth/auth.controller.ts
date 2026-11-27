@@ -6,8 +6,8 @@ import { updateEmployeePhotoById } from "../employee/employee.service.js";
 import { updateSystemAdminBiometrics } from "./system-admin.js";
 import {
   AUTH_COOKIE_NAME,
-  authCookieOptions,
-  clearAuthCookieOptions,
+  getAuthCookieOptions,
+  getClearAuthCookieOptions,
 } from "../../utils/auth-cookie.js";
 import {
   REFRESH_COOKIE_NAME,
@@ -52,7 +52,7 @@ export async function loginController(
 
   const result = await login(input);
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -84,7 +84,7 @@ export async function faceLoginController(
     return;
   }
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -104,7 +104,7 @@ export async function selectFaceUserController(
 
   const result = await selectFaceUser(input.selectionToken, input.accountId);
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -134,7 +134,7 @@ export async function phoneLoginController(
     return;
   }
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -198,7 +198,7 @@ export async function logoutController(
     await revokeRefreshToken(refreshToken);
   }
 
-  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions);
+  res.clearCookie(AUTH_COOKIE_NAME, getClearAuthCookieOptions(res));
   clearRefreshTokenCookie(res);
 
   res.status(200).json({
@@ -215,7 +215,7 @@ export async function logoutAllController(
 
   await revokeAllUserRefreshTokens(authReq.userId);
 
-  res.clearCookie(AUTH_COOKIE_NAME, clearAuthCookieOptions);
+  res.clearCookie(AUTH_COOKIE_NAME, getClearAuthCookieOptions(res));
   clearRefreshTokenCookie(res);
 
   res.status(200).json({
@@ -243,7 +243,7 @@ export async function refreshTokenController(
 
   const result = await rotateRefreshToken(refreshToken);
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -291,7 +291,7 @@ export async function verifyOtpController(
     return;
   }
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -313,7 +313,7 @@ export async function selectPhoneUserController(
     input.userId,
   );
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -335,7 +335,7 @@ export async function setPasswordController(
 
   // Rotate the session so the account leaves the restricted first-login state
   // without needing to sign in again.
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({
@@ -354,7 +354,7 @@ export async function changePasswordController(
 
   const result = await changePassword(authReq.userId, input);
 
-  res.cookie(AUTH_COOKIE_NAME, result.token, authCookieOptions);
+  res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions(res));
   setRefreshTokenCookie(res, result.refreshToken);
 
   res.status(200).json({

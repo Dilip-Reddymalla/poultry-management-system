@@ -6,24 +6,24 @@ export const REFRESH_COOKIE_NAME = "poultry_refresh";
 
 const isProduction = env.NODE_ENV === "production";
 
-const baseRefreshCookieOptions: CookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
-  path: "/api/auth",
-};
-
-export const refreshCookieOptions: CookieOptions = {
-  ...baseRefreshCookieOptions,
-  maxAge: REFRESH_TOKEN_TTL_MS,
-};
-
-export const clearRefreshCookieOptions: CookieOptions = baseRefreshCookieOptions;
+function refreshCookieOptions(sameOrigin: boolean): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: sameOrigin ? "lax" : "none",
+    path: "/api/auth",
+  };
+}
 
 export function setRefreshTokenCookie(res: Response, token: string): void {
-  res.cookie(REFRESH_COOKIE_NAME, token, refreshCookieOptions);
+  const sameOrigin = res.locals?.sameOriginAuth === true;
+  res.cookie(REFRESH_COOKIE_NAME, token, {
+    ...refreshCookieOptions(sameOrigin),
+    maxAge: REFRESH_TOKEN_TTL_MS,
+  });
 }
 
 export function clearRefreshTokenCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE_NAME, clearRefreshCookieOptions);
+  const sameOrigin = res.locals?.sameOriginAuth === true;
+  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions(sameOrigin));
 }

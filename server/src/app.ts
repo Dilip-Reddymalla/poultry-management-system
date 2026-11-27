@@ -26,6 +26,7 @@ import { notificationRoutes } from "./modules/notifications/notification.routes.
 import { initializeWebPush } from "./modules/notifications/webpush.config.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { requestContextMiddleware } from "./middlewares/request-context.js";
+import { isSameOriginRequest } from "./utils/auth-cookie.js";
 import { logger } from "./config/logger.js";
 import { recordRequest, renderMetrics } from "./config/metrics.js";
 
@@ -127,6 +128,15 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 app.use(requestContextMiddleware);
+
+// Decide per-request cookie SameSite policy: requests that arrive via the
+// same-origin reverse proxy (Apple/Safari path) use first-party cookies (Lax);
+// direct cross-origin requests use SameSite=None. Cookie helpers read this
+// from res.locals.
+app.use((req, res, next) => {
+  res.locals.sameOriginAuth = isSameOriginRequest(req);
+  next();
+});
 
 // ---------------------------------------------------------------------------
 // Unified Versioned API Router (v1 & backward-compatible /api)

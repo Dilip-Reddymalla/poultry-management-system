@@ -4,9 +4,18 @@
  */
 
 import { cacheGet, cachePut } from "../lib/http-cache.js";
+import { needsSameOriginCookies } from "../lib/platform.js";
 
-const rawBaseUrl: unknown =
-  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+/**
+ * On Apple devices (Safari / iOS) third-party cookies are blocked by ITP, so we
+ * route the API through a same-origin reverse proxy ("/api"). Everywhere else
+ * we keep the configured cross-origin API URL.
+ */
+const sameOriginApi = import.meta.env.PROD && needsSameOriginCookies();
+
+const rawBaseUrl: unknown = sameOriginApi
+  ? "/api"
+  : import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
 export const API_BASE_URL = (
   typeof rawBaseUrl === "string" && rawBaseUrl.trim().length > 0

@@ -39,9 +39,13 @@ export function AttendanceAvatar({
         onError={() => setImgError(true)}
         onClick={(e) => {
           if (onPreview) {
+            // preventDefault stops the parent <Link> card from navigating when
+            // the photo is clicked; only the preview callback should run.
+            e.preventDefault();
             e.stopPropagation();
             onPreview();
           } else if (previewable) {
+            e.preventDefault();
             e.stopPropagation();
             open({ src: photoUrl, name });
           }

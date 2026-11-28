@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
+    # Read configuration from the process environment (and an optional .env file).
+    # Without this, MODELS_DOWNLOAD_BASE_URL and other vars are never picked up.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     app_name: str = "Face AI Service"
     app_version: str = "1.0.0"
     debug: bool = False
@@ -65,7 +70,9 @@ class Settings(BaseModel):
     # startup (see app/models/download.py). Model files are NOT committed to git;
     # host them somewhere reachable (e.g. a CDN or GitHub release) and set this
     # to the base URL. Files must be served under the same relative paths.
-    model_download_base_url: str | None = None
+    # NOTE: the field name must NOT start with "model_" — that is a reserved
+    # pydantic "protected namespace" and would prevent env-var population.
+    models_download_base_url: str | None = None
 
     # Recognition & Matching Parameters
     match_threshold: float = 0.40

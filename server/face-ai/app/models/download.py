@@ -44,7 +44,7 @@ def ensure_models() -> None:
     if not missing:
         return
 
-    base_url = settings.model_download_base_url
+    base_url = settings.models_download_base_url
     if not base_url:
         raise RuntimeError(
             f"{len(missing)} Face-AI model file(s) are missing and "

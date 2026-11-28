@@ -86,7 +86,10 @@ const envSchema = z
 
     // Web Push (VAPID)
     VAPID_PUBLIC_KEY: z.string().trim().optional().default("BBWpW-R8aWUR5jVnKHQKWKXiPfJT7tTWdrXhphnzvuGHNdZD7Qu6jbu3Pt3dkq4s020mUnmBa-Oep3mbGmBzSvI"),
-    VAPID_PRIVATE_KEY: z.string().trim().optional().default("pJRfoDwQNLXx3Y8oIq5vEgY87j4CM8YmuAS-ihEqYJE"),
+    // NOTE: No default is ever provided for the private key. A committed default
+    // would let anyone with repo access sign push messages for users'
+    // subscriptions. If unset, web push is safely disabled.
+    VAPID_PRIVATE_KEY: z.string().trim().optional(),
     VAPID_SUBJECT: z.string().trim().optional().default("mailto:admin@poultryops.com"),
 
     // Neon Database Backups (automated branching API)

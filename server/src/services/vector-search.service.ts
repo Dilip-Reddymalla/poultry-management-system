@@ -84,7 +84,7 @@ export async function searchByEmbedding(
         'EMPLOYEE' AS "personType",
         e."employeeId" AS "personCode",
         e.name,
-        COALESCE(e."photoUrl", e.photo_url) AS "photoUrl",
+        e."photoUrl" AS "photoUrl",
         e."farmId" AS "farmId",
         (1 - (e.face_embedding <=> $1::vector)) AS similarity
       FROM employees e
@@ -130,7 +130,7 @@ export async function searchByEmbedding(
 
   // Fallback for local Postgres containers without pgvector extension
   const fallbackEmployeeQuery = `
-    SELECT id, 'EMPLOYEE' AS "personType", "employeeId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
+    SELECT id, 'EMPLOYEE' AS "personType", "employeeId" AS "personCode", name, "photoUrl" AS "photoUrl", "farmId", face_embedding
     FROM employees
     WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
     ${options.farmId ? `AND "farmId" = $1::uuid` : ""}

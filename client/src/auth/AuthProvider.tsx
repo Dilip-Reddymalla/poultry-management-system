@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchSession, signOut as signOutRequest } from "../api/auth.js";
 import { ApiError, setSessionExpiredHandler, setSessionRefreshedHandler } from "../api/client.js";
+import { cacheClear } from "../lib/http-cache.js";
 import type { SessionUser } from "../api/types.js";
 import { AuthContext, type SessionStatus } from "./auth-context.js";
 
@@ -55,6 +56,9 @@ export function AuthProvider({
     setSessionExpiredHandler(() => {
       setUser(null);
       setStatus("anonymous");
+      // Never leave one user's cached data available to the next user on a
+      // shared device.
+      void cacheClear();
       void signOutRequest().catch(() => {});
     });
 
@@ -88,6 +92,7 @@ export function AuthProvider({
     } finally {
       setUser(null);
       setStatus("anonymous");
+      void cacheClear();
     }
   }, []);
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { API_BASE_URL } from "../../../api/client.js";
 import type { FaceAiHealthState } from "./face-attendance.types.js";
 
 export function useFaceAiHealth() {
@@ -23,13 +24,18 @@ export function useFaceAiHealth() {
       try {
         if (triggerRestart) {
           try {
-            await fetch("/api/face-ai/restart", { method: "POST" });
+            await fetch(`${API_BASE_URL}/face-ai/restart`, {
+              method: "POST",
+              credentials: "include",
+            });
           } catch {
             // Ignore fire-and-forget error
           }
         }
 
-        const res = await fetch("/api/face-ai/health");
+        const res = await fetch(`${API_BASE_URL}/face-ai/health`, {
+          credentials: "include",
+        });
         const data = await res.json().catch(() => null);
         const isOffline =
           data?.circuitBreaker?.state === "OPEN" ||
@@ -54,7 +60,9 @@ export function useFaceAiHealth() {
 
             warmingUpPollRef.current = setInterval(async () => {
               try {
-                const pollRes = await fetch("/api/face-ai/health");
+                const pollRes = await fetch(`${API_BASE_URL}/face-ai/health`, {
+                  credentials: "include",
+                });
                 const pollData = await pollRes.json().catch(() => null);
                 const stillOffline =
                   pollData?.circuitBreaker?.state === "OPEN" ||

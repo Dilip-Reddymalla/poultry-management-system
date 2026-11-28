@@ -41,11 +41,6 @@ class Settings(BaseModel):
     recognizer_backend: str = "edgeface"
     liveness_backend: str = "minifasnet"
 
-    # Reference Identity Embeddings Directory
-    known_faces_dir: Path = Field(
-        default_factory=lambda: PROJECT_ROOT / "test_data" / "recognition"
-    )
-
     # Detection Parameters
     scrfd_confidence_threshold: float = 0.20
     scrfd_nms_threshold: float = 0.40
@@ -65,6 +60,12 @@ class Settings(BaseModel):
     enable_liveness: bool = False
     liveness_threshold: float = 0.50
     liveness_crop_scale: float = 2.7
+
+    # Optional base URL from which missing model binaries are downloaded at
+    # startup (see app/models/download.py). Model files are NOT committed to git;
+    # host them somewhere reachable (e.g. a CDN or GitHub release) and set this
+    # to the base URL. Files must be served under the same relative paths.
+    model_download_base_url: str | None = None
 
     # Recognition & Matching Parameters
     match_threshold: float = 0.40

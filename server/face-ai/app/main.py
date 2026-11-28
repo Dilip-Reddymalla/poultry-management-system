@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.models.download import ensure_models
 from app.services.face_pipeline import FacePipeline
 from app.api.routes import health, recognition
 
@@ -23,6 +24,10 @@ logger = logging.getLogger("face_ai")
 async def lifespan(app: FastAPI):
     logger.info("Initializing Face AI Service Application Lifespan...")
     try:
+        # Ensure model binaries are present before loading the pipeline (models
+        # are downloaded at deploy/boot from MODELELS_DOWNLOAD_BASE_URL).
+        ensure_models()
+
         pipeline = FacePipeline()
         app.state.pipeline = pipeline
         logger.info("✓ Face AI Pipeline successfully loaded into application state.")

@@ -10,6 +10,7 @@ import {
   processFrame,
   bulkMarkFaceAttendanceWithOffline,
   type FrameProcessResult,
+  type ProcessedFace,
   type FaceAttendanceRecord,
 } from "../../api/face-attendance.api.js";
 import { getCurrentShift, validateShiftTiming } from "../../lib/shift-timing.js";
@@ -27,6 +28,56 @@ import { FaceCard } from "./face-attendance/FaceCard.js";
 import { TourOverlay } from "../../components/TourOverlay.js";
 import { HelpIcon } from "../../components/icons.js";
 import "./Attendance.css";
+
+/**
+ * Assign each detected face to the best candidate person using greedy dedup:
+ * faces are processed highest-similarity-first, and a person can be assigned to
+ * at most one face. Shared by the camera and file-upload paths so the two flows
+ * behave identically.
+ */
+function buildFaceSelections(faces: ProcessedFace[]): FaceSelection[] {
+  const assignedPersonIds = new Set<string>();
+
+  const priorities = faces
+    .map((face) => ({
+      face,
+      topSimilarity: face.candidates[0]?.similarity ?? 0,
+    }))
+    .sort((a, b) => b.topSimilarity - a.topSimilarity);
+
+  const selectionsMap = new Map<number, FaceSelection>();
+
+  for (const { face } of priorities) {
+    // Find the highest candidate not already assigned to another face.
+    const eligible = face.candidates.find(
+      (c) => c.similarity >= 0.4 && !assignedPersonIds.has(c.id),
+    );
+
+    if (eligible) {
+      assignedPersonIds.add(eligible.id);
+      selectionsMap.set(face.faceIndex, {
+        faceIndex: face.faceIndex,
+        personId: eligible.id,
+        personType: eligible.personType,
+      });
+    } else {
+      selectionsMap.set(face.faceIndex, {
+        faceIndex: face.faceIndex,
+        personId: null,
+        personType: null,
+      });
+    }
+  }
+
+  return faces.map(
+    (f) =>
+      selectionsMap.get(f.faceIndex) || {
+        faceIndex: f.faceIndex,
+        personId: null,
+        personType: null,
+      },
+  );
+}
 
 export function FaceAttendancePage(): React.ReactElement {
   const { user } = useAuth();
@@ -350,55 +401,9 @@ export function FaceAttendancePage(): React.ReactElement {
       const res = await processFrame(fileToProcess, selectedFarmId);
       setResult(res);
 
-      // Smart Multi-Face Deduplication: ensure each person is assigned to at most one face
-      const assignedPersonIds = new Set<string>();
-
-      // Sort faces by highest confidence candidate first to prioritize best match
-      const faceMatchPriorities = res.faces
-        .map((face, originalIndex) => {
-          const top = face.candidates[0];
-          return {
-            originalIndex,
-            face,
-            topSimilarity: top?.similarity ?? 0,
-          };
-        })
-        .sort((a, b) => b.topSimilarity - a.topSimilarity);
-
-      const selectionsMap = new Map<number, FaceSelection>();
-
-      for (const item of faceMatchPriorities) {
-        const face = item.face;
-        // Find highest candidate not already assigned to another face
-        const eligible = face.candidates.find(
-          (c) => c.similarity >= 0.4 && !assignedPersonIds.has(c.id),
-        );
-
-        if (eligible) {
-          assignedPersonIds.add(eligible.id);
-          selectionsMap.set(face.faceIndex, {
-            faceIndex: face.faceIndex,
-            personId: eligible.id,
-            personType: eligible.personType,
-          });
-        } else {
-          selectionsMap.set(face.faceIndex, {
-            faceIndex: face.faceIndex,
-            personId: null,
-            personType: null,
-          });
-        }
-      }
-
-      const sels: FaceSelection[] = res.faces.map(
-        (f) =>
-          selectionsMap.get(f.faceIndex) || {
-            faceIndex: f.faceIndex,
-            personId: null,
-            personType: null,
-          },
-      );
-      setSelections(sels);
+      // Smart multi-face dedup is shared with the file-upload path so both
+      // flows assign people the same way (one person per face, best-match-first).
+      setSelections(buildFaceSelections(res.faces));
     } catch (err: any) {
       const errMsg = err?.message || "";
       const isConnectionError =
@@ -463,18 +468,8 @@ export function FaceAttendancePage(): React.ReactElement {
       const res = await processFrame(file, selectedFarmId);
       setResult(res);
 
-      const sels: FaceSelection[] = res.faces.map((face) => {
-        const topCandidate = face.candidates[0];
-        if (topCandidate && topCandidate.similarity >= 0.4) {
-          return {
-            faceIndex: face.faceIndex,
-            personId: topCandidate.id,
-            personType: topCandidate.personType,
-          };
-        }
-        return { faceIndex: face.faceIndex, personId: null, personType: null };
-      });
-      setSelections(sels);
+      // Same dedup algorithm as the camera path.
+      setSelections(buildFaceSelections(res.faces));
     } catch (err: any) {
       const errMsg = err?.message || "";
       const isConnectionError =

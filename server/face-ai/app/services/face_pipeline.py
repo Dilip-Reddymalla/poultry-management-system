@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from pathlib import Path
 from typing import Any
 
 import cv2
@@ -17,12 +16,10 @@ from app.liveness.liveness import LivenessAnalyzer
 from app.liveness.minifasnet import MiniFASNetLiveness
 from app.recognition.arcface import ArcFaceRecognizer
 from app.recognition.edgeface import EdgeFaceRecognizer
-from app.matching.face_matcher import FaceMatcher
 from app.api.schemas.recognition import (
     QualityMetrics,
     QualityResult,
     LivenessResult,
-    MatchCandidate,
     RecognitionResult,
     FaceAnalysisResult,
     ImageAnalysisResponse,
@@ -42,7 +39,10 @@ class FacePipeline:
     3. Anti-spoofing Liveness (MiniFASNetV2 / MobileNetV3)
     4. Face alignment (112x112)
     5. Face Recognition embedding generation (EdgeFace / ArcFace)
-    6. FaceMatcher cosine similarity comparison against known reference identities
+
+    Identity matching is intentionally NOT performed here: this microservice only
+    produces analysis + embeddings. Search/matching of embeddings is owned by the
+    Express API against pgvector (see server/src/services/vector-search.service.ts).
 
     Processes 0, 1, or N faces per image independently.
     """
@@ -111,67 +111,10 @@ class FacePipeline:
             )
             logger.info("✓ ArcFace Recognizer loaded.")
 
-        # 6. Face Matcher
-        self.matcher = FaceMatcher(threshold=settings.match_threshold)
-        logger.info("✓ Face Matcher loaded.")
-
-        # 7. Load Reference Identities Database
-        self.reference_embeddings: dict[str, list[np.ndarray]] = {}
-        self.load_reference_identities(settings.known_faces_dir)
+        # Identity matching is not initialized here — it is owned by the Express
+        # API (pgvector search). This service only generates analysis + embeddings.
 
         logger.info("✓ Face AI Pipeline initialization complete.")
-
-    def load_reference_identities(self, known_faces_dir: Path) -> None:
-        """
-        Load and index reference face embeddings from the known faces directory.
-        Supports directory structure:
-            known_faces_dir/
-                person1/
-                    person1_1.jpg
-                    person1_2.jpg
-                person2/
-                    person2_1.jpg
-        """
-        self.reference_embeddings.clear()
-        if not known_faces_dir.exists():
-            logger.warning(f"Known faces directory does not exist: {known_faces_dir}")
-            return
-
-        image_extensions = {".jpg", ".jpeg", ".png", ".webp"}
-        count_identities = 0
-        count_images = 0
-
-        for person_dir in known_faces_dir.iterdir():
-            if person_dir.is_dir():
-                identity_name = person_dir.name
-                embeddings = []
-
-                for img_path in person_dir.iterdir():
-                    if img_path.suffix.lower() in image_extensions:
-                        try:
-                            img = cv2.imread(str(img_path))
-                            if img is None or img.size == 0:
-                                continue
-
-                            detections = self.detector.detect(img)
-                            if not detections:
-                                continue
-
-                            # Use primary face for reference
-                            primary = detections[0]
-                            aligned = self.aligner.align_detection(img, primary)
-                            if aligned is not None:
-                                emb = self.recognizer.get_embedding(aligned)
-                                embeddings.append(emb)
-                                count_images += 1
-                        except Exception as exc:
-                            logger.warning(f"Failed to load reference image {img_path}: {exc}")
-
-                if embeddings:
-                    self.reference_embeddings[identity_name] = embeddings
-                    count_identities += 1
-
-        logger.info(f"Loaded {count_images} reference embeddings across {count_identities} identities.")
 
     def analyze_image(self, image: np.ndarray, filename: str) -> ImageAnalysisResponse:
         """
@@ -314,46 +257,15 @@ class FacePipeline:
 
             embedding = self.recognizer.get_embedding(aligned_face)
 
-            # 6. Face Matcher against Known Identity Database
-            candidates: list[MatchCandidate] = []
-            best_identity: str | None = None
-            best_similarity: float = -1.0
-
-            for identity, ref_embs in self.reference_embeddings.items():
-                max_sim_for_identity = -1.0
-                for ref_emb in ref_embs:
-                    sim = self.matcher.cosine_similarity(embedding, ref_emb)
-                    if sim > max_sim_for_identity:
-                        max_sim_for_identity = sim
-
-                if max_sim_for_identity > 0:
-                    candidates.append(
-                        MatchCandidate(
-                            identity=identity,
-                            similarity=float(max_sim_for_identity),
-                        )
-                    )
-                    if max_sim_for_identity > best_similarity:
-                        best_similarity = max_sim_for_identity
-                        best_identity = identity
-
-            # Sort candidates descending by similarity
-            candidates.sort(key=lambda c: c.similarity, reverse=True)
-
-            if best_similarity >= self.matcher.threshold and best_identity is not None:
-                rec_status = "MATCHED"
-                rec_identity = best_identity
-                rec_similarity = float(best_similarity)
-            else:
-                rec_status = "UNKNOWN"
-                rec_identity = None
-                rec_similarity = None
-
+            # Identity matching is intentionally not performed here. This service
+            # produces the embedding; search/matching happens in the Express API
+            # against pgvector (server/src/services/vector-search.service.ts). The
+            # recognition block only reports that the embedding was produced.
             rec_res = RecognitionResult(
-                status=rec_status,
-                identity=rec_identity,
-                similarity=rec_similarity,
-                candidates=candidates,
+                status="ANALYZED",
+                identity=None,
+                similarity=None,
+                candidates=[],
             )
 
             faces_res.append(

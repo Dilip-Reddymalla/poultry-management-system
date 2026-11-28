@@ -55,6 +55,21 @@ export const errorMiddleware: ErrorRequestHandler = (
     return;
   }
 
+  // Handle oversized JSON/urlencoded bodies — body-parser's PayloadTooLargeError
+  // carries status 413 and type "entity.too.large". Without this it would fall
+  // through to the generic 500 handler (and spam the System Admin alert).
+  if (
+    (err as { type?: string })?.type === "entity.too.large" &&
+    (err as { status?: number })?.status === 413
+  ) {
+    res.status(413).json({
+      success: false,
+      message: "Request body is too large",
+    });
+
+    return;
+  }
+
   if (err instanceof AppError) {
     const errorPayload = {
       path: req?.originalUrl || req?.url,

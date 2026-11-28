@@ -98,3 +98,25 @@ export async function cacheGet(url: string): Promise<unknown | undefined> {
     db.close();
   }
 }
+
+/**
+ * Wipe the entire offline GET cache. Called on sign-out and when a session
+ * expires so cached data from one user can never leak to the next user on a
+ * shared device.
+ */
+export async function cacheClear(): Promise<void> {
+  const db = await openDb();
+  if (!db) return;
+  try {
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    // ignore
+  } finally {
+    db.close();
+  }
+}

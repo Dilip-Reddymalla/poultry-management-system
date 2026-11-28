@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiError } from "./client.js";
+import { apiClient } from "./client.js";
 
 export interface AnalyticsData {
   workforce: {
@@ -41,13 +41,10 @@ export interface AnalyticsData {
 }
 
 export async function fetchAnalyticsSummary(): Promise<AnalyticsData> {
-  const res = await fetch(`${API_BASE_URL}/analytics/summary`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new ApiError(res.status, data.message || "Failed to load analytics");
-  }
-  return data.data;
+  // Go through apiClient so the session cookie is always sent (required on the
+  // cross-origin API path) and errors go through the standard ApiError envelope.
+  const payload = await apiClient.get<{ data: AnalyticsData }>(
+    "/analytics/summary",
+  );
+  return payload.data;
 }

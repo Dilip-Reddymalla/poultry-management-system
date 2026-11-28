@@ -5,6 +5,7 @@ import { normalizePhone } from "../../utils/phone.js";
 import type { AuthScope } from "../auth/scope.js";
 import { farmScopedWhere, isFarmInScope } from "../auth/scope.js";
 import { recordAuditLog } from "../audit/audit.service.js";
+import { assertDesignationUsable } from "../employee/employee.service.js";
 
 export interface ImportSummary {
   totalCount: number;
@@ -288,6 +289,11 @@ export async function importEmployeesFromExcel(
         const farmObj = readableFarms.find((f) => f.id === matchedFarmId);
         finalEmpId = `${farmObj?.name || "FARM"}-E${count + 1}`;
       }
+
+      // Enforce the same designation rank/role-activation gate as createEmployee —
+      // otherwise a low-ranked operator could import rows assigning senior
+      // designations (e.g. GM / Company Admin) in their own farm.
+      await assertDesignationUsable(scope, matchedFarmId!, matchedDesignationId!);
 
       const created = await prisma.employee.create({
         data: {

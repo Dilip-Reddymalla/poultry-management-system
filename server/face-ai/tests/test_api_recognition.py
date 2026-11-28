@@ -49,8 +49,7 @@ def test_analyze_valid_image(client: TestClient):
     assert "recognition" in face
     assert face["quality"]["usable"] in (True, False)
     assert face["recognition"]["status"] in (
-        "MATCHED",
-        "UNKNOWN",
+        "ANALYZED",
         "SPOOF",
         "REJECTED_LOW_QUALITY",
     )

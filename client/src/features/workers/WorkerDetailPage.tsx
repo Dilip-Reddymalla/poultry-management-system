@@ -16,6 +16,7 @@ import {
   StatusTag,
 } from "../../components/ui.js";
 import { useToast } from "../../components/use-toast.js";
+import { usePhotoViewer } from "../../components/PhotoViewer.js";
 import { useResource } from "../../hooks/useResource.js";
 import { PageHeader } from "../../layout/PageHeader.js";
 import { WorkerFormDialog } from "./WorkerFormDialog.js";
@@ -27,6 +28,7 @@ export function WorkerDetailPage(): React.ReactElement {
   const navigate = useNavigate();
   const { can } = useAuth();
   const { notify } = useToast();
+  const { open } = usePhotoViewer();
 
   const worker = useResource<Worker>(`worker:${id}`, () => fetchWorker(id));
 
@@ -218,12 +220,18 @@ export function WorkerDetailPage(): React.ReactElement {
               <img
                 src={record.photoUrl}
                 alt={record.name}
+                title={`Click to view ${record.name}'s photo`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  open({ src: record.photoUrl!, name: record.name });
+                }}
                 style={{
                   width: 100,
                   height: 100,
                   borderRadius: "50%",
                   objectFit: "cover",
                   border: "3px solid var(--primary, #6366f1)",
+                  cursor: "pointer",
                 }}
               />
             </div>

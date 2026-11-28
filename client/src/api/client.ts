@@ -141,7 +141,14 @@ function buildUrl(
   path: string,
   query: ApiRequestOptions["query"] | undefined,
 ): string {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  // On the Apple/Safari same-origin path, API_BASE_URL is relative ("/api").
+  // new URL() requires an absolute base, so resolve it against the app origin.
+  const base =
+    API_BASE_URL.startsWith("/") && typeof window !== "undefined"
+      ? `${window.location.origin}${API_BASE_URL}`
+      : API_BASE_URL;
+
+  const url = new URL(`${base}${path}`);
 
   if (query && typeof query === "object") {
     for (const [key, value] of Object.entries(query)) {

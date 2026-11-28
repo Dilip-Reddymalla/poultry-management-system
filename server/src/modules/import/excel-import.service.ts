@@ -140,12 +140,19 @@ export async function importEmployeesFromExcel(
     select: { id: true, code: true, name: true, companyId: true },
   });
 
-  const existingEmployees = await prisma.employee.findMany({
-    select: { employeeId: true },
-  });
-  const existingIdSet = new Set(
-    existingEmployees.map((e) => e.employeeId.toLowerCase()),
-  );
+  // Lazily track IDs that already exist (in the DB or created earlier in this
+  // import) instead of loading every row into memory at once.
+  const seenIds = new Set<string>();
+  const employeeIdExists = async (id: string): Promise<boolean> => {
+    const key = id.toLowerCase();
+    if (seenIds.has(key)) return true;
+    const found = await prisma.employee.findUnique({
+      where: { employeeId: id },
+      select: { employeeId: true },
+    });
+    seenIds.add(key);
+    return !!found;
+  };
 
   const headerRow = worksheet.getRow(1);
   const colIndexMap: Record<string, number> = {};
@@ -250,7 +257,7 @@ export async function importEmployeesFromExcel(
 
     // 4. Validate Employee ID
     if (rawEmpId) {
-      if (existingIdSet.has(rawEmpId.toLowerCase())) {
+      if (await employeeIdExists(rawEmpId)) {
         rowErrors.push(`Employee ID '${rawEmpId}' already exists`);
       }
     }
@@ -306,7 +313,7 @@ export async function importEmployeesFromExcel(
         },
       });
 
-      existingIdSet.add(finalEmpId.toLowerCase());
+      seenIds.add(finalEmpId.toLowerCase());
       addedCount++;
 
       void recordAuditLog({
@@ -388,12 +395,19 @@ export async function importWorkersFromExcel(
     select: { id: true, code: true, name: true, companyId: true },
   });
 
-  const existingWorkers = await prisma.worker.findMany({
-    select: { workerId: true },
-  });
-  const existingIdSet = new Set(
-    existingWorkers.map((w) => w.workerId.toLowerCase()),
-  );
+  // Lazily track IDs that already exist (in the DB or created earlier in this
+  // import) instead of loading every row into memory at once.
+  const seenIds = new Set<string>();
+  const workerIdExists = async (id: string): Promise<boolean> => {
+    const key = id.toLowerCase();
+    if (seenIds.has(key)) return true;
+    const found = await prisma.worker.findUnique({
+      where: { workerId: id },
+      select: { workerId: true },
+    });
+    seenIds.add(key);
+    return !!found;
+  };
 
   const headerRow = worksheet.getRow(1);
   const colIndexMap: Record<string, number> = {};
@@ -469,7 +483,7 @@ export async function importWorkersFromExcel(
 
     // 3. Validate Worker ID
     if (rawWrkId) {
-      if (existingIdSet.has(rawWrkId.toLowerCase())) {
+      if (await workerIdExists(rawWrkId)) {
         rowErrors.push(`Worker ID '${rawWrkId}' already exists`);
       }
     }
@@ -505,7 +519,7 @@ export async function importWorkersFromExcel(
         },
       });
 
-      existingIdSet.add(finalWrkId.toLowerCase());
+      seenIds.add(finalWrkId.toLowerCase());
       addedCount++;
 
       void recordAuditLog({

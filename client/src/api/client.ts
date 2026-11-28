@@ -139,15 +139,11 @@ export async function tryRefreshToken(): Promise<boolean> {
 
 function buildUrl(
   path: string,
-  query: ApiRequestOptions["query"] | string | undefined,
+  query: ApiRequestOptions["query"] | undefined,
 ): string {
   const url = new URL(`${API_BASE_URL}${path}`);
 
-  if (typeof query === "string") {
-    if (query.trim()) {
-      url.searchParams.set("status", query.trim());
-    }
-  } else if (query && typeof query === "object") {
+  if (query && typeof query === "object") {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== "") {
         url.searchParams.set(key, String(value));

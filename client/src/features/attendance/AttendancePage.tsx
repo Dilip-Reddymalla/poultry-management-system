@@ -139,6 +139,12 @@ export function AttendancePage({
   useEffect(() => {
     if (!moreOpen) return;
 
+    // Move focus into the menu when it opens.
+    const firstItem = moreRef.current?.querySelector<HTMLElement>(
+      '[role="menuitem"]',
+    );
+    firstItem?.focus();
+
     function handlePointerDown(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
       if (moreRef.current && !moreRef.current.contains(target)) {
@@ -149,7 +155,23 @@ export function AttendancePage({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setMoreOpen(false);
+        return;
       }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+      const items = Array.from(
+        moreRef.current?.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]',
+        ) ?? [],
+      );
+      if (items.length === 0) return;
+      event.preventDefault();
+      const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+      const nextIndex =
+        event.key === "ArrowDown"
+          ? (currentIndex + 1) % items.length
+          : (currentIndex - 1 + items.length) % items.length;
+      items[nextIndex]?.focus();
     }
 
     document.addEventListener("mousedown", handlePointerDown);

@@ -25,7 +25,10 @@ export function ExportAttendanceDialog({
 
   const farms = useResource<Farm[]>("farms:picker", () => fetchFarms());
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const query: ExportAttendanceQuery = {
@@ -34,10 +37,33 @@ export function ExportAttendanceDialog({
       ...(dateMode === "day" ? { date } : { from, to }),
     };
 
-    // The backend uses a session cookie, so a direct navigation to the
-    // export URL will authenticate and trigger the download.
-    window.location.href = exportAttendanceUrl(query);
-    onClose();
+    setDownloading(true);
+    setError(null);
+    try {
+      // Fetch with credentials so the session cookie is sent (works on the
+      // cross-origin API path), then hand the bytes to the browser as a
+      // download. This also surfaces failures instead of silently navigating.
+      const res = await fetch(exportAttendanceUrl(query), {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error(`Export failed (HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance_export_${Date.now()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      onClose();
+    } catch {
+      setError("Export failed. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -99,12 +125,21 @@ export function ExportAttendanceDialog({
           </select>
         </label>
 
+        {error && (
+          <p
+            style={{ color: "#dc2626", fontSize: 13, margin: "0 0 8px" }}
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
         <div className="dialog__footer">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={downloading}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Export to Excel
+          <Button type="submit" variant="primary" busy={downloading}>
+            {downloading ? "Exporting…" : "Export to Excel"}
           </Button>
         </div>
       </form>

@@ -192,16 +192,13 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
       take: 5,
     }),
 
-    // 10. Daily trend for last 14 days
-    prisma.attendance.findMany({
+    // 10. Daily trend for last 14 days (aggregated in SQL)
+    prisma.attendance.groupBy({
+      by: ["date", "status", "verificationMode"],
       where: {
         date: { gte: fourteenDaysAgo },
       },
-      select: {
-        date: true,
-        status: true,
-        verificationMode: true,
-      },
+      _count: { id: true },
     }),
 
     // 11. Operational shift breakdown (all-time / 90 days for statistical distribution)
@@ -314,10 +311,11 @@ export async function getPublicAnalyticsSummary(): Promise<AnalyticsSummary> {
       dailyMap.set(dayStr, { present: 0, absent: 0, faceAi: 0, total: 0 });
     }
     const entry = dailyMap.get(dayStr)!;
-    entry.total += 1;
-    if (record.status === "PRESENT") entry.present += 1;
-    if (record.status === "ABSENT") entry.absent += 1;
-    if (record.verificationMode === "FACE_AI") entry.faceAi += 1;
+    const count = record._count.id;
+    entry.total += count;
+    if (record.status === "PRESENT") entry.present += count;
+    if (record.status === "ABSENT") entry.absent += count;
+    if (record.verificationMode === "FACE_AI") entry.faceAi += count;
   }
 
   const sortedDates = Array.from(dailyMap.keys()).sort();

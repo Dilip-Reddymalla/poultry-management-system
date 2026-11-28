@@ -63,6 +63,7 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
         data: Record<string, unknown>;
       }> = [];
       const owner = new Map<string, string[]>(); // itemId -> source localIds
+      const contributed = new Set<string>(); // source localIds that produced ≥1 item
       let counter = 0;
 
       for (const rec of records) {
@@ -73,6 +74,7 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
             data: { ...rec.data, syncRef: rec.localId },
           });
           owner.set(rec.localId, [rec.localId]);
+          contributed.add(rec.localId);
         } else {
           const inner =
             (rec.data as { records?: Array<Record<string, unknown>> }).records ??
@@ -87,6 +89,7 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
             });
             owner.set(id, [rec.localId]);
           });
+          if (inner.length > 0) contributed.add(rec.localId);
         }
       }
 
@@ -106,11 +109,17 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Only drop source records that actually contributed items and were not
+      // kept due to a non-duplicate failure. (An empty bulk record contributes
+      // nothing and is left alone rather than silently deleted.)
       for (const rec of records) {
-        if (!keepLocalIds.has(rec.localId)) {
+        if (contributed.has(rec.localId) && !keepLocalIds.has(rec.localId)) {
           await deletePendingAttendance(rec.localId);
         }
       }
+    } catch {
+      // Sync failed (e.g. server unreachable) — keep everything queued; the
+      // next online transition will retry.
     } finally {
       flushing.current = false;
       setSyncing(false);

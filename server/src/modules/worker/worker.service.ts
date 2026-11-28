@@ -28,6 +28,7 @@ import type { SafeEmployee } from "../employee/employee.types.js";
 import { recordAuditLog } from "../audit/audit.service.js";
 
 import type { SafeWorker, WorkerPagination } from "./worker.types.js";
+import { writeFaceEmbedding } from "../../utils/face-embedding.js";
 
 const workerSelect = {
   id: true,
@@ -265,20 +266,7 @@ export async function createWorker(
 
     // Store face embedding via raw SQL (Prisma cannot write vector columns).
     if (faceData.faceEmbedding) {
-      try {
-        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
-        await prisma.$queryRawUnsafe(
-          `UPDATE workers SET face_embedding = $1::vector WHERE id = $2`,
-          vectorLiteral,
-          worker.id,
-        );
-      } catch {
-        await prisma.$queryRawUnsafe(
-          `UPDATE workers SET face_embedding = $1::float8[] WHERE id = $2`,
-          faceData.faceEmbedding,
-          worker.id,
-        );
-      }
+      await writeFaceEmbedding("workers", worker.id, faceData.faceEmbedding);
     }
 
     const safe = toSafeWorker(worker);
@@ -356,20 +344,7 @@ export async function updateWorker(
 
     // Update face embedding via raw SQL.
     if (faceData.faceEmbedding) {
-      try {
-        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
-        await prisma.$queryRawUnsafe(
-          `UPDATE workers SET face_embedding = $1::vector WHERE id = $2`,
-          vectorLiteral,
-          worker.id,
-        );
-      } catch {
-        await prisma.$queryRawUnsafe(
-          `UPDATE workers SET face_embedding = $1::float8[] WHERE id = $2`,
-          faceData.faceEmbedding,
-          worker.id,
-        );
-      }
+      await writeFaceEmbedding("workers", worker.id, faceData.faceEmbedding);
     }
 
     const safe = toSafeWorker(worker);
@@ -478,6 +453,7 @@ export async function deleteWorker(
       id: true,
       workerId: true,
       name: true,
+      photoUrl: true,
       farmId: true,
       farm: { select: { id: true, companyId: true } },
     },
@@ -503,6 +479,11 @@ export async function deleteWorker(
       where: { id },
     });
   });
+
+  // 3. Delete the Cloudinary photo asset (best-effort, after delete succeeds).
+  if (existingWorker.photoUrl) {
+    void deleteImageByUrl(existingWorker.photoUrl);
+  }
 
   void recordAuditLog({
     scope,

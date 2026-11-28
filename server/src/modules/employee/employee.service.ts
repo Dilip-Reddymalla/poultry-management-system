@@ -29,6 +29,7 @@ import {getFarmById} from "../farm/farm.service.js"
 
 import type { SafeUser } from "../auth/auth.types.js";
 import { hashPassword } from "../../utils/password.js";
+import { writeFaceEmbedding } from "../../utils/face-embedding.js";
 
 // User is selected by safe fields only (id, email, roles), so no sensitive field
 // like passwordHash can ever be returned.
@@ -389,20 +390,7 @@ export async function updateEmployeePhotoById(
   }
 
   if (faceData.faceEmbedding) {
-    try {
-      const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
-      await prisma.$queryRawUnsafe(
-        `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
-        vectorLiteral,
-        employeeId,
-      );
-    } catch {
-      await prisma.$queryRawUnsafe(
-        `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
-        faceData.faceEmbedding,
-        employeeId,
-      );
-    }
+    await writeFaceEmbedding("employees", employeeId, faceData.faceEmbedding);
   }
 }
 
@@ -457,20 +445,7 @@ export async function createEmployee(
 
     // Store face embedding via raw SQL (Prisma cannot write vector columns).
     if (faceData.faceEmbedding) {
-      try {
-        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
-        await prisma.$queryRawUnsafe(
-          `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
-          vectorLiteral,
-          employee.id,
-        );
-      } catch {
-        await prisma.$queryRawUnsafe(
-          `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
-          faceData.faceEmbedding,
-          employee.id,
-        );
-      }
+      await writeFaceEmbedding("employees", employee.id, faceData.faceEmbedding);
     }
 
     const safeEmp = toSafeEmployee(employee);
@@ -590,20 +565,7 @@ export async function updateEmployee(
 
     // Update face embedding via raw SQL.
     if (faceData.faceEmbedding) {
-      try {
-        const vectorLiteral = `[${faceData.faceEmbedding.join(",")}]`;
-        await prisma.$queryRawUnsafe(
-          `UPDATE employees SET face_embedding = $1::vector WHERE id = $2`,
-          vectorLiteral,
-          employee.id,
-        );
-      } catch {
-        await prisma.$queryRawUnsafe(
-          `UPDATE employees SET face_embedding = $1::float8[] WHERE id = $2`,
-          faceData.faceEmbedding,
-          employee.id,
-        );
-      }
+      await writeFaceEmbedding("employees", employee.id, faceData.faceEmbedding);
     }
 
     const safeEmp = toSafeEmployee(employee);
@@ -1147,6 +1109,7 @@ export async function deleteEmployee(
       id: true,
       employeeId: true,
       name: true,
+      photoUrl: true,
       farm: { select: { id: true, companyId: true } },
       designation: { select: { name: true } },
       user: {
@@ -1229,6 +1192,11 @@ export async function deleteEmployee(
       where: { id },
     });
   });
+
+  // 4. Delete the Cloudinary photo asset (best-effort, after delete succeeds).
+  if (existingEmployee.photoUrl) {
+    void deleteImageByUrl(existingEmployee.photoUrl);
+  }
 
   void recordAuditLog({
     scope,

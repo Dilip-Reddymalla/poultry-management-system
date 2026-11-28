@@ -115,7 +115,7 @@ router.get("/health", async (_req: Request, res: Response) => {
  * - Also resets the circuit breaker so requests flow once the service recovers.
  * - Has a 15-second cooldown to prevent restart storms.
  */
-router.post("/restart", requireRole("System Administrator", "Company Admin"), async (_req: Request, res: Response) => {
+router.post("/restart", requireRole("System Admin", "Company Admin"), async (_req: Request, res: Response) => {
   if (isFaceAiRestarting()) {
     return res.status(202).json({
       success: true,

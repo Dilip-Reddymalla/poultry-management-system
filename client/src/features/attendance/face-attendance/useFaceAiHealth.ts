@@ -7,12 +7,17 @@ export function useFaceAiHealth() {
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [faceAiWarmingUp, setFaceAiWarmingUp] = useState(false);
   const warmingUpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [warmingUpCountdown, setWarmingUpCountdown] = useState(0);
 
   const stopWarmingUpPoll = useCallback(() => {
     if (warmingUpPollRef.current) {
       clearInterval(warmingUpPollRef.current);
       warmingUpPollRef.current = null;
+    }
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
     }
     setFaceAiWarmingUp(false);
     setWarmingUpCountdown(0);
@@ -54,7 +59,10 @@ export function useFaceAiHealth() {
             setFaceAiWarmingUp(true);
             setWarmingUpCountdown(8);
 
-            const countdownId = setInterval(() => {
+            // Both intervals are tracked in refs and cleared by
+            // stopWarmingUpPoll (called on recovery and on unmount), so nothing
+            // leaks or keeps firing after the component unmounts.
+            countdownRef.current = setInterval(() => {
               setWarmingUpCountdown((prev) => (prev <= 1 ? 8 : prev - 1));
             }, 1000);
 
@@ -70,7 +78,6 @@ export function useFaceAiHealth() {
                   pollData?.fallbackMode === "MANUAL_ATTENDANCE";
 
                 if (!stillOffline) {
-                  clearInterval(countdownId);
                   stopWarmingUpPoll();
                   setFaceAiStatus({
                     online: true,
@@ -84,8 +91,6 @@ export function useFaceAiHealth() {
                 // Keep polling
               }
             }, 8000);
-
-            return () => clearInterval(countdownId);
           }
         } else {
           stopWarmingUpPoll();

@@ -382,7 +382,10 @@ class FacePipeline:
                 best_centrality = centrality
                 best_conf = conf
 
-        assert best_face is not None
+        if best_face is None:
+            # Defensive: unreachable while `eligible` is non-empty, but must not
+            # rely on `assert` (which is stripped under `python -O`).
+            raise RuntimeError("Face selection failed unexpectedly (no eligible face).")
 
         return ProfileEnrollResponse(
             success=True,

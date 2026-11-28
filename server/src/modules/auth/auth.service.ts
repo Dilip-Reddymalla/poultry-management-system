@@ -1172,16 +1172,10 @@ export async function rotateRefreshToken(
     throw new AppError("Invalid refresh token", 401);
   }
 
-  // Automatic reuse detection: If a revoked token is used, check if it falls within the rotation grace period.
-  // A 30-second window allows for network latency, retries, and concurrent tab requests without false-positive lockouts.
-  const ROTATION_GRACE_PERIOD_MS = 30_000;
+  // Reuse of a revoked token is rejected outright. We intentionally do NOT revoke
+  // the user's other sessions/tokens here: that would log every device out after
+  // a benign race (e.g. two tabs both refreshing at the same time).
   if (existingToken.revokedAt !== null) {
-    const elapsedSinceRevocation = Date.now() - existingToken.revokedAt.getTime();
-    if (elapsedSinceRevocation > ROTATION_GRACE_PERIOD_MS) {
-      // Past grace period: This specific token has been consumed and retired.
-      // Do not perform a global blanket wipe of other active devices (e.g. phone vs laptop),
-      // but ensure this stale token is rejected so only the current device logs out.
-    }
     throw new AppError("Refresh token revoked. Please log in again.", 401);
   }
 

@@ -7,6 +7,24 @@ import type { SessionUser } from "../api/types.js";
 import { AuthContext, type SessionStatus } from "./auth-context.js";
 
 /**
+ * Minimal runtime shape check for a session payload. The refresh flow must not
+ * trust a response just because it is an object — a malformed payload should be
+ * ignored rather than surfaced as an authenticated user.
+ */
+function isSessionUser(value: unknown): value is SessionUser {
+  if (typeof value !== "object" || value === null) return false;
+  const u = value as Record<string, unknown>;
+  return (
+    typeof u.id === "string" &&
+    typeof u.email === "string" &&
+    Array.isArray(u.roles) &&
+    Array.isArray(u.permissions) &&
+    typeof u.employee === "object" &&
+    u.employee !== null
+  );
+}
+
+/**
  * Session bootstrap: the app asks `/auth/me` once on load. 200 means the cookie
  * is valid and the app renders; 401 triggers a silent refresh using poultry_refresh.
  * No token is ever read or stored by the client — cookies are httpOnly by design.
@@ -64,8 +82,8 @@ export function AuthProvider({
 
     // When the silent refresh (in apiClient) succeeds, update in-memory user.
     setSessionRefreshedHandler((refreshedUser) => {
-      if (refreshedUser && typeof refreshedUser === "object") {
-        setUser(refreshedUser as SessionUser);
+      if (isSessionUser(refreshedUser)) {
+        setUser(refreshedUser);
         setStatus("authenticated");
       }
     });

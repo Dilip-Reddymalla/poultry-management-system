@@ -785,27 +785,44 @@ export async function bulkCreateAttendance(
         }
       }
 
-      const record = await prisma.attendance.create({
-        data: {
-          date: recordInput.date,
-          farmId,
-          ...(shedId && { shedId }),
-          ...link,
-          shift: recordInput.shift,
-          status: recordInput.status,
-          latitude: recordInput.latitude,
-          longitude: recordInput.longitude,
-          locationSource: finalLocationSource,
-          ...(recordInput.accuracy !== undefined && { accuracy: recordInput.accuracy }),
-          ...(recordInput.ipAddress !== undefined && { ipAddress: recordInput.ipAddress }),
-          ...(recordInput.syncRef ? { syncRef: recordInput.syncRef } : {}),
-          ...(finalNotes !== null && { notes: finalNotes }),
-          recordedById: scope.userId,
-          approvedById: requiresApproval ? null : scope.userId,
-          approvedAt: requiresApproval ? null : new Date(),
-        },
-        select: attendanceSelect,
-      });
+      let record;
+      try {
+        record = await prisma.attendance.create({
+          data: {
+            date: recordInput.date,
+            farmId,
+            ...(shedId && { shedId }),
+            ...link,
+            shift: recordInput.shift,
+            status: recordInput.status,
+            latitude: recordInput.latitude,
+            longitude: recordInput.longitude,
+            locationSource: finalLocationSource,
+            ...(recordInput.accuracy !== undefined && { accuracy: recordInput.accuracy }),
+            ...(recordInput.ipAddress !== undefined && { ipAddress: recordInput.ipAddress }),
+            ...(recordInput.syncRef ? { syncRef: recordInput.syncRef } : {}),
+            ...(finalNotes !== null && { notes: finalNotes }),
+            recordedById: scope.userId,
+            approvedById: requiresApproval ? null : scope.userId,
+            approvedAt: requiresApproval ? null : new Date(),
+          },
+          select: attendanceSelect,
+        });
+      } catch (err: any) {
+        // Unique syncRef race: a concurrent submission already created this row.
+        // Treat it as idempotently fulfilled instead of surfacing a 409.
+        if (recordInput.syncRef && err?.code === "P2002") {
+          const existing = await prisma.attendance.findFirst({
+            where: { syncRef: recordInput.syncRef },
+            select: { id: true },
+          });
+          if (existing) {
+            results.push({ status: "fulfilled", value: { id: existing.id } as never });
+            continue;
+          }
+        }
+        throw err;
+      }
 
       const safe = toSafeAttendance(record);
       if (isFallback) {

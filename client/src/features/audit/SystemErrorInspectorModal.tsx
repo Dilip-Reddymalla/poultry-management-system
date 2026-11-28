@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   X,
   AlertTriangle,
@@ -29,6 +29,18 @@ export function SystemErrorInspectorModal({
   const [copiedTrace, setCopiedTrace] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  // Escape closes the modal; move focus into it when it opens.
+  useEffect(() => {
+    if (!errorItem) return;
+    dialogRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [errorItem, onClose]);
 
   if (!errorItem) return null;
 
@@ -68,7 +80,12 @@ export function SystemErrorInspectorModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="inspector-modal-dialog">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="inspector-modal-dialog"
+        style={{ outline: "none" }}
+      >
         {/* Modal Header */}
         <div className="inspector-modal-header">
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1 }}>

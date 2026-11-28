@@ -376,8 +376,9 @@ model Attendance {
   notes String?
 
   // Client-generated idempotency key (offline sync / multi-device retries).
-  // Lets the server collapse a retried offline submission to a no-op.
-  syncRef String? @db.VarChar(128)
+  // Lets the server collapse a retried offline submission to a no-op. Unique so
+  // concurrent replays cannot create duplicate rows (P2002 is treated as a no-op).
+  syncRef String? @unique @db.VarChar(128)
 
   // Face-AI verification fields (populated when attendance is marked via face recognition).
   verificationMode String?  @default("MANUAL") // "MANUAL" | "FACE_AI"
@@ -409,7 +410,6 @@ model Attendance {
   @@index([farmId, date])
   // Dashboard query: attendance marked by a specific user on a date.
   @@index([recordedById, date])
-  @@index([syncRef])
   @@map("attendances")
 }
 

@@ -63,6 +63,8 @@ export interface ApiRequestOptions {
    * rather than an expired session, so they opt out of the global handler.
    */
   keepSessionOnUnauthorized?: boolean;
+  /** @internal — set on a retry after a silent token refresh, to bound retries. */
+  _retried?: boolean;
 }
 
 type SessionExpiredHandler = () => void;
@@ -245,15 +247,21 @@ export async function apiRequest<T>(
         ? envelope.message
         : (FALLBACK_MESSAGES[response.status] ?? "Something went wrong.");
 
-    if (response.status === 401 && !options.keepSessionOnUnauthorized) {
+    if (
+      response.status === 401 &&
+      !options.keepSessionOnUnauthorized &&
+      !options._retried
+    ) {
       // ---------------------------------------------------------------
       // Silent refresh: attempt to renew the access token using the
       // httpOnly refresh cookie before kicking the user to sign-in.
       // ---------------------------------------------------------------
       const refreshed = await tryRefreshToken();
       if (refreshed) {
-        // Token renewed — retry the original request once.
-        return apiRequest<T>(path, options);
+        // Token renewed — retry the original request exactly once. The
+        // `_retried` marker prevents an infinite refresh/retry loop if the
+        // retried request also comes back 401.
+        return apiRequest<T>(path, { ...options, _retried: true });
       }
 
       // Refresh also failed — session is truly gone.

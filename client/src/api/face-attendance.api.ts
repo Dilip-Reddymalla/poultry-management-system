@@ -127,6 +127,18 @@ export async function bulkMarkFaceAttendanceWithOffline(
     );
     return { queued: true, localId };
   }
-  const response = await bulkMarkFaceAttendance(records);
-  return { queued: false, response };
+  try {
+    const response = await bulkMarkFaceAttendance(records);
+    return { queued: false, response };
+  } catch (err) {
+    // Device reports online but the network call failed — queue instead.
+    if (err instanceof ApiError && err.status === 0) {
+      const localId = await enqueueAttendance(
+        { records } as unknown as Record<string, unknown>,
+        "face-bulk",
+      );
+      return { queued: true, localId };
+    }
+    throw err;
+  }
 }

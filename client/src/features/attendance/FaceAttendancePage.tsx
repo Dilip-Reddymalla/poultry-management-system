@@ -116,7 +116,6 @@ export function FaceAttendancePage(): React.ReactElement {
   // Farm & Shed Selection
   const [farms, setFarms] = useState<Farm[]>([]);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
-  const [farmsLoaded, setFarmsLoaded] = useState(false);
 
   const [sheds, setSheds] = useState<Shed[]>([]);
   const [selectedShedId, setSelectedShedId] = useState<string>("");
@@ -156,11 +155,12 @@ export function FaceAttendancePage(): React.ReactElement {
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. Load farms once
-  if (!farmsLoaded) {
-    setFarmsLoaded(true);
+  // 1. Load farms once on mount (not during render — avoids a render-time side
+  // effect that is fragile under StrictMode double-rendering).
+  useEffect(() => {
+    const controller = new AbortController();
     apiClient
-      .get<{ farms: Farm[] }>("/farms")
+      .get<{ farms: Farm[] }>("/farms", { signal: controller.signal })
       .then((data) => {
         const list = data?.farms || [];
         setFarms(list);
@@ -170,8 +170,12 @@ export function FaceAttendancePage(): React.ReactElement {
           setSelectedFarmId(list[0].id);
         }
       })
-      .catch(() => {});
-  }
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Ignore other errors; the page stays usable without farms loaded.
+      });
+    return () => controller.abort();
+  }, [user?.scope?.farmId]);
 
   // 2. Load Sheds when Farm changes
   useEffect(() => {

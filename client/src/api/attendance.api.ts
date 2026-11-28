@@ -1,4 +1,4 @@
-import { apiClient, API_BASE_URL } from "./client.js";
+import { apiClient, API_BASE_URL, ApiError } from "./client.js";
 import { enqueueAttendance } from "../lib/offline-store.js";
 import type {
   Attendance,
@@ -263,8 +263,21 @@ export async function createAttendanceWithOffline(
     );
     return { queued: true, localId };
   }
-  const attendance = await createAttendance(data);
-  return { queued: false, attendance };
+  try {
+    const attendance = await createAttendance(data);
+    return { queued: false, attendance };
+  } catch (err) {
+    // Device reports online but the network call failed (server unreachable) —
+    // treat it as offline so the record is queued instead of lost.
+    if (err instanceof ApiError && err.status === 0) {
+      const localId = await enqueueAttendance(
+        data as unknown as Record<string, unknown>,
+        "single",
+      );
+      return { queued: true, localId };
+    }
+    throw err;
+  }
 }
 
 /**
@@ -286,8 +299,19 @@ export async function bulkCreateAttendanceWithOffline(
     );
     return { queued: true, localId };
   }
-  const response = await bulkCreateAttendance(data);
-  return { queued: false, response };
+  try {
+    const response = await bulkCreateAttendance(data);
+    return { queued: false, response };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 0) {
+      const localId = await enqueueAttendance(
+        data as unknown as Record<string, unknown>,
+        "bulk",
+      );
+      return { queued: true, localId };
+    }
+    throw err;
+  }
 }
 
 /**

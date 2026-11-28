@@ -221,31 +221,48 @@ export async function bulkMarkFaceAttendance(
         }
       }
 
-      const created = await prisma.attendance.create({
-        data: {
-          date: record.date,
-          farmId: person.farmId,
-          shedId: finalShedId,
-          ...personLink,
-          shift: record.shift,
-          status: record.status,
-          latitude: record.latitude,
-          longitude: record.longitude,
-          verificationMode: "FACE_AI",
-          livenessScore: record.livenessScore ?? null,
-          qualityScore: record.qualityScore ?? null,
-          confidenceScore: record.confidenceScore ?? null,
-          snapshotUrl: record.snapshotUrl ?? null,
-          notes: finalNotes,
-          locationSource: finalLocationSource,
-          accuracy: record.accuracy ?? null,
-          ipAddress: record.ipAddress ?? null,
-          ...(record.syncRef ? { syncRef: record.syncRef } : {}),
-          recordedById: scope.userId,
-          approvedById: requiresApproval ? null : scope.userId,
-          approvedAt: requiresApproval ? null : new Date(),
-        },
-      });
+      let created;
+      try {
+        created = await prisma.attendance.create({
+          data: {
+            date: record.date,
+            farmId: person.farmId,
+            shedId: finalShedId,
+            ...personLink,
+            shift: record.shift,
+            status: record.status,
+            latitude: record.latitude,
+            longitude: record.longitude,
+            verificationMode: "FACE_AI",
+            livenessScore: record.livenessScore ?? null,
+            qualityScore: record.qualityScore ?? null,
+            confidenceScore: record.confidenceScore ?? null,
+            snapshotUrl: record.snapshotUrl ?? null,
+            notes: finalNotes,
+            locationSource: finalLocationSource,
+            accuracy: record.accuracy ?? null,
+            ipAddress: record.ipAddress ?? null,
+            ...(record.syncRef ? { syncRef: record.syncRef } : {}),
+            recordedById: scope.userId,
+            approvedById: requiresApproval ? null : scope.userId,
+            approvedAt: requiresApproval ? null : new Date(),
+          },
+        });
+      } catch (err: any) {
+        // Unique syncRef race: a concurrent submission already created this row.
+        // Treat it as an idempotent no-op instead of a 409.
+        if (record.syncRef && err?.code === "P2002") {
+          const existing = await prisma.attendance.findFirst({
+            where: { syncRef: record.syncRef },
+            select: { id: true },
+          });
+          if (existing) {
+            markedCount++;
+            continue;
+          }
+        }
+        throw err;
+      }
 
       if (isFallback) {
         enqueueIpFallbackAudit({

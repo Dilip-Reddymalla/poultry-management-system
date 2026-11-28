@@ -27,7 +27,26 @@ const clientHostnames = new Set(
 );
 
 export function isSameOriginRequest(req: Request): boolean {
-  return clientHostnames.has(req.hostname ?? "");
+  // When behind the same-origin reverse proxy (e.g. Vercel rewriting `/api` to
+  // the backend), the downstream `Host` is the backend's, but the app's real
+  // host is forwarded in `X-Forwarded-Host`. Use that first so proxy requests
+  // are correctly treated as first-party (SameSite=Lax).
+  let host = req.hostname ?? "";
+  const forwardedHost = req.headers["x-forwarded-host"];
+  if (
+    typeof forwardedHost === "string" &&
+    forwardedHost.trim().length > 0
+  ) {
+    const first = forwardedHost.split(",")[0]?.trim() ?? "";
+    if (first) {
+      try {
+        host = new URL(first.includes("://") ? first : `https://${first}`).hostname;
+      } catch {
+        host = first;
+      }
+    }
+  }
+  return clientHostnames.has(host);
 }
 
 function baseAuthCookieOptions(sameOrigin: boolean): CookieOptions {

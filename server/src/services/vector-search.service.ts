@@ -102,7 +102,7 @@ export async function searchByEmbedding(
         'WORKER' AS "personType",
         w."workerId" AS "personCode",
         w.name,
-        COALESCE(w."photoUrl", w.photo_url) AS "photoUrl",
+        w."photoUrl" AS "photoUrl",
         w."farmId" AS "farmId",
         (1 - (w.face_embedding <=> $1::vector)) AS similarity
       FROM workers w
@@ -137,7 +137,7 @@ export async function searchByEmbedding(
   `;
 
   const fallbackWorkerQuery = `
-    SELECT id, 'WORKER' AS "personType", "workerId" AS "personCode", name, COALESCE("photoUrl", photo_url) AS "photoUrl", "farmId", face_embedding
+    SELECT id, 'WORKER' AS "personType", "workerId" AS "personCode", name, "photoUrl" AS "photoUrl", "farmId", face_embedding
     FROM workers
     WHERE face_embedding IS NOT NULL AND status = 'ACTIVE'
     ${options.farmId ? `AND "farmId" = $1::uuid` : ""}
